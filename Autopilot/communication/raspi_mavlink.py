@@ -1,12 +1,19 @@
+import time
+import threading
+import sys
+import os
+
 from pymavlink import mavutil
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
 
 from Autopilot.system_info.status import raspi_status as status
 from Autopilot.system_info.sensor import raspi_sensor_calibrate as calibrate
 from Autopilot.control.motor import raspi_motor_control as motor
 from Autopilot.control.common import raspi_timer as timer
 
-#master = mavutil.mavlink_connection("udp:0.0.0.0:50000")
-#master.wait_hearbbeat() - threading
+
 
 UP = 1000
 DOWN = 1001
@@ -121,3 +128,21 @@ def handle_cmd(master, cmd):
                 -1,
                 len(status.read_all_status())
             )
+
+def wait_for_heartbeat(master):
+    while True:
+        msg = master.recv_match(type='HEARTBEAT', blocking=True, timeout=5)
+        if msg:
+            print("Heartbeat received from system (system %u component %u)" % (msg.get_srcSystem(), msg.get_srcComponent()))
+        else:
+            print("Heartbeat timeout, no heartbeat received")
+
+master = mavutil.mavlink_connection("udp:0.0.0.0:50000")
+
+heartbeat_thread = threading.Thread(target=wait_for_heartbeat, args=(master,))
+heartbeat_thread.daemon = True
+heartbeat_thread.start()
+
+while True:
+    cmd = received_cmd(master)
+    handle_cmd(master, cmd)
