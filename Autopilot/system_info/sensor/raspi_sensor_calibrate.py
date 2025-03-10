@@ -1,4 +1,4 @@
-import raspi_sensor_read as sensor
+import Autopilot.system_info.sensor.raspi_sensor_read as sensor
 import time
 
 from Autopilot.system_info.status import raspi_status as status
