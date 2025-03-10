@@ -20,10 +20,7 @@ SET_LIGHT = 1023
 SET_CAMERA = 1024
 
 START_MAG_CALIBRATION = 1025
-#master = mavutil.mavlink_connection("udpout:169.254.54.120:50000")
 
-#using a thread to send heartbeat to the Raspberry Pi
-#threading.Thread(target=send_heartbeat, args=(master,)).start()
 def send_heartbeat(master):
     while True:
         master.mav.heartbeat_send(
@@ -157,3 +154,12 @@ def get_all_status(master):
         master.target_system,
         master.target_component
     )
+
+master = mavutil.mavlink_connection("udpout:169.254.54.120:50000")
+
+# using a thread to send heartbeat to the Raspberry Pi
+threading.Thread(target=send_heartbeat, args=(master,)).start()
+
+while True:
+    set_auto_heading(master, 1, 0)
+    time.sleep(1)

@@ -1,10 +1,12 @@
 import sys
-import cv2
-import numpy as np
+import os
+
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QPushButton
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtCore import QTimer, QThread, pyqtSignal, Qt
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from Mission_planner.controller.joystick import VirtualJoystick
 from Mission_planner.controller import control_buttons as buttons_controller

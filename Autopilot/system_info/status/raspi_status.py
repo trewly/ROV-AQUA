@@ -1,5 +1,5 @@
 import json
-import raspi_sensor_read as sensor
+import Autopilot.system_info.sensor.raspi_sensor_read as sensor
 
 def init_status():
     data ={
