@@ -1,7 +1,7 @@
 import subprocess
 
 # Lệnh với flip camera (lật dọc và ngang)
-command = "libcamera-vid -t 0 --width 1280 --height 720 --framerate 30 --codec h264 --vflip --hflip -o - | gst-launch-1.0 fdsrc ! h264parse ! rtph264pay ! udpsink host=169.254.219.222 port=5000"
+command = "libcamera-vid -t 0 --width 1280 --height 720 --framerate 30 --codec h264 --vflip --hflip -o - | gst-launch-1.0 fdsrc ! h264parse ! rtph264pay ! udpsink host=169.254.54. port=5000"
 
 print("Starting GStreamer UDP Stream with flipped camera...")
 
