@@ -17,6 +17,10 @@ class Ui_Form(QWidget):
         super().__init__()
         self.shift_timer = QTimer(self)
         self.ctrl_timer = QTimer(self)
+
+        self.shift_timer.timeout.connect(lambda: self.surface_button.click())
+        self.ctrl_timer.timeout.connect(lambda: self.dive_button.click())
+
         self.light_on = False
 
         self.setWindowTitle("ROV Control")
@@ -29,7 +33,6 @@ class Ui_Form(QWidget):
         self.overlay_widget.setAttribute(Qt.WA_TranslucentBackground)
         self.overlay_widget.setWindowFlags(Qt.FramelessWindowHint)
 
-        # Buttons trên video
         btn_width = 100
         btn_height = 50
         btn_x = 850
@@ -50,9 +53,8 @@ class Ui_Form(QWidget):
 
         self.light_button = QPushButton("LIGHT", self.overlay_widget)
         self.light_button.setGeometry(btn_x, btn_y_start + 3 * btn_spacing, btn_width, btn_height)
-        self.light_button.clicked.connect(buttons_controller.on_light_button_clicked)
+        self.light_button.clicked.connect(lambda: buttons_controller.on_light_button_clicked(self))
 
-        # Joystick trong suốt ở góc dưới trái
         self.joystick = VirtualJoystick(self.overlay_widget)
         self.joystick.setGeometry(QtCore.QRect(10, 370, 120, 120))
 
