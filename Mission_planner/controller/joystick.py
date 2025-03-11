@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem
-from PyQt5.QtCore import Qt, QPointF, pyqtSignal
+from PyQt5.QtCore import Qt, QPointF, QTimer, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor
 
 class VirtualJoystick(QGraphicsView):
@@ -36,6 +36,13 @@ class VirtualJoystick(QGraphicsView):
 
         self.joystickMoved.connect(self.on_joystick_moved)
 
+        self.keys_pressed = set()
+        self.keys_pressed = set()
+        self.timer = QTimer(self)
+        self.timer.setInterval(100)
+        self.timer.timeout.connect(self.update_knob_position)
+        self.timer.start()
+
     def move_knob(self, x, y):
         dx = x * self.max_distance
         dy = -y * self.max_distance
@@ -50,31 +57,42 @@ class VirtualJoystick(QGraphicsView):
         if not self.hasFocus():
             return super().keyPressEvent(event)
 
-        if event.key() == Qt.Key_Left:
-            self.current_x = -1
-        elif event.key() == Qt.Key_Right:
-            self.current_x = 1
-        elif event.key() == Qt.Key_Up:
-            self.current_y = 1
-        elif event.key() == Qt.Key_Down:
-            self.current_y = -1
+        if event.key() in {Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down}:
+            self.keys_pressed.add(event.key())
+            self.update_knob_position()
         else:
-            return super().keyPressEvent(event)
-
-        self.move_knob(self.current_x, self.current_y)
-    
+            super().keyPressEvent(event)
 
     def keyReleaseEvent(self, event):
         if not self.hasFocus():
             return super().keyReleaseEvent(event)
 
-        if event.key() in (Qt.Key_Left, Qt.Key_Right):
-            self.current_x = 0
-        if event.key() in (Qt.Key_Up, Qt.Key_Down):
-            self.current_y = 0
+        if event.key() in {Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down}:
+            self.keys_pressed.discard(event.key())
+            self.update_knob_position()
         else:
-            return super().keyReleaseEvent(event)
-        self.move_knob(self.current_x, self.current_y)
+            super().keyReleaseEvent(event)
+
+    def update_knob_position(self):
+        x = 0
+        y = 0
+
+        if Qt.Key_Left in self.keys_pressed:
+            x -= 1
+        if Qt.Key_Right in self.keys_pressed:
+            x += 1
+        if Qt.Key_Up in self.keys_pressed:
+            y += 1
+        if Qt.Key_Down in self.keys_pressed:
+            y -= 1
+
+        self.move_knob(x, y)
 
     def on_joystick_moved(self, x, y):
         print(f"Joystick X: {x:.2f}, Y: {y:.2f}")
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    joystick = VirtualJoystick()
+    joystick.show()
+    sys.exit(app.exec_())
