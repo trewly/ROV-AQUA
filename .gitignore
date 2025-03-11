@@ -1,0 +1,21 @@
+# Bỏ qua các file biên dịch Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Bỏ qua thư mục ảo của môi trường Python (venv)
+venv/
+.env
+
+# Bỏ qua file log và dữ liệu tạm thời
+*.log
+*.sqlite3
+
+# Bỏ qua video gốc và ảnh tạm thời
+*.h264
+*.jpg
+*.png
+
+# Bỏ qua thư mục build và môi trường ảo
+build/
+venv/
