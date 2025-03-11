@@ -2,7 +2,7 @@ import subprocess
 import socket
 import time
 import cv2
-from picamera2 import Picamera2, encoders
+from picamera2 import Picamera2, encoders # type: ignore
 
 def send_file(server_ip, server_port, file_path):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
