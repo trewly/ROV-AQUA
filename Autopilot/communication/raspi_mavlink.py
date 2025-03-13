@@ -41,16 +41,7 @@ def received_cmd(master):
             
 def handle_cmd(master, cmd):
     if cmd == None:
-        master.mav.statustext_send(
-            mavutil.mavlink.MAV_SEVERITY_WARNING,
-            "No command received".encode('utf-8')
-        )
         return
-    
-    master.mav.command_ack_send(
-        cmd.command,
-        mavutil.mavlink.MAV_RESULT_ACCEPT
-    )
 
     if cmd.get_type() == "COMMAND_LONG":
         print("Hello")
