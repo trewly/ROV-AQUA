@@ -129,7 +129,9 @@ def handle_cmd(master, cmd):
                 -1,
                 len(status.read_all_status())
             )
-
+    elif cmd.get_type() == "HEARTBEAT":
+        return
+    
 def wait_for_heartbeat(master):
     while True:
         msg = master.recv_match(type='HEARTBEAT', blocking=True, timeout=5)
