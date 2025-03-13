@@ -41,18 +41,10 @@ def received_cmd(master):
             
 def handle_cmd(master, cmd):
     if cmd == None:
-        master.mav.statustext_send(
-            mavutil.mavlink.MAV_SEVERITY_WARNING,
-            "No command received".encode('utf-8')
-        )
         return
-    
-    master.mav.command_ack_send(
-        cmd.command,
-        mavutil.mavlink.MAV_RESULT_ACCEPT
-    )
 
     if cmd.get_type() == "COMMAND_LONG":
+        print("Hello")
         if status.read_status(key="mode") == "manual":
             if cmd.command == UP:
                 timer.marked()
@@ -128,7 +120,9 @@ def handle_cmd(master, cmd):
                 -1,
                 len(status.read_all_status())
             )
-
+    elif cmd.get_type() == "HEARTBEAT":
+        return
+    
 def wait_for_heartbeat(master):
     while True:
         msg = master.recv_match(type='HEARTBEAT', blocking=True, timeout=5)
@@ -136,6 +130,7 @@ def wait_for_heartbeat(master):
             print("Heartbeat received from system (system %u component %u)" % (msg.get_srcSystem(), msg.get_srcComponent()))
         else:
             print("Heartbeat timeout, no heartbeat received")
+        time.sleep(0.1)
 
 master = mavutil.mavlink_connection("udp:0.0.0.0:50000")
 
@@ -146,3 +141,4 @@ heartbeat_thread.start()
 while True:
     cmd = received_cmd(master)
     handle_cmd(master, cmd)
+    time.sleep(0.1)

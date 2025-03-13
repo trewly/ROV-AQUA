@@ -37,7 +37,7 @@ def init_status():
         "auto_depth": False,
     }
     
-    with open("status.json", "w") as file:
+    with open("Autopilot/system_info/status/status.json", "w") as file:
         json.dump(data, file)
 
 def update_sensor_status():
@@ -56,7 +56,7 @@ def update_sensor_status():
     heading = sensor.read_angle_xy(mag_x, mag_y)
 
     try:
-        with open("status.json", "r") as file:
+        with open("Autopilot/system_info/status/status.json", "r") as file:
             data = json.load(file)
     except FileNotFoundError:
         data = {}
@@ -105,23 +105,23 @@ def update_sensor_status():
         "previous_heading": previous_heading
     })
 
-    with open("status.json", "w") as file:
+    with open("Autopilot/system_info/status/status.json", "w") as file:
         json.dump(data, file, indent=4)
 
 def update_status(key, value):
-    with open("status.json", "r") as file:
+    with open("Autopilot/system_info/status/status.json", "r") as file:
         data = json.load(file)
     data[key] = value
-    with open("status.json", "w") as file:
+    with open("Autopilot/system_info/status/status.json", "w") as file:
         json.dump(data, file, indent=4)
 
 def read_all_status():
-    with open("status.json", "r") as file:
+    with open("Autopilot/system_info/status/status.json", "r") as file:
         data = json.load(file)
     return data
 
 def read_status(key):
-    with open("status.json", "r") as file:
+    with open("Autopilot/system_info/status/status.json", "r") as file:
         data = json.load(file)
     return data[key]
 

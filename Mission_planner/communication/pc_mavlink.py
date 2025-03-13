@@ -28,7 +28,7 @@ def send_heartbeat(master):
             mavutil.mavlink.MAV_AUTOPILOT_INVALID,
             0, 0, 0
         )
-        time.sleep(1)
+        time.sleep(3)
 
 def send_control_cmd(master, cmd):
     master.mav.command_long_send(
@@ -47,6 +47,7 @@ def set_auto_heading(master, enable, heading):
         0,
         enable, heading, 0, 0, 0, 0, 0
     )
+    print("Sending")
 
 def set_auto_depth(master, enable, depth):
     master.mav.command_long_send(
@@ -157,9 +158,8 @@ def get_all_status(master):
 
 master = mavutil.mavlink_connection("udpout:169.254.54.120:50000")
 
-# using a thread to send heartbeat to the Raspberry Pi
 threading.Thread(target=send_heartbeat, args=(master,), daemon=True).start()
 
 while True:
-    set_auto_heading(master, 1, 0)
+    set_auto_heading(master, 1, 90)
     time.sleep(1)
