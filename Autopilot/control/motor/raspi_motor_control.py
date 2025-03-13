@@ -54,10 +54,10 @@ class Motor:
             self.pi.set_PWM_dutycycle(self.pin, current_duty_cycle - 1)
     
 
-LEFT_MOTOR = Motor(1)
-RIGHT_MOTOR = Motor(2)
-LEFT_DEPTH_MOTOR = Motor(3)
-RIGHT_DEPTH_MOTOR = Motor(4)
+LEFT_MOTOR = Motor(5)
+RIGHT_MOTOR = Motor(6)
+LEFT_DEPTH_MOTOR = Motor(7)
+RIGHT_DEPTH_MOTOR = Motor(8)
 
 def self_balance():
     pitch = status.read_status("pitch")

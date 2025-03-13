@@ -157,7 +157,6 @@ def get_all_status(master):
 
 master = mavutil.mavlink_connection("udpout:169.254.54.120:50000")
 
-# using a thread to send heartbeat to the Raspberry Pi
 threading.Thread(target=send_heartbeat, args=(master,), daemon=True).start()
 
 while True:

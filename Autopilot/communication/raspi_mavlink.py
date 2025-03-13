@@ -145,4 +145,8 @@ heartbeat_thread.start()
 
 while True:
     cmd = received_cmd(master)
-    handle_cmd(master, cmd)
+    if cmd.get_type() == "LONG COMMAND":
+        print("Hello")
+        if cmd.command == "PARAM_REQUEST_READ":
+            print("PARAM_REQUEST_READ")
+    time.sleep(1)
