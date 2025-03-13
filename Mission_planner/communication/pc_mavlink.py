@@ -159,7 +159,7 @@ def get_all_status(master):
 master = mavutil.mavlink_connection("udpout:169.254.54.120:50000")
 
 threading.Thread(target=send_heartbeat, args=(master,), daemon=True).start()
-threading.Thread(target=set_auto_heading, args=(master, 1, 0), daemon=True).start()
 
 while True:
+    set_auto_heading(master, 1, 90)
     time.sleep(1)
