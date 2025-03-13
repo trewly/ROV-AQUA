@@ -6,8 +6,6 @@ venv/
 *.log
 *.sqlite3
 *.h264
-*.jpg
-*.png
 build/
 venv/
 *.mp4
