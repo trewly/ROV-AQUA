@@ -6,3 +6,4 @@ numpy-stl
 opencv-python
 PyOpenGL
 PyOpenGL_accelerate
+scipy 
