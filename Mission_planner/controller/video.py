@@ -4,13 +4,12 @@ import numpy as np
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QPushButton
 from PyQt5.QtGui import QImage, QPixmap
-from PyQt5.QtCore import QTimer, QThread, pyqtSignal, Qt
+from PyQt5.QtCore import QThread, pyqtSignal, Qt
 
 class VideoReceiver(QWidget):
-    """Class nhận video qua UDP và phát trên QLabel"""
     frame_signal = pyqtSignal(np.ndarray)
 
-    def __init__(self, udp_ip="169.254.54.121", udp_port=5000, parent=None):
+    def __init__(self, udp_ip="169.254.54.121", udp_port=5000, save_path="received_video.mp4", parent=None):
         super().__init__(parent)
         self.setGeometry(0, 0, 960, 540)
 
@@ -19,7 +18,11 @@ class VideoReceiver(QWidget):
 
         self.udp_ip = udp_ip
         self.udp_port = udp_port
+        self.save_path = save_path
         self.running = True
+
+        self.video_writer = None
+
         self.video_thread = QThread()
         self.video_thread.run = self.run_video
         self.video_thread.start()
@@ -27,8 +30,11 @@ class VideoReceiver(QWidget):
         self.frame_signal.connect(self.update_frame)
 
     def run_video(self):
-        """Chờ có dữ liệu video trước khi hiển thị"""
         cap = None
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        fps = 30
+        frame_size = (1920, 1080)
+
         while self.running:
             if cap is None:
                 cap = cv2.VideoCapture(f"udp://{self.udp_ip}:{self.udp_port}", cv2.CAP_FFMPEG)
@@ -36,37 +42,46 @@ class VideoReceiver(QWidget):
                     print("Đang chờ luồng video...")
                     cap.release()
                     cap = None
-                    QtCore.QThread.msleep(500)  # Chờ 500ms trước khi thử lại
+                    QtCore.QThread.msleep(500)
                     continue
-            
+
+            if self.video_writer is None:
+                self.video_writer = cv2.VideoWriter(self.save_path, fourcc, fps, frame_size)
+
             ret, frame = cap.read()
             if ret:
+                frame = cv2.flip(frame, -1)
                 self.frame_signal.emit(frame)
+                self.video_writer.write(frame)
             else:
                 print("Mất kết nối video, thử kết nối lại...")
                 cap.release()
                 cap = None
-                QtCore.QThread.msleep(500)  # Chờ trước khi thử lại
+                if self.video_writer:
+                    self.video_writer.release()
+                    self.video_writer = None
+                QtCore.QThread.msleep(500)
 
         if cap:
             cap.release()
+        if self.video_writer:
+            self.video_writer.release()
 
     def update_frame(self, frame):
-        """Hiển thị khung hình trên QLabel"""
-        frame = cv2.resize(frame, (960, 540))
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        height, width, channel = frame.shape
+        frame_resized = cv2.resize(frame, (960, 540))
+        frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
+        height, width, channel = frame_rgb.shape
         bytes_per_line = 3 * width
-        qimg = QImage(frame.data, width, height, bytes_per_line, QImage.Format_RGB888)
+        qimg = QImage(frame_rgb.data, width, height, bytes_per_line, QImage.Format_RGB888)
         pixmap = QPixmap.fromImage(qimg)
         self.label.setPixmap(pixmap)
 
     def closeEvent(self, event):
-        """Đóng ứng dụng và dừng video thread"""
         self.running = False
         self.video_thread.quit()
         self.video_thread.wait()
         event.accept()
+        print(f"Đã lưu video tại: {self.save_path}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

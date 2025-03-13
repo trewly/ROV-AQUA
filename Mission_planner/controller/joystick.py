@@ -37,11 +37,6 @@ class VirtualJoystick(QGraphicsView):
         self.joystickMoved.connect(self.on_joystick_moved)
 
         self.keys_pressed = set()
-        self.keys_pressed = set()
-        self.timer = QTimer(self)
-        self.timer.setInterval(100)
-        self.timer.timeout.connect(self.update_knob_position)
-        self.timer.start()
 
     def move_knob(self, x, y):
         dx = x * self.max_distance

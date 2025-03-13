@@ -2,6 +2,7 @@ import subprocess
 import socket
 import time
 import cv2
+import threading
 from picamera2 import Picamera2, encoders # type: ignore
 
 def send_file(server_ip, server_port, file_path):
@@ -18,23 +19,12 @@ def send_file(server_ip, server_port, file_path):
     print(f"Đã gửi file: {file_path}")
     client_socket.close()
 
-def start_video_stream():
-    command = "libcamera-vid -t 0 --width 1280 --height 720 --framerate 30 --codec h264 --vflip --hflip -o - | gst-launch-1.0 fdsrc ! h264parse ! rtph264pay ! udpsink host=169.254.54. port=5000"
-
-    print("Starting GStreamer UDP Stream with flipped camera...")
-
+def run_streaming():
+    command = "libcamera-vid -t 0 --width 1920 --height 1080 --framerate 30 --codec h264 --bitrate 10000000 -o - | gst-launch-1.0 fdsrc ! h264parse ! mpegtsmux ! udpsink host=169.254.54.121 port=5000 sync=false async=false"
     global process
-    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-
-    try:
-        for line in process.stdout:
-            print("[STDOUT]:", line.strip())
-        for line in process.stderr:
-            print("[STDERR]:", line.strip())
-        process.wait()
-    except KeyboardInterrupt:
-        global process
-        process.terminate()
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process.wait()
+#thread = threading.Thread(target=run_streaming)    
 
 def stop_video_stream():
     print("Stopping GStreamer UDP Stream...")
