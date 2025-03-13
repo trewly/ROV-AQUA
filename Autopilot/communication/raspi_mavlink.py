@@ -53,6 +53,7 @@ def handle_cmd(master, cmd):
     )
 
     if cmd.get_type() == "COMMAND_LONG":
+        print("Hello")
         if status.read_status(key="mode") == "manual":
             if cmd.command == UP:
                 timer.marked()
@@ -136,6 +137,7 @@ def wait_for_heartbeat(master):
             print("Heartbeat received from system (system %u component %u)" % (msg.get_srcSystem(), msg.get_srcComponent()))
         else:
             print("Heartbeat timeout, no heartbeat received")
+        time.sleep(0.1)
 
 master = mavutil.mavlink_connection("udp:0.0.0.0:50000")
 
@@ -145,7 +147,5 @@ heartbeat_thread.start()
 
 while True:
     cmd = received_cmd(master)
-    if cmd.get_type() == "COMMAND LONG":
-        print("Hello")
-        if cmd.command == "PARAM_REQUEST_READ":
-            print("PARAM_REQUEST_READ")
+    handle_cmd(master, cmd)
+    time.sleep(0.1)
