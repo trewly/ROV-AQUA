@@ -28,7 +28,7 @@ def send_heartbeat(master):
             mavutil.mavlink.MAV_AUTOPILOT_INVALID,
             0, 0, 0
         )
-        time.sleep(1)
+        time.sleep(0.1)
 
 def send_control_cmd(master, cmd):
     master.mav.command_long_send(
