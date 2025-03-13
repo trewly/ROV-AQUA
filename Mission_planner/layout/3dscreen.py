@@ -5,6 +5,7 @@ from stl import mesh
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout
 from PyQt5.QtCore import QThread, pyqtSignal
 import os
+from scipy.spatial.transform import Rotation as R
 #phan gia lap xoay
 from PyQt5.QtGui import QMatrix4x4
 import time
@@ -17,14 +18,14 @@ class RotationThread(QThread):
     def run(self):
         while True:
             # Xoay X từ 0 -> 360
-            for angle in range(0, 361, 5):
-                self.new_rotation.emit(angle, 0, 0)
-                time.sleep(0.05)
+            #for angle in range(0, 361, 5):
+            #    self.new_rotation.emit(angle, 0, 0)
+            #    time.sleep(0.05)
 
             # Xoay Y từ 0 -> 360
-            for angle in range(0, 361, 5):
-                self.new_rotation.emit(360, angle, 0)
-                time.sleep(0.05)
+            #for angle in range(0, 361, 5):
+            #    self.new_rotation.emit(360, angle, 0)
+            #    time.sleep(0.05)
 
             # Xoay Z từ 0 -> 360
             for angle in range(0, 361, 5):
@@ -79,15 +80,24 @@ class STLViewerWidget(QWidget):
         self.rotation_thread.start()
 
     def on_stl_loaded(self, vertices, faces):
-        vertices -= np.mean(vertices, axis=0)
+        vertices -= np.mean(vertices, axis=0)  # Căn giữa
         scale_factor = 0.1
         vertices *= scale_factor
-        vertices -= np.mean(vertices, axis=0)
 
+        # Xoay dữ liệu gốc
+        rot_x = R.from_euler('x', 90, degrees=True).as_matrix()
+        rot_z = R.from_euler('z', 180, degrees=True).as_matrix()
+
+        vertices = vertices @ rot_x.T
+        vertices = vertices @ rot_z.T
+
+        # Tạo MeshItem với dữ liệu đã xoay
         mesh_color = (1, 1, 1, 0.1)
         self.mesh_item = gl.GLMeshItem(vertexes=vertices, faces=faces, shader="normalColor", color=mesh_color)
-        self.mesh_item.rotate(90, 1, 0, 0)
-        self.mesh_item.rotate(180, 0, 0, 1)
+
+        self.view.addItem(self.mesh_item)
+        
+
         self.view.addItem(self.mesh_item)
 
     def add_axes(self):
