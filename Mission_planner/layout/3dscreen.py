@@ -76,7 +76,9 @@ class STLViewerWidget(QWidget):
 
         # Khởi động luồng đọc dữ liệu xoay giả lập
         self.rotation_thread = RotationThread()
-        self.rotation_thread.new_rotation.connect(self.rotate_model)  # Kết nối tín hiệu
+        self.rotation_thread.new_rotation.connect(self.rotate_model)  # xoay theo truc the gioi
+        self.rotation_thread.new_rotation.connect(self.attitude_indicator_update)  # xoay pitch roll
+        self.rotaion_thread.new_rotation.connect(self.compass_update)  # xoay compass
         self.rotation_thread.start()
 
     def on_stl_loaded(self, vertices, faces):
@@ -165,6 +167,13 @@ class STLViewerWidget(QWidget):
         transform.rotate(z_angle, 0, 0, 1)  # Xoay quanh trục Z
 
         self.mesh_item.setTransform(transform)  # Cập nhật mô hình
+
+    def attitude_indicator_update(self, roll, pitch, yaw):
+        pass
+    
+    def compass_update(self, heading):
+        pass
+    
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
