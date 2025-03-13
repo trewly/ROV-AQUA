@@ -149,4 +149,3 @@ while True:
         print("Hello")
         if cmd.command == "PARAM_REQUEST_READ":
             print("PARAM_REQUEST_READ")
-    time.sleep(1)

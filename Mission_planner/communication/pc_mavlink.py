@@ -28,7 +28,7 @@ def send_heartbeat(master):
             mavutil.mavlink.MAV_AUTOPILOT_INVALID,
             0, 0, 0
         )
-        time.sleep(0.1)
+        time.sleep(1)
 
 def send_control_cmd(master, cmd):
     master.mav.command_long_send(
@@ -158,7 +158,7 @@ def get_all_status(master):
 master = mavutil.mavlink_connection("udpout:169.254.54.120:50000")
 
 threading.Thread(target=send_heartbeat, args=(master,), daemon=True).start()
+threading.Thread(target=set_auto_heading, args=(master, 1, 0), daemon=True).start()
 
 while True:
-    set_auto_heading(master, 1, 0)
     time.sleep(1)
