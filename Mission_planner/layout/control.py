@@ -35,10 +35,10 @@ class Ui_Form(QWidget):
         self.overlay_widget.setWindowFlags(Qt.FramelessWindowHint)
 
         btn_width = 100
-        btn_height = 50
+        btn_height = 30
         btn_x = 850
         btn_y_start = 10
-        btn_spacing = 60
+        btn_spacing = 35
 
         self.surface_button = QPushButton("Surface", self.overlay_widget)
         self.surface_button.setGeometry(btn_x, btn_y_start, btn_width, btn_height)
@@ -76,6 +76,10 @@ class Ui_Form(QWidget):
             self.ctrl_timer.stop()
         else:
             super().keyReleaseEvent(event)
+
+    def closeEvent(self, event):
+        self.video_receiver.closeEvent(event)
+        event.accept()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

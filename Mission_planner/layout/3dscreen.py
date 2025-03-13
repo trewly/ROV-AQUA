@@ -22,7 +22,7 @@ view.setCameraPosition(distance=10)
 view.show()
 
 # Load mô hình STL
-vertices, faces = load_stl("ROV-AQUA\Mission_planner\layout\shell_assem.STL")
+vertices, faces = load_stl("Mission_planner\layout\shell_assem.STL")
 vertices -= np.mean(vertices, axis=0)  # Dịch toàn bộ mô hình về gốc tọa độ
 scale_factor = 0.1  # Thu nhỏ mô hình 50%
 vertices *= scale_factor
@@ -33,7 +33,5 @@ mesh_item = gl.GLMeshItem(vertexes=vertices, faces=faces, shader="shaded", drawE
 view.addItem(mesh_item)
 mesh_item.rotate(90, 1, 0, 0)  # Xoay 90 độ quanh trục X
 view.setCameraPosition(distance=80)  # Tăng khoảng cách camera để mô hình trông nhỏ hơn
-
-
 
 sys.exit(app.exec_())
