@@ -24,7 +24,9 @@ def run_streaming():
     global process
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     process.wait()
-#thread = threading.Thread(target=run_streaming)    
+thread = threading.Thread(target=run_streaming, daemon=True)
+thread.start()
+thread.join()
 
 def stop_video_stream():
     print("Stopping GStreamer UDP Stream...")
