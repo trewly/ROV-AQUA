@@ -1,4 +1,10 @@
 import pigpio
+import sys
+import os
+import time
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+
 from Autopilot.system_info.status import raspi_status as status
 
 FORWARD = 1
@@ -24,7 +30,8 @@ class Motor:
         self.pi.set_PWM_frequency(self.pin, BASE_FREQUENCY)
         self.pi.set_PWM_range(self.pin, 100)
         self.pi.set_PWM_dutycycle(self.pin, DUTY_CYCLE_STOP)
-
+        time.sleep(1)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
     def get_direction(self):
         current_duty_cycle = self.pi.get_PWM_dutycycle(self.pin)
         if current_duty_cycle == DUTY_CYCLE_STOP:
@@ -42,17 +49,17 @@ class Motor:
             return
         else:
             self.pi.set_PWM_dutycycle(self.pin, DUTY_CYCLE_STOP)
-    
     def increase_speed_forward(self):
         current_duty_cycle = self.pi.get_PWM_dutycycle(self.pin)
-        while current_duty_cycle < min(scale_to_pwm(status.read_status(key="max_speed_forward")), DUTY_CYCLE_MAX_FORWARD) :
+        while current_duty_cycle < DUTY_CYCLE_MAX_FORWARD:
             self.pi.set_PWM_dutycycle(self.pin, current_duty_cycle + 1)
-        
+            time.sleep(0.05)
+            
     def increase_speed_backward(self):
         current_duty_cycle = self.pi.get_PWM_dutycycle(self.pin)
-        while current_duty_cycle > max(scale_to_pwm(status.read_status(key="max_speed_backward")), DUTY_CYCLE_MAX_BACKWARD):
+        while current_duty_cycle > DUTY_CYCLE_MAX_BACKWARD:
             self.pi.set_PWM_dutycycle(self.pin, current_duty_cycle - 1)
-    
+            time.sleep(0.05)
 
 LEFT_MOTOR = Motor(5)
 RIGHT_MOTOR = Motor(6)
@@ -119,3 +126,12 @@ def set_speed_forward(right_pwm, left_pwm):
 def set_speed_depth(right_pwm, left_pwm):
     LEFT_DEPTH_MOTOR.set_duty_cycle(scale_to_pwm(left_pwm))
     RIGHT_DEPTH_MOTOR.set_duty_cycle(scale_to_pwm(right_pwm))
+
+duty = 75
+while True:
+    LEFT_MOTOR.pi.set_PWM_dutycycle(5, 75)
+    time.sleep(1)
+    while duty < 100:
+        LEFT_MOTOR.pi.set_PWM_dutycycle(5, duty)
+        duty = duty + 5
+        time.sleep(5)
