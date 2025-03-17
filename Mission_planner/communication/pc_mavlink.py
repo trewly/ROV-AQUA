@@ -2,6 +2,8 @@ from pymavlink import mavutil
 import time
 import threading
 
+import Mission_planner.status.pc_status as status
+
 UP = 1000
 DOWN = 1001
 LEFT = 1002
@@ -155,6 +157,12 @@ def get_all_status(master):
         master.target_system,
         master.target_component
     )
+
+def receive_status(master):
+    while True:
+        msg = master.recv_match(type="PARAM_VALUE", blocking=True)
+        print(msg.param_id.decode('utf-8'), msg.param_value)
+        status.update_status(msg.param_id.decode('utf-8'), msg.param_value)
 
 master = mavutil.mavlink_connection("udpout:169.254.54.120:50000")
 
