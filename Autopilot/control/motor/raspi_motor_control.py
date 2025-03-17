@@ -41,7 +41,7 @@ class Motor:
         else:
             return BACKWARD
 
-    def set_duty_cycle(self, duty_cycle):
+    def set_dutycycle(self, duty_cycle):
         self.pi.set_PWM_dutycycle(self.pin, duty_cycle)
 
     def stop(self):
@@ -49,17 +49,15 @@ class Motor:
             return
         else:
             self.pi.set_PWM_dutycycle(self.pin, DUTY_CYCLE_STOP)
-    def increase_speed_forward(self):
-        current_duty_cycle = self.pi.get_PWM_dutycycle(self.pin)
-        while current_duty_cycle < DUTY_CYCLE_MAX_FORWARD:
-            self.pi.set_PWM_dutycycle(self.pin, current_duty_cycle + 1)
-            time.sleep(0.05)
+    def set_speed_forward(self):
+        speed = status.read_status("max_speed_forward")
+        dutycycle = scale_to_pwm(speed)
+        self.pi.set_PWM_dutycycle(self.pin, dutycycle=dutycycle)
             
-    def increase_speed_backward(self):
-        current_duty_cycle = self.pi.get_PWM_dutycycle(self.pin)
-        while current_duty_cycle > DUTY_CYCLE_MAX_BACKWARD:
-            self.pi.set_PWM_dutycycle(self.pin, current_duty_cycle - 1)
-            time.sleep(0.05)
+    def set_speed_backward(self):
+        speed = status.read_status("max_speed_backward")
+        dutycycle = scale_to_pwm(speed)
+        self.pi.set_PWM_dutycycle(self.pin, dutycycle=dutycycle)
 
 LEFT_MOTOR = Motor(5)
 RIGHT_MOTOR = Motor(6)
@@ -73,42 +71,42 @@ def self_balance():
     previous_roll = status.read_status("previous_roll")
 
     if pitch - previous_pitch > 1:
-        LEFT_DEPTH_MOTOR.increase_speed_forward()
-        RIGHT_DEPTH_MOTOR.increase_speed_forward()
+        LEFT_DEPTH_MOTOR.set_speed_forward()
+        RIGHT_DEPTH_MOTOR.set_speed_forward()
     elif pitch - previous_pitch < -1:
-        LEFT_DEPTH_MOTOR.increase_speed_backward()
-        RIGHT_DEPTH_MOTOR.increase_speed_backward()
+        LEFT_DEPTH_MOTOR.set_speed_backward()
+        RIGHT_DEPTH_MOTOR.set_speed_backward()
 
     if roll - previous_roll > 1:
-        LEFT_DEPTH_MOTOR.increase_speed_forward()
-        RIGHT_DEPTH_MOTOR.increase_speed_backward()
+        LEFT_DEPTH_MOTOR.set_speed_forward()
+        RIGHT_DEPTH_MOTOR.set_speed_backward()
     elif roll - previous_roll < -1:
-        LEFT_DEPTH_MOTOR.increase_speed_backward()
-        RIGHT_DEPTH_MOTOR.increase_speed_forward()
+        LEFT_DEPTH_MOTOR.set_speed_backward()
+        RIGHT_DEPTH_MOTOR.set_speed_forward()
 
 def move_forward():
-    LEFT_MOTOR.increase_speed_forward()
-    RIGHT_MOTOR.increase_speed_forward()
+    LEFT_MOTOR.set_speed_forward()
+    RIGHT_MOTOR.set_speed_forward()
 
 def move_backward():
-    LEFT_MOTOR.increase_speed_backward()
-    RIGHT_MOTOR.increase_speed_backward()
+    LEFT_MOTOR.set_speed_backward()
+    RIGHT_MOTOR.set_speed_backward()
 
 def turn_left():
-    LEFT_MOTOR.increase_speed_backward()
-    RIGHT_MOTOR.increase_speed_forward()
+    LEFT_MOTOR.set_speed_backward()
+    RIGHT_MOTOR.set_speed_forward()
 
 def turn_right():
-    LEFT_MOTOR.increase_speed_forward()
-    RIGHT_MOTOR.increase_speed_backward()
+    LEFT_MOTOR.set_speed_forward()
+    RIGHT_MOTOR.set_speed_backward()
 
 def dive():
-    LEFT_DEPTH_MOTOR.increase_speed_forward()
-    RIGHT_DEPTH_MOTOR.increase_speed_forward()
+    LEFT_DEPTH_MOTOR.set_speed_forward()
+    RIGHT_DEPTH_MOTOR.set_speed_forward()
 
 def surface():
-    LEFT_DEPTH_MOTOR.increase_speed_backward()
-    RIGHT_DEPTH_MOTOR.increase_speed_backward()
+    LEFT_DEPTH_MOTOR.set_speed_backward()
+    RIGHT_DEPTH_MOTOR.set_speed_backward()
 
 def stop(motor):
     motor.stop()
@@ -127,11 +125,12 @@ def set_speed_depth(right_pwm, left_pwm):
     LEFT_DEPTH_MOTOR.set_duty_cycle(scale_to_pwm(left_pwm))
     RIGHT_DEPTH_MOTOR.set_duty_cycle(scale_to_pwm(right_pwm))
 
-duty = 75
+speed = 0
 while True:
-    LEFT_MOTOR.pi.set_PWM_dutycycle(5, 75)
+    LEFT_MOTOR.stop()
     time.sleep(1)
-    while duty < 100:
-        LEFT_MOTOR.pi.set_PWM_dutycycle(5, duty)
-        duty = duty + 5
+    while speed < 100:
+        speed += 10
+        status.update_status("max_speed_forward", speed)
+        LEFT_MOTOR.set_speed_forward()
         time.sleep(5)
