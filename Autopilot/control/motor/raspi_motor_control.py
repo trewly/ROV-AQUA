@@ -126,6 +126,7 @@ def set_speed_depth(right_pwm, left_pwm):
     RIGHT_DEPTH_MOTOR.set_duty_cycle(scale_to_pwm(right_pwm))
 
 speed = 0
+status.update_status("max_speed_forward",sp)
 while True:
     LEFT_MOTOR.stop()
     time.sleep(1)
