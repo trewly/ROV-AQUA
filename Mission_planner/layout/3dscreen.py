@@ -16,6 +16,8 @@ import random
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))) 
 
+from Mission_planner.controller import state_status #phan dung de doc du lieu
+
 #phan gia lap xoay
 class RotationThread(QThread):
     new_rotation = pyqtSignal(float, float, float)  # Signal gửi 3 giá trị (pitch, roll, yaw)
@@ -71,7 +73,6 @@ class STLLoaderThread(QThread):
             faces[i] = [i * 3, i * 3 + 1, i * 3 + 2]
 
         self.finished.emit(vertices, faces)
-
 
 class STLViewerWidget(QWidget):
     def __init__(self, stl_file):
