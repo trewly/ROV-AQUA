@@ -87,9 +87,11 @@ def handle_cmd(master, cmd):
 
         elif cmd.command == SET_SPEED_FORWARD:
             status.update_status(key="max_speed_forward", value=cmd.param1)
+            print("Speed set to: ", cmd.param1)
 
         elif cmd.command == SET_SPEED_BACKWARD:
             status.update_status(key="max_speed_backward", value=cmd.param1)
+            print("Speed set to: ", cmd.param1)
         
         elif cmd.command == SET_LIGHT:
             status.update_status(key="light", value=cmd.param1)
