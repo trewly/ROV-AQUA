@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt
 import os
 import sys
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
 import Mission_planner.communication.pc_mavlink as mavlink
 import time
