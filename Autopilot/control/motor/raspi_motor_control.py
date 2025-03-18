@@ -125,13 +125,13 @@ from Autopilot.system_info.status import raspi_status as status
 #     LEFT_DEPTH_MOTOR.set_duty_cycle(scale_to_pwm(left_pwm))
 #     RIGHT_DEPTH_MOTOR.set_duty_cycle(scale_to_pwm(right_pwm))
 
-# speed = 0
-# while True:
-#     LEFT_MOTOR.stop()
-#     time.sleep(1)
-#     while speed < 100:
-#         speed += 10
-#         status.update_status("max_speed_forward", speed)
-#         LEFT_MOTOR.set_speed_forward()
-#         time.sleep(5)
-status.update_status("temp", 1)
+speed = 0
+status.update_status("max_speed_forward",sp)
+while True:
+    LEFT_MOTOR.stop()
+    time.sleep(1)
+    while speed < 100:
+        speed += 10
+        status.update_status("max_speed_forward", speed)
+        LEFT_MOTOR.set_speed_forward()
+        time.sleep(5)
