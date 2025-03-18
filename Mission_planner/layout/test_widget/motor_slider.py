@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 import Mission_planner.communication.pc_mavlink as mavlink
 import time
 
-mav = mavlink.MavlinkController()
+
 
 class SliderApp(QWidget):
     def __init__(self):
@@ -48,8 +48,8 @@ class SliderApp(QWidget):
         self.setLayout(layout)
 
     def update_label1(self):
-        mav.set_max_speed_forward(self.motor1.value())
-        mav.set_max_speed_backward(self.motor1.value())
+        mavlink.MAV.set_max_speed_forward(self.motor1.value())
+        mavlink.MAV.set_max_speed_backward(self.motor1.value())
         print(f"motor xy: {self.motor1.value()}")
         self.label1.setText(f"motor xy: {self.motor1.value()}")
     def update_label2(self):

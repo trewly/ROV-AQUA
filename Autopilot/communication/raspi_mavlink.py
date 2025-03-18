@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 
 from Autopilot.system_info.status import raspi_status as status
 from Autopilot.system_info.sensor import raspi_sensor_calibrate as calibrate
-from Autopilot.control.motor import raspi_motor_control as motor
+from Autopilot.control.motor import raspi_motor_control as rov
 from Autopilot.control.common import raspi_timer as timer
 
 
@@ -48,27 +48,27 @@ def handle_cmd(master, cmd):
         if status.read_status(key="mode") == "manual":
             if cmd.command == UP:
                 timer.marked()
-                motor.surface()
+                rov.surface()
             elif cmd.command == DOWN:
                 timer.marked()
-                motor.dive()
+                rov.dive()
             elif cmd.command == LEFT:
                 timer.marked()
-                motor.turn_left()
+                rov.turn_left()
             elif cmd.command == RIGHT:
                 timer.marked()
-                motor.turn_right()
+                rov.turn_right()
             elif cmd.command == FORWARD:
                 timer.marked()
-                motor.move_forward()
+                rov.move_forward()
             elif cmd.command == BACKWARD:
                 timer.marked()
-                motor.move_backward()
+                rov.move_backward()
             elif cmd.command == STOP:
-                motor.stop_all()
+                rov.stop_all()
 
         if timer.get_time_difference() > 1.5:
-            motor.stop_all()  
+            rov.stop_all()  
         
         if cmd.command == SET_AUTO_HEADING:
             status.update_status(key="auto_heading", value=cmd.param1)

@@ -1,9 +1,12 @@
 from .mode_change import ModeChangeDialog
+from Mission_planner.communication.pc_mavlink import MAV
 
 def on_surface_button_clicked():
+    MAV.send_control_cmd(MAV.SURFACE)
     print("Surface button clicked")
 
 def on_dive_button_clicked():
+    MAV.send_control_cmd(MAV.DIVE)
     print("Dive button clicked")
 
 def on_mode_change_button_clicked():

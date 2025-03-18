@@ -5,8 +5,8 @@ import threading
 import Mission_planner.status.pc_status as status
 
 class MavlinkController:
-    UP = 1000
-    DOWN = 1001
+    SURFACE = 1000
+    DIVE = 1001
     LEFT = 1002
     RIGHT = 1003
     FORWARD = 1004
@@ -146,3 +146,5 @@ class MavlinkController:
             msg = self.master.recv_match(type="PARAM_VALUE", blocking=True)
             print(msg.param_id.decode('utf-8'), msg.param_value)
             status.update_status(msg.param_id.decode('utf-8'), msg.param_value)
+
+MAV = MavlinkController()

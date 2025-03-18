@@ -2,6 +2,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem
 from PyQt5.QtCore import Qt, QPointF, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor
+from Mission_planner.communication.pc_mavlink import MAV
 
 class VirtualJoystick(QGraphicsView):
     joystickMoved = pyqtSignal(float, float)
@@ -49,7 +50,7 @@ class VirtualJoystick(QGraphicsView):
         if not self.hasFocus():
             return super().keyPressEvent(event)
 
-        if event.isAutoRepeat():  # Bỏ qua Key Repeat
+        if event.isAutoRepeat():
             return
 
         key = event.key()
@@ -65,7 +66,7 @@ class VirtualJoystick(QGraphicsView):
         if not self.hasFocus():
             return super().keyReleaseEvent(event)
 
-        if event.isAutoRepeat():  # Bỏ qua Key Repeat
+        if event.isAutoRepeat():
             return
 
         key = event.key()
@@ -99,7 +100,21 @@ class VirtualJoystick(QGraphicsView):
         self.move_knob(x, y)
 
     def on_joystick_moved(self, x, y):
-        print(f"Joystick X: {x:.2f}, Y: {y:.2f}")
+        if x == 0 and y == 0:
+            print("STOP")
+            MAV.send_control_cmd(MAV.STOP)
+        elif x == 1 and y == 0:
+            print("RIGHT")
+            MAV.send_control_cmd(MAV.RIGHT)
+        elif x == -1 and y == 0:
+            print("LEFT")
+            MAV.send_control_cmd(MAV.LEFT)
+        elif x == 0 and y == 1:
+            print("FORWARD")
+            MAV.send_control_cmd(MAV.FORWARD)
+        elif x == 0 and y == -1:
+            print("BACKWARD")
+            MAV.send_control_cmd(MAV.BACKWARD)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
