@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem
-from PyQt5.QtCore import Qt, QPointF, QTimer, pyqtSignal
+from PyQt5.QtCore import Qt, QPointF, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor
 
 class VirtualJoystick(QGraphicsView):
@@ -31,12 +31,9 @@ class VirtualJoystick(QGraphicsView):
 
         self.center = QPointF((size - knob_size) / 2, (size - knob_size) / 2)
 
-        self.current_x = 0
-        self.current_y = 0
-
+        self.pressed_keys_order = []
+        
         self.joystickMoved.connect(self.on_joystick_moved)
-
-        self.keys_pressed = set()
 
     def move_knob(self, x, y):
         dx = x * self.max_distance
@@ -52,9 +49,15 @@ class VirtualJoystick(QGraphicsView):
         if not self.hasFocus():
             return super().keyPressEvent(event)
 
-        if event.key() in {Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down}:
-            self.keys_pressed.add(event.key())
-            self.update_knob_position()
+        if event.isAutoRepeat():  # Bỏ qua Key Repeat
+            return
+
+        key = event.key()
+        if key in {Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down}:
+            if key not in self.pressed_keys_order:
+                self.pressed_keys_order.append(key)
+                print(f"Key Pressed: {key}, Current pressed keys: {self.pressed_keys_order}")
+                self.update_knob_position()
         else:
             super().keyPressEvent(event)
 
@@ -62,24 +65,36 @@ class VirtualJoystick(QGraphicsView):
         if not self.hasFocus():
             return super().keyReleaseEvent(event)
 
-        if event.key() in {Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down}:
-            self.keys_pressed.discard(event.key())
-            self.update_knob_position()
+        if event.isAutoRepeat():  # Bỏ qua Key Repeat
+            return
+
+        key = event.key()
+        if key in self.pressed_keys_order:
+            self.pressed_keys_order.remove(key)
+            print(f"Key Released: {key}, Remaining pressed keys: {self.pressed_keys_order}")
+
+        if not self.pressed_keys_order:
+            self.reset_knob()
         else:
             super().keyReleaseEvent(event)
+            self.update_knob_position()
 
     def update_knob_position(self):
-        x = 0
-        y = 0
+        if len(self.pressed_keys_order) == 0:
+            self.move_knob(0, 0)
+            return
 
-        if Qt.Key_Left in self.keys_pressed:
-            x -= 1
-        if Qt.Key_Right in self.keys_pressed:
-            x += 1
-        if Qt.Key_Up in self.keys_pressed:
-            y += 1
-        if Qt.Key_Down in self.keys_pressed:
-            y -= 1
+        key = self.pressed_keys_order[0]
+        x, y = 0, 0
+
+        if key == Qt.Key_Left:
+            x = -1
+        elif key == Qt.Key_Right:
+            x = 1
+        elif key == Qt.Key_Up:
+            y = 1
+        elif key == Qt.Key_Down:
+            y = -1
 
         self.move_knob(x, y)
 
