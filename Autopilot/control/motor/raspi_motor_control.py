@@ -1,4 +1,4 @@
-#import pigpio
+import pigpio
 import sys
 import os
 import time
