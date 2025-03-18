@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import pyqtgraph.opengl as gl
 from stl import mesh
-from PyQt5.QtWidgets import QApplication, QWidget, QGraphicsScene,QGraphicsItem,QGraphicsView,QVBoxLayout, QHBoxLayout,QGraphicsItem
+from PyQt5.QtWidgets import QApplication, QWidget,QFrame, QGraphicsScene,QGraphicsItem,QGraphicsView,QVBoxLayout, QHBoxLayout,QGraphicsItem
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtGui import QTransform
 from PyQt5.QtCore import Qt
@@ -13,6 +13,8 @@ from scipy.spatial.transform import Rotation as R
 from PyQt5.QtGui import QMatrix4x4
 import time
 import random
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))) 
 
 #phan gia lap xoay
 class RotationThread(QThread):
@@ -82,7 +84,7 @@ class STLViewerWidget(QWidget):
         self.view = gl.GLViewWidget()
         layout.addWidget(self.view)
         self.view.setCameraPosition(distance=80)
-        self.view.setBackgroundColor((240, 240, 255))
+        self.view.setBackgroundColor((255, 255, 255))
         self.view.setFixedSize(720, 540)
         self.mesh_item = None
         self.stl_loader = STLLoaderThread(stl_file)
@@ -109,6 +111,10 @@ class STLViewerWidget(QWidget):
         instrument_layout.addWidget(self.compass_view)
         self.compass_init()
 
+        self.compass_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.compass_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.compass_view.setFrameShape(QFrame.NoFrame)
+
         #them widget attitude indicator
         self.ai_faceZ = 1             
         self.ai_caseZ = 2             
@@ -121,6 +127,9 @@ class STLViewerWidget(QWidget):
         instrument_layout.addWidget(self.ai_view)
         self.attitude_indicator_init()
 
+        self.ai_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.ai_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.ai_view.setFrameShape(QFrame.NoFrame)
 
         # Khởi động luồng đọc dữ liệu xoay giả lập
         self.rotation_thread = RotationThread()
@@ -309,7 +318,7 @@ class STLViewerWidget(QWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    stl_path = os.path.join(script_dir, "shell_assem.STL")
+    stl_path = os.path.join(script_dir, "resources\\shell_assem.STL")
 
     viewer = STLViewerWidget(stl_path)
     viewer.show()
