@@ -15,7 +15,7 @@ class SliderApp(QWidget):
         self.motor1.setMinimum(0)
         self.motor1.setMaximum(100)
         self.motor1.setValue(50)
-        self.motor1.valueChanged.connect(self.update_label1)
+        self.motor1.sliderReleased.connect(self.update_label1)
 
         self.label1 = QLabel("motor xy: 50")
         
@@ -24,7 +24,7 @@ class SliderApp(QWidget):
         self.motor2.setMinimum(0)
         self.motor2.setMaximum(200)
         self.motor2.setValue(100)
-        self.motor2.valueChanged.connect(self.update_label2)
+        self.motor2.sliderReleased.connect(self.update_label2)
 
         self.label2 = QLabel("motor z: 100")
 
@@ -36,11 +36,13 @@ class SliderApp(QWidget):
 
         self.setLayout(layout)
 
-    def update_label1(self, value):
-        self.label1.setText(f"motor xy: {value}")
+    def update_label1(self):
+        print(f"motor xy: {self.motor1.value()}")
+        self.label1.setText(f"motor xy: {self.motor1.value()}")
 
-    def update_label2(self, value):
-        self.label2.setText(f"motor z: {value}")
+    def update_label2(self):
+        print(f"motor z: {self.motor2.value()}")
+        self.label2.setText(f"motor z: {self.motor2.value()}")
 
 if __name__ == "__main__":
     app = QApplication([])
