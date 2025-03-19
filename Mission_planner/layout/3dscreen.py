@@ -16,7 +16,7 @@ import random
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))) 
 
-from Mission_planner.controller import state_status #phan dung de doc du lieu
+#from Mission_planner.controller import state_status #phan dung de doc du lieu
 
 #phan gia lap xoay
 class RotationThread(QThread):

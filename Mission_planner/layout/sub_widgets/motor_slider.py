@@ -29,7 +29,8 @@ class MotorSlider(QWidget):
         self.motor1.sliderReleased.connect(self.update_label1)
 
         self.label1 = QLabel("motor xy: 50")
-        
+        self.label1.setStyleSheet("font-size:18px")
+
         # Tạo Slider 2
         self.motor2 = QSlider(Qt.Horizontal)
         self.motor2.setMinimum(0)
@@ -38,6 +39,7 @@ class MotorSlider(QWidget):
         self.motor2.sliderReleased.connect(self.update_label2)
 
         self.label2 = QLabel("motor z: 100")
+        self.label2.setStyleSheet("font-size:18px")
 
         # Thêm vào layout
         layout.addWidget(self.label1)

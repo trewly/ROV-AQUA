@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QGridLayout, QHBoxLayout
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 
@@ -15,33 +15,119 @@ from Mission_planner.status import pc_status as status
 
 # print("Current sys.path:", sys.path)
 
+infoStyle="""
+            QWidget {
+                border: 2px solid black;  /* Viền màu đen */
+                border-radius: 10px;      /* Bo góc */
+                background-color: lightgray; /* Màu nền nhẹ */
+            }
+        """
+
+normal="""
+        QLabel {
+            background-color: transparent; 
+            border: none;  
+            font-size: 20px;     
+            font-weight: bold;                                               
+        }
+    """
+
+highlightValue="""
+        QLabel {
+                    background-color: transparent; 
+                    border: none;  
+                    font-size: 40px;     
+                    font-weight: bold;                                               
+                }
+    """
+
 class settingLayout(QWidget):
     def __init__(self):
         super().__init__()
-        self.setFixedSize(540,960)
-        layout = QVBoxLayout()  # Layout chính
-        
+        self.setFixedSize(850,1000)
+
         #khoi tao view widget
         self.view_init()
-
         #khoi tao canvas
         self.canvas_init()
-
+    
         #khoi tao bar thong so
         self.info_bar_init()
 
         #khoi tao bar setting
         self.setting_bar_init()
 
-        self.setLayout(layout)  # Đặt layout cho widget
+        #self.setLayout(mainLayout)
+
     def view_init(self):
-        pass
+        self.viewWidget = QWidget(self)
+        self.viewWidget.setFixedSize(850, 70)
+        
+        # View label
+        self.viewLabel = QLabel("View", self.viewWidget)
+        self.viewLabel.setStyleSheet("font-size: 48px; font-weight: bold;")
+        self.viewLabel.move(20,10)  # Di chuyển label "View" tới vị trí (0, 10)
+        
+        # status text
+        self.statusLabel = QLabel("Vehicle unconnected", self.viewWidget)
+        self.statusLabel.setStyleSheet("font-size: 20px; ")
+        self.statusLabel.move(605,36)  # Di chuyển label trạng thái gần vị trí mong muốn
+        
+        # status dot
+        self.statusDot = QLabel(self.viewWidget)
+        self.statusDot.setFixedSize(20, 20)
+        self.statusDot.setStyleSheet("border-radius: 10px; background-color: gray; border: 1px solid black;")
+        self.statusDot.move(568,39)  
+
+        self.viewWidget.setGeometry(0, 0, 850, 70)
+
     def canvas_init(self):
-        pass 
+        self.mainCanvas=canvas.CanvasWidget()
+        self.mainCanvas.move(20,100)      
+        self.mainCanvas.setParent(self) 
+
     def info_bar_init(self):
-        pass
+
+        #tao box hien thi nhiet do
+        self.tempInfoWidget = QWidget(self)
+        self.tempInfoWidget.setFixedSize(178,95)
+
+        self.tempInfoWidget.setStyleSheet(infoStyle)
+        tempLable=QLabel("Temp",self.tempInfoWidget)
+        tempLable.setStyleSheet(normal)
+        tempLable.move(60,10)
+
+        tempValue=QLabel("40o",self.tempInfoWidget)
+        tempValue.setStyleSheet(highlightValue)
+        tempValue.move(58,36)
+        
+        self.tempInfoWidget.setGeometry(20,630,178,95)
+
+        #tao box hien thi do sau
+        self.depthInfoWidget = QWidget(self)
+        self.depthInfoWidget.setFixedSize(178,95)
+
+        self.depthInfoWidget.setStyleSheet(infoStyle)
+
+        depthLable=QLabel("Depth",self.depthInfoWidget)
+        depthLable.setStyleSheet(normal)
+        depthLable.move(60,10)
+
+        depthValue=QLabel("5m",self.depthInfoWidget)
+        depthValue.setStyleSheet(highlightValue)
+        depthValue.move(58,36)
+
+        self.depthInfoWidget.setGeometry(210,630,178,95)
+
     def setting_bar_init(self):
-        pass
+        self.viewLabel = QLabel("Setting", self)
+        self.viewLabel.setStyleSheet("font-size: 36px; font-weight: bold;")
+        self.viewLabel.move(20,750)  # Di chuyển label "View" tới vị trí (0, 10)
+        
+        #add speed slider
+        self.speedSlider=motor_slider.MotorSlider()
+        self.speedSlider.move(20,780)      
+        self.speedSlider.setParent(self) 
 
 
 class StatusReaderThread(QThread):
