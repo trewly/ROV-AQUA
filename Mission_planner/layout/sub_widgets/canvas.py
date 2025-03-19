@@ -67,15 +67,15 @@ class MyWidget(QWidget):
         self.waypoint_menu.addAction("Pattern", lambda: self.select_waypoint_mode("pattern"))
         #self.waypoint_menu.setStyleSheet(button_style)
 
-        self.button2d = QPushButton("2D",self)
-        self.button2d.setStyleSheet(button_style)
-        self.button2d.setFixedSize(90, 50)
-        self.button2d.move(600, 5) 
+        # self.button2d = QPushButton("2D",self)
+        # self.button2d.setStyleSheet(button_style)
+        # self.button2d.setFixedSize(90, 50)
+        # self.button2d.move(600, 5) 
 
-        self.button3d = QPushButton("3D",self)
-        self.button3d.setStyleSheet(button_style)
-        self.button3d.setFixedSize(90, 50)
-        self.button3d.move(695, 5) 
+        # self.button3d = QPushButton("3D",self)
+        # self.button3d.setStyleSheet(button_style)
+        # self.button3d.setFixedSize(90, 50)
+        # self.button3d.move(695, 5) 
 
         #clear button
         self.button_clear = QPushButton("Clear", self)
