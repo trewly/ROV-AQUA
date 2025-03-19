@@ -1,10 +1,8 @@
 import sys
-import cv2
 import os
-import numpy as np
-from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QPushButton
-from PyQt5.QtGui import QImage, QPixmap
+
+from PyQt5 import QtCore
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton
 from PyQt5.QtCore import Qt
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))) 
@@ -55,9 +53,8 @@ class Ui_Form(QWidget):
         self.joystick.setGeometry(QtCore.QRect(10, 370, 120, 120))
 
     def keyPressEvent(self, event):
-        """ Xử lý khi nhấn phím """
         if event.isAutoRepeat():
-            return  # Bỏ qua sự kiện tự lặp do hệ thống
+            return
 
         key = event.key()
         if key == Qt.Key_Shift:

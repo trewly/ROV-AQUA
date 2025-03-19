@@ -55,5 +55,3 @@ def read_status(key):
     with open("Mission_planner/status/status.json", "r") as file:
         data = json.load(file)
     return data[key]
-
-init_status()
