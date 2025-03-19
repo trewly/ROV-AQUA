@@ -11,7 +11,7 @@ import time
 
 
 
-class SliderApp(QWidget):
+class MotorSlider(QWidget):
     def __init__(self):
 
         super().__init__()
@@ -58,6 +58,6 @@ class SliderApp(QWidget):
 
 if __name__ == "__main__":
     app = QApplication([])
-    window = SliderApp()
+    window = MotorSlider()
     window.show()
     app.exec_()

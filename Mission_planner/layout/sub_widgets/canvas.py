@@ -21,7 +21,7 @@ button_style="""
             }
         """
 
-class MyWidget(QWidget):
+class CanvasWidget(QWidget):
     def __init__(self):
         super().__init__()
         self.setFixedSize(800, 500)
@@ -140,6 +140,6 @@ class MyWidget(QWidget):
 
 if __name__ == "__main__":
     app = QApplication([])
-    window = MyWidget()
+    window = CanvasWidget()
     window.show()
     app.exec_()
