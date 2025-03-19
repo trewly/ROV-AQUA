@@ -61,9 +61,9 @@ class Ui_Form(QWidget):
 
         key = event.key()
         if key == Qt.Key_Shift:
-            buttons_controller.on_surface_button_clicked()  # Gửi lệnh một lần
+            buttons_controller.on_surface_button_clicked()
         elif key == Qt.Key_Control:
-            buttons_controller.on_dive_button_clicked()  # Gửi lệnh một lần
+            buttons_controller.on_dive_button_clicked()
         elif key == Qt.Key_L:
             self.light_button.click()
         else:
@@ -71,7 +71,7 @@ class Ui_Form(QWidget):
 
     def keyReleaseEvent(self, event):
         if event.isAutoRepeat():
-            return  # Bỏ qua sự kiện tự lặp do hệ thống
+            return
 
         key = event.key()
         if key == Qt.Key_Shift:

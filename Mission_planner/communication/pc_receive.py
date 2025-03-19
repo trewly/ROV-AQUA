@@ -1,7 +1,7 @@
 import socket
 import subprocess
 
-def receive_image(server_ip, server_port, save_path):
+def receive_file(server_ip, server_port, save_path):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((server_ip, server_port))
     server_socket.listen(1)
@@ -24,7 +24,7 @@ def receive_image(server_ip, server_port, save_path):
     conn.close()
     server_socket.close()
 
-#receive_image(server_ip="0.0.0.0", server_port=5001, save_path="output.jpg")
+receive_file(server_ip="0.0.0.0", server_port=5001, save_path="Mission_planner\status\status.json")
 
 def receive_video(server_ip, server_port, save_path):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -49,4 +49,4 @@ def receive_video(server_ip, server_port, save_path):
 
     print(f"Đã chuyển đổi thành: {mp4_path}")
 
-receive_video(server_ip="0.0.0.0", server_port=5001, save_path="received_video.h264")
+#receive_video(server_ip="0.0.0.0", server_port=5001, save_path="received_video.h264")

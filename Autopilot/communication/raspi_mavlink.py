@@ -2,6 +2,7 @@ import time
 import threading
 import sys
 import os
+import socket
 
 from pymavlink import mavutil
 
@@ -11,8 +12,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 from Autopilot.system_info.status import raspi_status as status
 from Autopilot.system_info.sensor import raspi_sensor_calibrate as calibrate
 from Autopilot.control.motor import raspi_motor_control as rov
-from Autopilot.control.common import raspi_timer as timer
 
+last_hearbeat = 0
 
 
 SURFACE = 1000
@@ -34,130 +35,112 @@ SET_CAMERA = 1024
 
 START_MAG_CALIBRATION = 1025
 
-def received_cmd(master):
-    msg = master.recv_match(blocking=True)
-    if msg:
-        return msg
-    return None
-            
-def handle_cmd(master, cmd):
-    if cmd == None:
+def handle_msg(master, msg):
+    if msg == None:
         return
 
-    if cmd.get_type() == "COMMAND_LONG":
+    if msg.get_type() == "COMMAND_LONG":
         if status.read_status(key="mode") == "manual":
-            if cmd.command == SURFACE:
+            if msg.command == SURFACE:
                 print("SURFACE")
-                timer.marked()
                 rov.surface()
-            elif cmd.command == DIVE:
+            elif msg.command == DIVE:
                 print("DIVE")
-                timer.marked()
                 rov.dive()
-            elif cmd.command == LEFT:
+            elif msg.command == LEFT:
                 print("LEFT")
-                timer.marked()
                 rov.turn_left()
-            elif cmd.command == RIGHT:
+            elif msg.command == RIGHT:
                 print("RIGHT")
-                timer.marked()
                 rov.turn_right()
-            elif cmd.command == FORWARD:
+            elif msg.command == FORWARD:
                 print("FORWARD")
-                timer.marked()
                 rov.move_forward()
-            elif cmd.command == BACKWARD:
+            elif msg.command == BACKWARD:
                 print("BACKWARD")
-                timer.marked()
                 rov.move_backward()
-            elif cmd.command == STOP:
+            elif msg.command == STOP:
                 print("STOP")
                 rov.stop_all()
-
-        if timer.get_time_difference() > 1.5:
-            rov.stop_all()  
         
-        if cmd.command == SET_MANUAL:
+        if msg.command == SET_MANUAL:
             status.update_status(key="mode", value="manual")
             status.update_status(key="auto_heading", value=False)
             status.update_status(key="auto_depth", value=False)
             print("Manual mode set")
-        elif cmd.command == SET_AUTO_HEADING:
-            status.update_status(key="auto_heading", value=cmd.param1)
-            status.update_status(key="target_heading", value=cmd.param2)
+        elif msg.command == SET_AUTO_HEADING:
+            status.update_status(key="auto_heading", value=msg.param1)
+            status.update_status(key="target_heading", value=msg.param2)
             status.update_status(key="mode", value="auto_heading")
-            print("Auto heading set to: ", cmd.param1, cmd.param2)
+            print("Auto heading set to: ", msg.param1, msg.param2)
 
-        elif cmd.command == SET_AUTO_DEPTH:
-            status.update_status(key="auto_depth", value=cmd.param1)
-            status.update_status(key="target_depth", value=cmd.param2)
+        elif msg.command == SET_AUTO_DEPTH:
+            status.update_status(key="auto_depth", value=msg.param1)
+            status.update_status(key="target_depth", value=msg.param2)
             status.update_status(key="mode", value="auto_depth")
-            print("Auto depth set to: ", cmd.param1, cmd.param2)
+            print("Auto depth set to: ", msg.param1, msg.param2)
 
-        elif cmd.command == SET_PID:
-            status.update_status(key="Kp", value=cmd.param1)
-            status.update_status(key="Ki", value=cmd.param2)
-            status.update_status(key="Kd", value=cmd.param3)
-            print("PID set to: ", cmd.param1, cmd.param2, cmd.param3)
+        elif msg.command == SET_PID:
+            status.update_status(key="Kp", value=msg.param1)
+            status.update_status(key="Ki", value=msg.param2)
+            status.update_status(key="Kd", value=msg.param3)
+            print("PID set to: ", msg.param1, msg.param2, msg.param3)
 
-        elif cmd.command == SET_SPEED_FORWARD:
-            status.update_status(key="max_speed_forward", value=cmd.param1)
-            print("Speed set to: ", cmd.param1)
+        elif msg.command == SET_SPEED_FORWARD:
+            status.update_status(key="max_speed_forward", value=msg.param1)
+            print("Speed set to: ", msg.param1)
 
-        elif cmd.command == SET_SPEED_BACKWARD:
-            status.update_status(key="max_speed_backward", value=cmd.param1)
-            print("Speed set to: ", cmd.param1)
+        elif msg.command == SET_SPEED_BACKWARD:
+            status.update_status(key="max_speed_backward", value=msg.param1)
+            print("Speed set to: ", msg.param1)
         
-        elif cmd.command == SET_LIGHT:
-            status.update_status(key="light", value=cmd.param1)
-            print("Light set to: ", cmd.param1)
+        elif msg.command == SET_LIGHT:
+            status.update_status(key="light", value=msg.param1)
+            print("Light set to: ", msg.param1)
 
-        elif cmd.command == SET_CAMERA:
-            status.update_status(key="camera", value=cmd.param1)
-            print("Camera set to: ", cmd.param1)
+        elif msg.command == SET_CAMERA:
+            status.update_status(key="camera", value=msg.param1)
+            print("Camera set to: ", msg.param1)
         
-        elif cmd.command == START_MAG_CALIBRATION:
+        elif msg.command == START_MAG_CALIBRATION:
             calibrate.calibrate_mag()
-        
-    elif cmd.get_type() == "PARAM_REQUEST_READ":
-        param_id = cmd.param_id.decode('utf-8').strip('\x00')
-        param_value = status.read_status(key=param_id)
-        master.mav.param_value_send(
-            param_id.encode('utf-8'),
-            param_value,
-            mavutil.mavlink.MAV_PARAM_TYPE_REAL32,
-            -1,
-            0
-        )
 
-    elif cmd.get_type() == "PARAM_REQUEST_LIST":
-        for param_id, param_value in status.read_all_status().items():
-            master.mav.param_value_send(
-                param_id.encode('utf-8'),
-                param_value,
-                mavutil.mavlink.MAV_PARAM_TYPE_REAL32,
-                -1,
-                len(status.read_all_status())
-            )
-    elif cmd.get_type() == "HEARTBEAT":
-        return
-    
-def wait_for_heartbeat(master):
+def received_msg(master):
     while True:
-        msg = master.recv_match(type='HEARTBEAT', blocking=True, timeout=5)
-        if msg:
-            print("Heartbeat received from system (system %u component %u)" % (msg.get_srcSystem(), msg.get_srcComponent()))
-        else:
-            print("Heartbeat timeout, no heartbeat received")
-        time.sleep(0.1)
+        msg = master.recv_match(blocking=True)
+        if msg.get_type() == "HEARTBEAT":
+            last_hearbeat = time.time()
 
-master = mavutil.mavlink_connection("udp:0.0.0.0:50000")
+        elif time.time() - last_hearbeat > 5:
+            print("Connection lost")
+            continue
+        handle_msg(master, msg)
 
-heartbeat_thread = threading.Thread(target=wait_for_heartbeat, args=(master,))
-heartbeat_thread.daemon = True
-heartbeat_thread.start()
 
-while True:
-    cmd = received_cmd(master)
-    handle_cmd(master, cmd)
-    time.sleep(0.1)
+def send_status(master):
+    while True:
+        status_data = status.read_all_status()
+        for key, value in status_data.items():
+            try:
+                master.mav.param_value_send(
+                    key.encode("utf-8"),
+                    float(value),
+                    mavutil.mavlink.MAV_PARAM_TYPE_REAL32,
+                    -1,
+                    len(status_data)
+                )
+            except Exception as e:
+                print(f"Error sending {key}: {e}")
+        time.sleep(1)
+
+
+# master_receive = mavutil.mavlink_connection("udpin:0.0.0.0:50000")
+# thread1 = threading.Thread(target=received_msg, args=(master_receive,), daemon=True)
+# thread1.start()
+
+# master_send = mavutil.mavlink_connection("udpout:169.254.54.120:50001")
+# thread2 = threading.Thread(target=send_status, args=(master_send,), daemon=True)
+# thread2.start()
+
+# while True:
+#     time.sleep(1)
