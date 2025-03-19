@@ -5,9 +5,17 @@ def on_surface_button_clicked():
     MAV.send_control_cmd(MAV.SURFACE)
     print("Surface button clicked")
 
+def on_surface_button_released():
+    MAV.send_control_cmd(MAV.STOP)
+    print("Surface button released")
+
 def on_dive_button_clicked():
     MAV.send_control_cmd(MAV.DIVE)
     print("Dive button clicked")
+
+def on_dive_button_released():
+    MAV.send_control_cmd(MAV.STOP)
+    print("Dive button released")
 
 def on_mode_change_button_clicked():
     dialog = ModeChangeDialog()

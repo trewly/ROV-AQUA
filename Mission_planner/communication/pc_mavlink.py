@@ -13,6 +13,7 @@ class MavlinkController:
     BACKWARD = 1005
     STOP = 1006
 
+    SET_MANUAL = 1111
     SET_AUTO_HEADING = 1007
     SET_AUTO_DEPTH = 1008
     SET_PID = 1009
@@ -44,6 +45,15 @@ class MavlinkController:
             cmd,                             # Encoded command
             0,                               # Confirmation - How many commands to send
             0, 0, 0, 0, 0, 0, 0              # Parameters
+        )
+
+    def set_manual_mode(self):
+        self.master.mav.command_long_send(
+            self.master.target_system,
+            self.master.target_component,
+            self.SET_MANUAL,
+            0,
+            0, 0, 0, 0, 0, 0, 0
         )
 
     def set_auto_heading(self, enable, heading):

@@ -15,14 +15,15 @@ from Autopilot.control.common import raspi_timer as timer
 
 
 
-UP = 1000
-DOWN = 1001
+SURFACE = 1000
+DIVE = 1001
 LEFT = 1002
 RIGHT = 1003
 FORWARD = 1004
 BACKWARD = 1005
 STOP = 1006
 
+SET_MANUAL = 1111
 SET_AUTO_HEADING = 1007
 SET_AUTO_DEPTH = 1008
 SET_PID = 1009
@@ -45,12 +46,12 @@ def handle_cmd(master, cmd):
 
     if cmd.get_type() == "COMMAND_LONG":
         if status.read_status(key="mode") == "manual":
-            if cmd.command == UP:
-                print("UP")
+            if cmd.command == SURFACE:
+                print("SURFACE")
                 timer.marked()
                 rov.surface()
-            elif cmd.command == DOWN:
-                print("DOWN")
+            elif cmd.command == DIVE:
+                print("DIVE")
                 timer.marked()
                 rov.dive()
             elif cmd.command == LEFT:
@@ -76,20 +77,28 @@ def handle_cmd(master, cmd):
         if timer.get_time_difference() > 1.5:
             rov.stop_all()  
         
-        if cmd.command == SET_AUTO_HEADING:
+        if cmd.command == SET_MANUAL:
+            status.update_status(key="mode", value="manual")
+            status.update_status(key="auto_heading", value=False)
+            status.update_status(key="auto_depth", value=False)
+            print("Manual mode set")
+        elif cmd.command == SET_AUTO_HEADING:
             status.update_status(key="auto_heading", value=cmd.param1)
             status.update_status(key="target_heading", value=cmd.param2)
             status.update_status(key="mode", value="auto_heading")
+            print("Auto heading set to: ", cmd.param1, cmd.param2)
 
         elif cmd.command == SET_AUTO_DEPTH:
             status.update_status(key="auto_depth", value=cmd.param1)
             status.update_status(key="target_depth", value=cmd.param2)
             status.update_status(key="mode", value="auto_depth")
+            print("Auto depth set to: ", cmd.param1, cmd.param2)
 
         elif cmd.command == SET_PID:
             status.update_status(key="Kp", value=cmd.param1)
             status.update_status(key="Ki", value=cmd.param2)
             status.update_status(key="Kd", value=cmd.param3)
+            print("PID set to: ", cmd.param1, cmd.param2, cmd.param3)
 
         elif cmd.command == SET_SPEED_FORWARD:
             status.update_status(key="max_speed_forward", value=cmd.param1)
@@ -101,9 +110,11 @@ def handle_cmd(master, cmd):
         
         elif cmd.command == SET_LIGHT:
             status.update_status(key="light", value=cmd.param1)
+            print("Light set to: ", cmd.param1)
 
         elif cmd.command == SET_CAMERA:
             status.update_status(key="camera", value=cmd.param1)
+            print("Camera set to: ", cmd.param1)
         
         elif cmd.command == START_MAG_CALIBRATION:
             calibrate.calibrate_mag()

@@ -5,7 +5,7 @@ import numpy as np
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QPushButton
 from PyQt5.QtGui import QImage, QPixmap
-from PyQt5.QtCore import QTimer, QThread, pyqtSignal, Qt
+from PyQt5.QtCore import Qt
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))) 
 
@@ -16,11 +16,6 @@ from Mission_planner.controller.video import VideoReceiver
 class Ui_Form(QWidget):
     def __init__(self):
         super().__init__()
-        self.shift_timer = QTimer(self)
-        self.ctrl_timer = QTimer(self)
-
-        self.shift_timer.timeout.connect(lambda: self.surface_button.click())
-        self.ctrl_timer.timeout.connect(lambda: self.dive_button.click())
 
         self.light_on = False
 
@@ -60,20 +55,29 @@ class Ui_Form(QWidget):
         self.joystick.setGeometry(QtCore.QRect(10, 370, 120, 120))
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Shift and not self.shift_timer.isActive():
-            self.shift_timer.start(100)
-        elif event.key() == Qt.Key_Control and not self.ctrl_timer.isActive():
-            self.ctrl_timer.start(100)
-        elif event.key() == Qt.Key_L:
+        """ Xử lý khi nhấn phím """
+        if event.isAutoRepeat():
+            return  # Bỏ qua sự kiện tự lặp do hệ thống
+
+        key = event.key()
+        if key == Qt.Key_Shift:
+            buttons_controller.on_surface_button_clicked()  # Gửi lệnh một lần
+        elif key == Qt.Key_Control:
+            buttons_controller.on_dive_button_clicked()  # Gửi lệnh một lần
+        elif key == Qt.Key_L:
             self.light_button.click()
         else:
             super().keyPressEvent(event)
 
     def keyReleaseEvent(self, event):
-        if event.key() == Qt.Key_Shift:
-            self.shift_timer.stop()
-        elif event.key() == Qt.Key_Control:
-            self.ctrl_timer.stop()
+        if event.isAutoRepeat():
+            return  # Bỏ qua sự kiện tự lặp do hệ thống
+
+        key = event.key()
+        if key == Qt.Key_Shift:
+            buttons_controller.on_surface_button_released()
+        elif key == Qt.Key_Control:
+            buttons_controller.on_dive_button_released()
         else:
             super().keyReleaseEvent(event)
 

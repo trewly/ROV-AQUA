@@ -72,7 +72,6 @@ class VirtualJoystick(QGraphicsView):
         key = event.key()
         if key in self.pressed_keys_order:
             self.pressed_keys_order.remove(key)
-            print(f"Key Released: {key}, Remaining pressed keys: {self.pressed_keys_order}")
 
         if not self.pressed_keys_order:
             self.reset_knob()

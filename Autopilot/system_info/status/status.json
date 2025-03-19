@@ -43,5 +43,7 @@
     "Kp": 0,
     "Ki": 0,
     "Kd": 0,
-    "mode": "manual"
+    "mode": "manual",
+    "light": 0,
+    "camera": 0
 }

@@ -1,6 +1,8 @@
 from PyQt5.QtWidgets import (QApplication, QWidget, QPushButton, QVBoxLayout, QDialog, QRadioButton, QButtonGroup, QLabel, QSpinBox, QMessageBox)
 from PyQt5.QtCore import QRect
 
+from Mission_planner.communication.pc_mavlink import MAV
+
 class ModeChangeDialog(QDialog):
     current_mode = "Manual"
     current_heading = 0
@@ -104,14 +106,18 @@ class ModeChangeDialog(QDialog):
             heading = self.heading_input.value()
             ModeChangeDialog.current_mode = "Auto Heading"
             ModeChangeDialog.current_heading = heading
+            MAV.set_auto_heading(True, heading)
             print(f"Mode: Auto Heading, Heading: {heading}°")
         elif self.auto_depth_mode.isChecked():
             depth = self.depth_input.value()
             ModeChangeDialog.current_mode = "Auto Depth"
             ModeChangeDialog.current_depth = depth
+            MAV.set_auto_depth(True, depth)
             print(f"Mode: Auto Depth, Depth: {depth}m")
         elif self.manual_mode.isChecked():
             ModeChangeDialog.current_mode = "Manual"
+            MAV.set_auto_heading(False, 0)
+            MAV.set_auto_depth(False, 0)
             print("Mode: Manual")
             
         super().accept()
