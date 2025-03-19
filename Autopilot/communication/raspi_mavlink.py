@@ -44,27 +44,33 @@ def handle_cmd(master, cmd):
         return
 
     if cmd.get_type() == "COMMAND_LONG":
-        print("Hello")
         if status.read_status(key="mode") == "manual":
             if cmd.command == UP:
+                print("UP")
                 timer.marked()
                 rov.surface()
             elif cmd.command == DOWN:
+                print("DOWN")
                 timer.marked()
                 rov.dive()
             elif cmd.command == LEFT:
+                print("LEFT")
                 timer.marked()
                 rov.turn_left()
             elif cmd.command == RIGHT:
+                print("RIGHT")
                 timer.marked()
                 rov.turn_right()
             elif cmd.command == FORWARD:
+                print("FORWARD")
                 timer.marked()
                 rov.move_forward()
             elif cmd.command == BACKWARD:
+                print("BACKWARD")
                 timer.marked()
                 rov.move_backward()
             elif cmd.command == STOP:
+                print("STOP")
                 rov.stop_all()
 
         if timer.get_time_difference() > 1.5:
