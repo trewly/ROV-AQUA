@@ -24,7 +24,7 @@ def receive_file(server_ip, server_port, save_path):
     conn.close()
     server_socket.close()
 
-receive_file(server_ip="0.0.0.0", server_port=5001, save_path="Mission_planner\status\status.json")
+#receive_file(server_ip="0.0.0.0", server_port=5001, save_path="Mission_planner\status\status.json")
 
 def receive_video(server_ip, server_port, save_path):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

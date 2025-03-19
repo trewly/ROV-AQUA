@@ -15,7 +15,6 @@ from Autopilot.control.motor import raspi_motor_control as rov
 
 last_hearbeat = 0
 
-
 SURFACE = 1000
 DIVE = 1001
 LEFT = 1002
@@ -24,16 +23,17 @@ FORWARD = 1004
 BACKWARD = 1005
 STOP = 1006
 
-SET_MANUAL = 1111
-SET_AUTO_HEADING = 1007
-SET_AUTO_DEPTH = 1008
-SET_PID = 1009
-SET_SPEED_FORWARD = 1021        #Forward speed range is from 1 to 100
-SET_SPEED_BACKWARD = 1022       #Backward speed range is from -100 to -1
-SET_LIGHT = 1023
-SET_CAMERA = 1024
+SET_MANUAL = 1100
+SET_AUTO_HEADING = 1101
+SET_AUTO_DEPTH = 1102
+SET_PID = 1103
+SET_SPEED_FORWARD = 1104        # Forward speed range is from 1 to 100
+SET_SPEED_BACKWARD = 1105       # Backward speed range is from -100 to -1
 
-START_MAG_CALIBRATION = 1025
+SET_LIGHT = 1106
+SET_CAMERA = 1107
+
+START_MAG_CALIBRATION = 1200
 
 def handle_msg(master, msg):
     if msg == None:
@@ -68,6 +68,7 @@ def handle_msg(master, msg):
             status.update_status(key="auto_heading", value=False)
             status.update_status(key="auto_depth", value=False)
             print("Manual mode set")
+
         elif msg.command == SET_AUTO_HEADING:
             status.update_status(key="auto_heading", value=msg.param1)
             status.update_status(key="target_heading", value=msg.param2)
@@ -116,7 +117,6 @@ def received_msg(master):
             continue
         handle_msg(master, msg)
 
-
 def send_status(master):
     while True:
         status_data = status.read_all_status()
@@ -143,4 +143,4 @@ def send_status(master):
 # thread2.start()
 
 # while True:
-#     time.sleep(1)
+#     pass

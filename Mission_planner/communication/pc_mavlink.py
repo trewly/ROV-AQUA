@@ -13,17 +13,17 @@ class MavlinkController:
     BACKWARD = 1005
     STOP = 1006
 
-    SET_MANUAL = 1111
-    SET_AUTO_HEADING = 1007
-    SET_AUTO_DEPTH = 1008
-    SET_PID = 1009
-    SET_SPEED_FORWARD = 1021        # Forward speed range is from 1 to 100
-    SET_SPEED_BACKWARD = 1022       # Backward speed range is from -100 to -1
+    SET_MANUAL = 1100
+    SET_AUTO_HEADING = 1101
+    SET_AUTO_DEPTH = 1102
+    SET_PID = 1103
+    SET_SPEED_FORWARD = 1104        # Forward speed range is from 1 to 100
+    SET_SPEED_BACKWARD = 1105       # Backward speed range is from -100 to -1
 
-    SET_LIGHT = 1023
-    SET_CAMERA = 1024
+    SET_LIGHT = 1106
+    SET_CAMERA = 1107
 
-    START_MAG_CALIBRATION = 1025
+    START_MAG_CALIBRATION = 1200
 
     def __init__(self):
         self.master_send = mavutil.mavlink_connection("udpout:169.254.54.120:50000")
