@@ -59,6 +59,11 @@ RIGHT_MOTOR = Motor(6)
 LEFT_DEPTH_MOTOR = Motor(7)
 RIGHT_DEPTH_MOTOR = Motor(8)
 
+LEFT_MOTOR.stop()
+RIGHT_MOTOR.stop()
+LEFT_DEPTH_MOTOR.stop()
+RIGHT_DEPTH_MOTOR.stop()
+
 def self_balance():
     pitch = status.read_status("pitch")
     roll = status.read_status("roll")

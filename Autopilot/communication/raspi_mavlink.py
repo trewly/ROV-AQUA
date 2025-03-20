@@ -109,13 +109,8 @@ def handle_msg(master, msg):
 def received_msg(master):
     while True:
         msg = master.recv_match(blocking=True)
-        if msg.get_type() == "HEARTBEAT":
-            last_hearbeat = time.time()
-
-        elif time.time() - last_hearbeat > 5:
-            print("Connection lost")
-            continue
         handle_msg(master, msg)
+        
 
 def send_status(master):
     while True:

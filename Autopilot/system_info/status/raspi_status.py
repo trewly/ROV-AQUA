@@ -145,6 +145,5 @@ def read_all_status():
     return data
 
 def read_status(key):
-
     data = json.load(file)
     return data[key]
