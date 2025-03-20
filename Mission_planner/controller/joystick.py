@@ -42,10 +42,6 @@ class VirtualJoystick(QGraphicsView):
         self.knob.setPos(self.center.x() + dx, self.center.y() + dy)
         self.joystickMoved.emit(x, y)
 
-    def reset_knob(self):
-        self.knob.setPos(self.center)
-        self.joystickMoved.emit(0, 0)
-
     def keyPressEvent(self, event):
         if not self.hasFocus():
             return super().keyPressEvent(event)
@@ -63,21 +59,19 @@ class VirtualJoystick(QGraphicsView):
             super().keyPressEvent(event)
 
     def keyReleaseEvent(self, event):
-        if not self.hasFocus():
-            return super().keyReleaseEvent(event)
-
         if event.isAutoRepeat():
             return
 
         key = event.key()
-        if key in self.pressed_keys_order:
-            self.pressed_keys_order.remove(key)
 
-        if not self.pressed_keys_order:
-            self.reset_knob()
+        if key in {Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down}:
+            if key in self.pressed_keys_order:
+                self.pressed_keys_order.remove(key)
+
+            if not any(k in {Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down} for k in self.pressed_keys_order):
+                self.move_knob(0, 0)
         else:
             super().keyReleaseEvent(event)
-            self.update_knob_position()
 
     def update_knob_position(self):
         if len(self.pressed_keys_order) == 0:
