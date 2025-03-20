@@ -26,4 +26,4 @@ def auto_heading(pid):
         left_pwm = motor.scale_to_pwm(value=left_motor_speed)
         right_pwm = motor.scale_to_pwm(value=right_motor_speed)
 
-        motor.set_speed_forward(right_pwm=right_pwm, left_pwm=left_pwm)
+        # motor.set_speed_forward(right_pwm=right_pwm, left_pwm=left_pwm)

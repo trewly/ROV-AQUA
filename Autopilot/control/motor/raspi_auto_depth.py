@@ -26,4 +26,4 @@ def auto_depth(pid):
         left_pwm = motor.scale_to_pwm(value=left_depth_motor_speed)
         right_pwm = motor.scale_to_pwm(value=right_depth_motor_speed)
 
-        motor.set_speed_depth(right_pwm=right_pwm, left_pwm=left_pwm)
+        # motor.set_speed_depth(right_pwm=right_pwm, left_pwm=left_pwm)
