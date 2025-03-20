@@ -25,20 +25,20 @@ class RotationThread(QThread):
     def run(self):
         while True:
             #test ngau nhien
-            # ngau nhien roll,pitch,yaw
-            pitch = random.uniform(-20,20) 
-            roll = random.uniform(-90,90)   
-            yaw = random.uniform(0,360)    
+            # # ngau nhien roll,pitch,yaw
+            # pitch = random.uniform(-20,20) 
+            # roll = random.uniform(-90,90)   
+            # yaw = random.uniform(0,360)    
             
-            self.new_rotation.emit(roll,pitch,yaw)
-            print(roll,pitch,yaw)
-            time.sleep(2)  
+            # self.new_rotation.emit(roll,pitch,yaw)
+            # print(roll,pitch,yaw)
+            # time.sleep(2)  
             
             #test goc pitch
-            # for pitch in range(-90, 90, 5):  
-            #     self.new_rotation.emit(0, pitch, 0)  
-            #     print(f"Pitch: {pitch}")  
-            #     time.sleep(0.05)  
+            for pitch in range(-90, 90, 5):  
+                self.new_rotation.emit(0, pitch, 0)  
+                #print(f"Pitch: {pitch}")  
+                time.sleep(0.05)  
             
             #test goc roll
             # for roll in range(-90, 90, 5):  
@@ -106,7 +106,7 @@ class STLViewerWidget(QWidget):
         self.compass_faceZ = 1
         self.compass_caseZ = 2  
         self.compass_view = QGraphicsView(self)
-        self.compass_view.setFixedSize(250, 250)
+        self.compass_view.setFixedSize(280, 280) 
         self.compass_screen = QGraphicsScene(self)
         self.compass_view.setScene(self.compass_screen)
         instrument_layout.addWidget(self.compass_view)
@@ -122,7 +122,7 @@ class STLViewerWidget(QWidget):
         self.ai_backZ = 0             
         self.ai_ringZ = 3      
         self.ai_view = QGraphicsView(self)
-        self.ai_view.setFixedSize(250,250)
+        self.ai_view.setFixedSize(280,280)
         self.ai_screen=QGraphicsScene(self)
         self.ai_view.setScene(self.ai_screen)
         instrument_layout.addWidget(self.ai_view)

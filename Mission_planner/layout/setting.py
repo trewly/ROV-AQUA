@@ -240,7 +240,8 @@ class MainWindow(QWidget):
         event.accept()
 
 
-app = QApplication([])
-window = settingLayout()
-window.show()
-app.exec_()
+if __name__ == "__main__":
+    app = QApplication([])
+    setter = settingLayout()
+    setter.show()
+    app.exec_()

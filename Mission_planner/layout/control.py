@@ -84,6 +84,6 @@ class Ui_Form(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    MainWindow = Ui_Form()
-    MainWindow.show()
+    controller = Ui_Form()
+    controller.show()
     sys.exit(app.exec_())
