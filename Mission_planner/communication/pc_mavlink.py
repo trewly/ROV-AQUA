@@ -19,6 +19,8 @@ class MavlinkController:
     SET_PID = 1103
     SET_SPEED_FORWARD = 1104        # Forward speed range is from 1 to 100
     SET_SPEED_BACKWARD = 1105       # Backward speed range is from -100 to -1
+    SET_SPEED_DIVE = 1106
+    SET_SPEED_SURFACE = 1107
 
     SET_LIGHT = 1106
     SET_CAMERA = 1107
@@ -111,6 +113,32 @@ class MavlinkController:
             max_speed, 0, 0, 0, 0, 0, 0
         )
 
+    def set_max_speed_dive(self, max_speed):
+        if max_speed < -100:
+            max_speed = -100
+        elif max_speed > -1:
+            max_speed = -1
+        self.master_send.mav.command_long_send(
+            self.master_send.target_system,
+            self.master_send.target_component,
+            self.SET_SPEED_DIVE,
+            0,
+            max_speed, 0, 0, 0, 0, 0, 0
+        )
+    
+    def set_max_speed_surface(self, max_speed):
+        if max_speed < 1:
+            max_speed = 1
+        elif max_speed > 100:
+            max_speed = 100
+        self.master_send.mav.command_long_send(
+            self.master_send.target_system,
+            self.master_send.target_component,
+            self.SET_SPEED_SURFACE,
+            0,
+            max_speed, 0, 0, 0, 0, 0, 0
+        )
+        
     def set_pid(self, Kp, Ki, Kd):
         self.master_send.mav.command_long_send(
             self.master_send.target_system,
