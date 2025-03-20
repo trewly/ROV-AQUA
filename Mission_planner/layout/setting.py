@@ -1,5 +1,6 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QGridLayout, QHBoxLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QGridLayout, QHBoxLayout, QPushButton
 from PyQt5.QtWidgets import QLabel
+from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 
 import sys
@@ -41,6 +42,26 @@ highlightValue="""
                 }
     """
 
+buttonStyle = """
+    QPushButton {
+        font-size: 16px;
+        font-weight: bold;
+        padding: 5px; /* Giúp không làm ảnh hưởng đến hover */
+        border: 1px solid black; /* Viền ngoài */
+        border-radius: 8px; /* Bo góc */
+        background-color: white;
+    }
+
+    QPushButton:hover {
+        background-color: lightgray; 
+    }
+
+    QPushButton:pressed {
+        background-color: #a8d5e2; 
+        border-color: #2980b9;
+    }
+"""
+
 class settingLayout(QWidget):
     def __init__(self):
         super().__init__()
@@ -57,7 +78,8 @@ class settingLayout(QWidget):
         #khoi tao bar setting
         self.setting_bar_init()
 
-        #self.setLayout(mainLayout)
+        #Khoi tao cac phim chuc nang
+        self.setting_function_button_init()
 
     def view_init(self):
         self.viewWidget = QWidget(self)
@@ -99,7 +121,7 @@ class settingLayout(QWidget):
 
         tempValue=QLabel("40o",self.tempInfoWidget)
         tempValue.setStyleSheet(highlightValue)
-        tempValue.move(58,36)
+        tempValue.move(50,36)
         
         self.tempInfoWidget.setGeometry(20,630,178,95)
 
@@ -129,7 +151,50 @@ class settingLayout(QWidget):
         self.speedSlider.move(20,780)      
         self.speedSlider.setParent(self) 
 
+    def setting_function_button_init(self):
+        #khoi tao vung chua button
+        button_fnc_widget=QWidget(self)
+        button_fnc_widget.setFixedSize(340,340)
+        button_fnc_widget.move(480,630)
+        button_fnc_widget.setStyleSheet(infoStyle)
 
+        #button 1
+        self.calib_button=QPushButton("Calib",self)
+        self.calib_button.setFixedSize(130,70)
+        self.calib_button.setStyleSheet(buttonStyle)
+        self.calib_button.move(505,650)
+        
+        #button 2
+        self.calib_button=QPushButton("Param set",self)
+        self.calib_button.setFixedSize(130,70)
+        self.calib_button.setStyleSheet(buttonStyle)
+        self.calib_button.move(665,650)
+
+        #button 3
+        self.button3=QPushButton("Button3",self)
+        self.button3.setFixedSize(130,70)
+        self.button3.setStyleSheet(buttonStyle)
+        self.button3.move(505,760)
+        
+        #button 4
+        self.button4=QPushButton("Button4",self)
+        self.button4.setFixedSize(130,70)
+        self.button4.setStyleSheet(buttonStyle)
+        self.button4.move(665,760)
+
+        # #button 5
+        self.button5=QPushButton("Button5",self)
+        self.button5.setFixedSize(130,70)
+        self.button5.setStyleSheet(buttonStyle)
+        self.button5.move(505,870)
+        
+        #button 6
+        self.button6=QPushButton("Button6",self)
+        self.button6.setFixedSize(130,70)
+        self.button6.setStyleSheet(buttonStyle)
+        self.button6.move(665,870)
+
+    
 class StatusReaderThread(QThread):
     status_signal = pyqtSignal(str, object)
 
