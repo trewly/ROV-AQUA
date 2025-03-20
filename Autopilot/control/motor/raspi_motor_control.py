@@ -3,8 +3,6 @@ import sys
 import os
 import time
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
-
 from Autopilot.system_info.status import raspi_status as status
 
 FORWARD = 1

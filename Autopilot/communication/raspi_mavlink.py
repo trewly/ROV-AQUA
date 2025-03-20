@@ -130,12 +130,11 @@ def send_status(master):
 
 
 master_receive = mavutil.mavlink_connection("udpin:0.0.0.0:50000")
-thread1 = threading.Thread(target=received_msg, args=(master_receive,), daemon=True)
-thread1.start()
+
 
 # master_send = mavutil.mavlink_connection("udpout:169.254.54.120:50001")
 # thread2 = threading.Thread(target=send_status, args=(master_send,), daemon=True)
 # thread2.start()
 
 while True:
-    pass
+    received_msg(master_receive)
