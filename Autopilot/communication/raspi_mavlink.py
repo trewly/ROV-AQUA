@@ -109,8 +109,13 @@ def handle_msg(master, msg):
 def received_msg(master):
     while True:
         msg = master.recv_match(blocking=True)
+        if msg.get_type() == "HEARTBEAT":
+            last_hearbeat = time.time()
+
+        elif time.time() - last_hearbeat > 5:
+            print("Connection lost")
+            continue
         handle_msg(master, msg)
-        
 
 def send_status(master):
     while True:
@@ -129,12 +134,13 @@ def send_status(master):
         time.sleep(1)
 
 
-master_receive = mavutil.mavlink_connection("udpin:0.0.0.0:50000")
-
+# master_receive = mavutil.mavlink_connection("udpin:0.0.0.0:50000")
+# thread1 = threading.Thread(target=received_msg, args=(master_receive,), daemon=True)
+# thread1.start()
 
 # master_send = mavutil.mavlink_connection("udpout:169.254.54.120:50001")
 # thread2 = threading.Thread(target=send_status, args=(master_send,), daemon=True)
 # thread2.start()
 
-while True:
-    received_msg(master_receive)
+# while True:
+#     pass

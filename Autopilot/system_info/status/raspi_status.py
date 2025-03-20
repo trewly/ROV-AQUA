@@ -1,8 +1,6 @@
 import json
 import Autopilot.system_info.sensor.raspi_sensor_read as sensor
 
-file = open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "r+")
-
 def init_status():
     data ={
         "depth": 0,
@@ -65,7 +63,8 @@ def init_status():
         "camera": 0
     }
 
-    json.dump(data, file)
+    with open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "w") as file:
+        json.dump(data, file)
 
 def update_sensor_status():
     temp = sensor.read_temp_data()
@@ -136,14 +135,20 @@ def update_sensor_status():
         json.dump(data, file, indent=4)
 
 def update_status(key, value):
-    data = json.load(file)
+    with open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "r") as file:
+        data = json.load(file)
     data[key] = value
-    json.dump(data, file, indent=4)
+    with open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "w") as file:
+        json.dump(data, file, indent=4)
 
 def read_all_status():
-    data = json.load(file)
+    with open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "r") as file:
+        data = json.load(file)
     return data
 
 def read_status(key):
-    data = json.load(file)
+    with open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "r") as file:
+        data = json.load(file)
     return data[key]
+
+init_status()

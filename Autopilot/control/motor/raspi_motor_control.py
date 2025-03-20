@@ -3,6 +3,8 @@ import sys
 import os
 import time
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+
 from Autopilot.system_info.status import raspi_status as status
 
 FORWARD = 1
@@ -39,9 +41,14 @@ class Motor:
         else:
             return BACKWARD
 
-    def stop(self):
-        self.pi.set_PWM_dutycycle(self.pin, DUTY_CYCLE_STOP)
+    def set_dutycycle(self, duty_cycle):
+        self.pi.set_PWM_dutycycle(self.pin, duty_cycle)
 
+    def stop(self):
+        if self.get_direction() == STOP:
+            return
+        else:
+            self.pi.set_PWM_dutycycle(self.pin, DUTY_CYCLE_STOP)
     def set_speed_forward(self):
         speed = status.read_status("max_speed_forward")
         dutycycle = scale_to_pwm(speed)
@@ -56,11 +63,6 @@ LEFT_MOTOR = Motor(5)
 RIGHT_MOTOR = Motor(6)
 LEFT_DEPTH_MOTOR = Motor(7)
 RIGHT_DEPTH_MOTOR = Motor(8)
-
-LEFT_MOTOR.stop()
-RIGHT_MOTOR.stop()
-LEFT_DEPTH_MOTOR.stop()
-RIGHT_DEPTH_MOTOR.stop()
 
 def self_balance():
     pitch = status.read_status("pitch")
@@ -114,6 +116,14 @@ def stop_all():
     RIGHT_MOTOR.stop()
     LEFT_DEPTH_MOTOR.stop()
     RIGHT_DEPTH_MOTOR.stop()
+
+def set_speed_forward(right_pwm, left_pwm):
+    LEFT_MOTOR.set_duty_cycle(scale_to_pwm(left_pwm))
+    RIGHT_MOTOR.set_duty_cycle(scale_to_pwm(right_pwm))
+
+def set_speed_depth(right_pwm, left_pwm):
+    LEFT_DEPTH_MOTOR.set_duty_cycle(scale_to_pwm(left_pwm))
+    RIGHT_DEPTH_MOTOR.set_duty_cycle(scale_to_pwm(right_pwm))
 
 # speed = 0
 # status.update_status("max_speed_forward",speed)

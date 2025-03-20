@@ -27,10 +27,10 @@ class MavlinkController:
 
     def __init__(self):
         self.master_send = mavutil.mavlink_connection("udpout:169.254.54.120:50000")
-        #threading.Thread(target=self.send_heartbeat, daemon=True).start()
+        threading.Thread(target=self.send_heartbeat, daemon=True).start()
 
-        #self.master_receive = mavutil.mavlink_connection("udpin:0.0.0.0:50001")
-        #threading.Thread(target=self.receive_msg, daemon=True).start()
+        self.master_receive = mavutil.mavlink_connection("udpin:0.0.0.0:50001")
+        threading.Thread(target=self.receive_msg, daemon=True).start()
 
     def send_heartbeat(self):
         while True:
