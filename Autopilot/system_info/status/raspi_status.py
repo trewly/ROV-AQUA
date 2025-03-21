@@ -65,6 +65,7 @@ def init_status():
 
     with open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "w") as file:
         json.dump(data, file)
+    file.close()
 
 def update_sensor_status():
     temp = sensor.read_temp_data()
@@ -133,6 +134,7 @@ def update_sensor_status():
 
     with open("..\..\..\status.json", "w") as file:
         json.dump(data, file, indent=4)
+    file.close()
 
 def update_status(key, value):
     with open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "r") as file:
@@ -140,15 +142,18 @@ def update_status(key, value):
     data[key] = value
     with open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "w") as file:
         json.dump(data, file, indent=4)
+    file.close()
 
 def read_all_status():
     with open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "r") as file:
         data = json.load(file)
+    file.close()
     return data
 
 def read_status(key):
     with open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "r") as file:
         data = json.load(file)
+    file.close()
     return data[key]
 
-init_status()
+# init_status()

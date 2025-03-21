@@ -35,7 +35,7 @@ SET_CAMERA = 1107
 
 START_MAG_CALIBRATION = 1200
 
-def handle_msg(master, msg):
+def handle_received_msg(msg):
     if msg == None:
         return
 
@@ -115,32 +115,40 @@ def received_msg(master):
         elif time.time() - last_hearbeat > 5:
             print("Connection lost")
             continue
-        handle_msg(master, msg)
+        handle_received_msg(msg)
+
 
 def send_status(master):
     while True:
         status_data = status.read_all_status()
-        for key, value in status_data.items():
+        
+        for key in ["roll", "pitch", "heading", "temp", "depth"]:
             try:
+                value = float(status_data.get(key, 0))
+                param_id = key.ljust(16, '\0')
+                param_type = mavutil.mavlink.MAV_PARAM_TYPE_REAL32
+                
                 master.mav.param_value_send(
-                    key.encode("utf-8"),
-                    float(value),
-                    mavutil.mavlink.MAV_PARAM_TYPE_REAL32,
-                    -1,
-                    len(status_data)
+                    param_id.encode("ascii"),
+                    value,
+                    param_type,
+                    0,
+                    4
                 )
+                print(f"Sent {key}: {value}")
             except Exception as e:
                 print(f"Error sending {key}: {e}")
+            time.sleep(0.01)
+        
         time.sleep(1)
-
 
 master_receive = mavutil.mavlink_connection("udpin:0.0.0.0:50000")
 thread1 = threading.Thread(target=received_msg, args=(master_receive,), daemon=True)
 thread1.start()
 
-# master_send = mavutil.mavlink_connection("udpout:169.254.54.120:50001")
-# thread2 = threading.Thread(target=send_status, args=(master_send,), daemon=True)
-# thread2.start()
+master_send = mavutil.mavlink_connection("udpout:169.254.54.121:50001")
+thread2 = threading.Thread(target=send_status, args=(master_send,), daemon=True)
+thread2.start()
 
 while True:
     time.sleep(1)
