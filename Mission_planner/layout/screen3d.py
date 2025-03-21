@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import pyqtgraph.opengl as gl
 from stl import mesh
-from PyQt5.QtWidgets import QApplication, QWidget,QFrame, QGraphicsScene,QGraphicsItem,QGraphicsView,QVBoxLayout, QHBoxLayout,QGraphicsItem
+from PyQt5.QtWidgets import QLabel, QApplication, QWidget,QFrame, QGraphicsScene,QGraphicsItem,QGraphicsView,QVBoxLayout, QHBoxLayout,QGraphicsItem
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtGui import QTransform
 from PyQt5.QtCore import Qt
@@ -77,8 +77,10 @@ class STLLoaderThread(QThread):
 class STLViewerWidget(QWidget):
     def __init__(self, stl_file):
         super().__init__()
-        self.setFixedSize(960,540)
+        self.setFixedSize(960,450)
         layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        
         self.setLayout(layout)
 
         #them widget opengl chua mohinh3d
@@ -86,7 +88,7 @@ class STLViewerWidget(QWidget):
         layout.addWidget(self.view)
         self.view.setCameraPosition(distance=80)
         self.view.setBackgroundColor((255, 255, 255))
-        self.view.setFixedSize(720, 540)
+        self.view.setFixedSize(850, 450)
         self.mesh_item = None
         self.stl_loader = STLLoaderThread(stl_file)
         self.stl_loader.finished.connect(self.on_stl_loaded)
@@ -102,11 +104,15 @@ class STLViewerWidget(QWidget):
         #them instrument vao layout chinh
         layout.addWidget(instrument_widget)
         
-        #them widget compass
+
+        self._scaleX = 0.8
+        self._scaleY = 0.8
+        #them widget compass    
+
         self.compass_faceZ = 1
         self.compass_caseZ = 2  
         self.compass_view = QGraphicsView(self)
-        self.compass_view.setFixedSize(280, 280) 
+        self.compass_view.setFixedSize(250, 250) 
         self.compass_screen = QGraphicsScene(self)
         self.compass_view.setScene(self.compass_screen)
         instrument_layout.addWidget(self.compass_view)
@@ -115,14 +121,15 @@ class STLViewerWidget(QWidget):
         self.compass_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.compass_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.compass_view.setFrameShape(QFrame.NoFrame)
-
+        
         #them widget attitude indicator
+
         self.ai_faceZ = 1             
         self.ai_caseZ = 2             
         self.ai_backZ = 0             
         self.ai_ringZ = 3      
         self.ai_view = QGraphicsView(self)
-        self.ai_view.setFixedSize(280,280)
+        self.ai_view.setFixedSize(250,250)
         self.ai_screen=QGraphicsScene(self)
         self.ai_view.setScene(self.ai_screen)
         instrument_layout.addWidget(self.ai_view)
@@ -226,8 +233,6 @@ class STLViewerWidget(QWidget):
 
     #ham khoi tao, chuc nang compass
     def compass_init(self):
-        self._scaleX = 1
-        self._scaleY = 1
 
         self.compass_reset()
 
@@ -265,33 +270,40 @@ class STLViewerWidget(QWidget):
     #ham khoi tao, chuc nang attitude indicator
     def attitude_indicator_init(self):
         self.attitude_reset()
-        # Background
+
+        # **Background**
         self.ai_itemBack = QGraphicsSvgItem("./layout/resources/attitude_indicator/ai_back.svg")
         self.ai_itemBack.setZValue(self.ai_backZ)
+        self.ai_itemBack.setTransform(QTransform().scale(self._scaleX, self._scaleY), True)
         self.ai_screen.addItem(self.ai_itemBack)
-        
+
         bbox = self.ai_itemBack.boundingRect()
         self.ai_originalAdiCtr = bbox.center()
         self.ai_itemBack.setTransformOriginPoint(self.ai_originalAdiCtr)
 
-        # Face (mặt attitude)
+        # **Face (mặt attitude)**
         self.ai_itemFace = QGraphicsSvgItem("./layout/resources/attitude_indicator/ai_face.svg")
         self.ai_itemFace.setZValue(self.ai_faceZ)
+        self.ai_itemFace.setTransform(QTransform().scale(self._scaleX, self._scaleY), True)
         self.ai_screen.addItem(self.ai_itemFace)
         self.ai_itemFace.setTransformOriginPoint(self.ai_originalAdiCtr)
-        
-        # Ring
+
+        # **Ring**
         self.ai_itemRing = QGraphicsSvgItem("./layout/resources/attitude_indicator/ai_ring.svg")
         self.ai_itemRing.setZValue(self.ai_ringZ)
+        self.ai_itemRing.setTransform(QTransform().scale(self._scaleX, self._scaleY), True)
         self.ai_screen.addItem(self.ai_itemRing)
         self.ai_itemRing.setTransformOriginPoint(self.ai_originalAdiCtr)
 
-        # Case
+        # **Case**
         self.ai_itemCase = QGraphicsSvgItem("./layout/resources/attitude_indicator/ai_case.svg")
         self.ai_itemCase.setZValue(self.ai_caseZ)
+        self.ai_itemCase.setTransform(QTransform().scale(self._scaleX, self._scaleY), True)
         self.ai_screen.addItem(self.ai_itemCase)
 
+        # **Căn giữa lại**
         self.ai_view.centerOn(self.width() / 2.0, self.height() / 2.0)
+
         self.update_attitude_view()
 
     def update_attitude_view(self):
@@ -312,7 +324,7 @@ class STLViewerWidget(QWidget):
             pitch = 20
         elif pitch < -20:  
             pitch = -20
-        self.ai_itemFace.setY(pitch * 2)
+        self.ai_itemFace.setY(pitch * 2 * self._scaleY)
         # Cập nhật giao diện
         self.update_attitude_view()
 
