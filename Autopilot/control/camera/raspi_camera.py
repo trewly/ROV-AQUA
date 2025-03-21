@@ -20,7 +20,7 @@ def send_file(server_ip, server_port, file_path):
     client_socket.close()
 
 def run_streaming():
-    command = "libcamera-vid -t 0 --width 1920 --height 1080 --framerate 30 --codec h264 --inline --profile high --level 4.2 --bitrate 3000000 -o - | gst-launch-1.0 fdsrc ! h264parse config-interval = 1 ! mpegtsmux ! udpsink host=169.254.54.121 port=5000 sync=false async=false buffer-size=16384 qos=true"
+    command = "libcamera-vid -t 0 --width 1920 --height 1080 --framerate 30 --codec h264 --bitrate 3000000 -o - | gst-launch-1.0 fdsrc ! h264parse config-interval = 1000 ! mpegtsmux ! udpsink host=169.254.54.121 port=5000 sync=false async=false"
     global process
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     process.wait()

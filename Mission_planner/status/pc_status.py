@@ -38,20 +38,23 @@ def init_status():
     
     with open("Mission_planner/status/status.json", "w") as file:
         json.dump(data, file, indent=4)
+    file.close()
 
 def update_status(key, value):
-    with open("Mission_planner/status/status.json", "r") as file:
+    with open("Mission_planner/status/status.json", "r+") as file:
         data = json.load(file)
     data[key] = value
-    with open("Mission_planner/status/status.json", "w") as file:
-        json.dump(data, file, indent=4)
+    json.dump(data, file, indent=4)
+    file.close()
 
 def read_all_status():
     with open("Mission_planner/status/status.json", "r") as file:
         data = json.load(file)
+    file.close()
     return data
 
 def read_status(key):
     with open("Mission_planner/status/status.json", "r") as file:
         data = json.load(file)
+    file.close()
     return data[key]
