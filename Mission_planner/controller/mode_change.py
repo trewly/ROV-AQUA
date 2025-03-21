@@ -116,6 +116,7 @@ class ModeChangeDialog(QDialog):
             print(f"Mode: Auto Depth, Depth: {depth}m")
         elif self.manual_mode.isChecked():
             ModeChangeDialog.current_mode = "Manual"
+            MAV.set_manual_mode()
             MAV.set_auto_heading(False, 0)
             MAV.set_auto_depth(False, 0)
             print("Mode: Manual")

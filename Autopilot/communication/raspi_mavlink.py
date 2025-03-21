@@ -104,6 +104,7 @@ def handle_received_msg(msg):
             print("Camera set to: ", msg.param1)
         
         elif msg.command == START_MAG_CALIBRATION:
+            print("Mag calibration started")
             calibrate.calibrate_mag()
 
 def received_msg(master):
@@ -113,8 +114,9 @@ def received_msg(master):
             last_hearbeat = time.time()
 
         elif time.time() - last_hearbeat > 5:
-            print("Connection lost")
-            continue
+            print("Connection lost, surfacing")
+            while status.read_status(key="depth") > 0:
+                rov.surface()
         handle_received_msg(msg)
 
 
@@ -133,7 +135,7 @@ def send_status(master):
                     value,
                     param_type,
                     0,
-                    4
+                    5
                 )
                 print(f"Sent {key}: {value}")
             except Exception as e:

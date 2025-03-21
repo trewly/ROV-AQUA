@@ -90,7 +90,6 @@ class MavlinkController:
             0,
             enable, heading, 0, 0, 0, 0, 0
         )
-        print("Sending")
 
     def set_auto_depth(self, enable, depth):
         self.master_send.mav.command_long_send(
