@@ -1,6 +1,10 @@
 from pymavlink import mavutil
 import time
 import threading
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 import Mission_planner.status.pc_status as status
 
@@ -28,11 +32,15 @@ class MavlinkController:
     START_MAG_CALIBRATION = 1200
 
     def __init__(self):
-        self.master_send = mavutil.mavlink_connection("udpout:169.254.54.120:50000")
-        threading.Thread(target=self.send_heartbeat, daemon=True).start()
+        self.master_send = mavutil.mavlink_connection("udpout:169.254.54.120:5000")
+        send_thread = threading.Thread(target=self.send_heartbeat, daemon=True)
+        send_thread.start()
 
-        self.master_receive = mavutil.mavlink_connection("udpin:0.0.0.0:50001")
-        threading.Thread(target=self.receive_msg, daemon=True).start()
+        self.master_receive = mavutil.mavlink_connection("udpin:0.0.0.0:5001")
+        receive_thread = threading.Thread(target=self.receive_msg, daemon=True)
+        receive_thread.start()
+
+        self.timer = time.time()
 
     def send_heartbeat(self):
         while True:
@@ -45,10 +53,20 @@ class MavlinkController:
 
     def receive_msg(self):
         while True:
-            msg = self.master_receive.recv_msg()
-            if msg is not None:
-                if msg.get_type() == "PARAM_VALUE":
-                    status.update_status(msg.param_id.decode('utf-8'), msg.param_value)
+            try:
+                msg = self.master_receive.recv_match(blocking=True)
+                if msg is not None:
+                    self.timer = time.time()
+                    if msg.get_type() == "PARAM_VALUE":
+                        param_id = msg.param_id.rstrip('\x00')
+                        param_value = msg.param_value
+                        status.update_status(param_id, param_value)
+                        print(f"Received: {param_id} = {param_value}")
+                if time.time() - self.timer > 5:
+                    print("Connection lost")
+                    status.update_status("disconnect", True)
+            except Exception as e:
+                print(f"Error receiving message: {e}")
 
     def send_control_cmd(self, cmd):
         self.master_send.mav.command_long_send(
@@ -68,23 +86,22 @@ class MavlinkController:
             0, 0, 0, 0, 0, 0, 0
         )
 
-    def set_auto_heading(self, enable, heading):
+    def set_auto_heading(self, heading):
         self.master_send.mav.command_long_send(
             self.master_send.target_system,
             self.master_send.target_component,
             self.SET_AUTO_HEADING,
             0,
-            enable, heading, 0, 0, 0, 0, 0
+            heading, 0, 0, 0, 0, 0, 0
         )
-        print("Sending")
 
-    def set_auto_depth(self, enable, depth):
+    def set_auto_depth(self, depth):
         self.master_send.mav.command_long_send(
             self.master_send.target_system,
             self.master_send.target_component,
             self.SET_AUTO_DEPTH,
             0,
-            enable, depth, 0, 0, 0, 0, 0
+            depth, 0, 0, 0, 0, 0, 0
         )
 
     def set_max_speed_forward(self, max_speed):

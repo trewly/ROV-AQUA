@@ -55,7 +55,6 @@ class VirtualJoystick(QGraphicsView):
         if key in {Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down}:
             if key not in self.pressed_keys_order:
                 self.pressed_keys_order.append(key)
-                print(f"Key Pressed: {key}, Current pressed keys: {self.pressed_keys_order}")
                 self.update_knob_position()
         else:
             super().keyPressEvent(event)

@@ -1,15 +1,15 @@
 import sys
 import cv2
 import numpy as np
-from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QPushButton
+from PyQt5 import QtCore
+from PyQt5.QtWidgets import QApplication, QLabel, QWidget
 from PyQt5.QtGui import QImage, QPixmap
-from PyQt5.QtCore import QThread, pyqtSignal, Qt
+from PyQt5.QtCore import QThread, pyqtSignal
 
 class VideoReceiver(QWidget):
     frame_signal = pyqtSignal(np.ndarray)
 
-    def __init__(self, udp_ip="169.254.54.121", udp_port=5000, save_path="received_video.mp4", parent=None):
+    def __init__(self, udp_ip="169.254.54.121", udp_port=5002, save_path="received_video.mp4", parent=None):
         super().__init__(parent)
         self.setGeometry(0, 0, 960, 540)
 

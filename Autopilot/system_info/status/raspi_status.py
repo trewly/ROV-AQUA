@@ -59,12 +59,12 @@ def init_status():
         "Kd": 0,
 
         "mode": "manual",
-        "light": 0,
-        "camera": 0
+        "disconnect": False
     }
 
     with open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "w") as file:
         json.dump(data, file)
+    file.close()
 
 def update_sensor_status():
     temp = sensor.read_temp_data()
@@ -81,11 +81,9 @@ def update_sensor_status():
 
     heading = sensor.read_angle_xy(mag_x, mag_y)
 
-    try:
-        with open("..\..\..\status.json", "r") as file:
-            data = json.load(file)
-    except FileNotFoundError:
-        data = {}
+    with open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "r") as file:
+        data = json.load(file)
+
 
     previous_accel_x = data.get("accel_x")
     previous_accel_y = data.get("accel_y")
@@ -131,8 +129,9 @@ def update_sensor_status():
         "previous_heading": previous_heading
     })
 
-    with open("..\..\..\status.json", "w") as file:
+    with open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "w") as file:
         json.dump(data, file, indent=4)
+    file.close()
 
 def update_status(key, value):
     with open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "r") as file:
@@ -140,15 +139,18 @@ def update_status(key, value):
     data[key] = value
     with open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "w") as file:
         json.dump(data, file, indent=4)
+    file.close()
 
 def read_all_status():
     with open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "r") as file:
         data = json.load(file)
+    file.close()
     return data
 
 def read_status(key):
     with open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "r") as file:
         data = json.load(file)
+    file.close()
     return data[key]
 
-init_status()
+# init_status()

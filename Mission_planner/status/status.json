@@ -1,5 +1,7 @@
 {
     "depth": 0,
+    "horizontal_velocity": 0,
+    "vertical_velocity": 0,
     "temp": 0,
     "accel_x": 0,
     "accel_y": 0,
@@ -13,7 +15,6 @@
     "pitch": 0,
     "roll": 0,
     "heading": 0,
-    "previous_temp": 0,
     "previous_accel_x": 0,
     "previous_accel_y": 0,
     "previous_accel_z": 0,
@@ -30,5 +31,20 @@
     "mag_calib_y": 0,
     "mag_calib_z": 0,
     "auto_heading": false,
-    "auto_depth": false
+    "target_heading": 0,
+    "auto_depth": false,
+    "target_depth": 0,
+    "max_speed_forward": 100.0,
+    "max_speed_backward": -1.0,
+    "max_speed_dive": 100.0,
+    "max_speed_surface": 100.0,
+    "left_speed": 100,
+    "right_speed": 100,
+    "left_depth_speed": 100,
+    "right_depth_speed": 100,
+    "Kp": 0,
+    "Ki": 0,
+    "Kd": 0,
+    "mode": "manual",
+    "disconnect": false
 }
