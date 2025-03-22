@@ -1,30 +1,29 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QGraphicsView, QGraphicsScene, QPushButton, QMenu, QGraphicsEllipseItem, QGraphicsLineItem
-from PyQt5.QtGui import QPen, QColor
+from PyQt5.QtWidgets import QLabel,QApplication, QWidget, QVBoxLayout, QGraphicsView, QGraphicsScene, QPushButton, QMenu, QGraphicsEllipseItem, QGraphicsLineItem
+from PyQt5.QtGui import QPen, QColor, QFont, QFontDatabase
 from PyQt5.QtCore import Qt
 
-button_style="""
-            QPushButton {
-                background-color: #DDDDDD;  /* Màu nền trắng */
-                color: black;             /* Chữ màu đen */
-                font-size: 14px; 
-                font-family: 'Roboto', sans-serif;                   
-                border: 1px solid black;  /* Viền xám nhạt */
-                padding: 8px;               /* Khoảng cách chữ */
-            }
-            QPushButton:hover {
-                background-color: #E3F2FD;  /* Màu xanh nhẹ khi hover */
-                border: 2px solid #90CAF9;  /* Viền xanh nhạt hơn */
-            }
-            QPushButton:pressed {
-                background-color: #BBDEFB;  /* Màu xanh đậm khi nhấn */
-                border: 2px solid #42A5F5;
-            }
-        """
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from resources.style import canvas_button_style
 
 class CanvasWidget(QWidget):
     def __init__(self):
         super().__init__()
-        self.setFixedSize(800, 500)
+        self.setFixedSize(881, 566)
+
+        #some info
+        self.depth_info = 0
+        self.temp_info = 0
+
+        #font setup
+        font_id = QFontDatabase.addApplicationFont("./layout/resources/Orbitron/static/Orbitron-Regular.ttf")
+        if font_id != -1:  # Kiểm tra nếu thêm thành công
+            font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
+            self.font = QFont(font_family, 10, QFont.Bold)
+        else:
+            print("Không thể tải font!")
 
         #canvas init
         self.canvas_init()
@@ -34,6 +33,12 @@ class CanvasWidget(QWidget):
 
         #canvas button
         self.button_init()
+
+        #vehicle status
+        self.vehicle_status_init()
+
+        #system info
+        self.system_info_init()
 
         #bien 
         self.selected_points = []
@@ -53,19 +58,20 @@ class CanvasWidget(QWidget):
         self.canvas.setScene(self.scene)
         self.canvas.setDragMode(QGraphicsView.ScrollHandDrag)
         self.canvas.centerOn(2500, 2500)
+        self.canvas.setStyleSheet("background-color: #F3F3E0;") 
         self.draw_grid(50)  
 
     def button_init(self):
-        self.wbutton = QPushButton("Waypoint set", self)
-        self.wbutton.setStyleSheet(button_style)
-        self.wbutton.setFixedSize(120, 50)
+        self.wbutton = QPushButton("WAYPOINT", self)
+        self.wbutton.setStyleSheet(canvas_button_style)
+        self.wbutton.setFixedSize(160, 50)
         self.wbutton.move(15, 5) 
         self.wbutton.clicked.connect(self.show_waypoint_menu)
 
         self.waypoint_menu = QMenu(self)
         self.waypoint_menu.addAction("Go to point", lambda: self.select_waypoint_mode("Go to point"))
         self.waypoint_menu.addAction("Pattern", lambda: self.select_waypoint_mode("pattern"))
-        #self.waypoint_menu.setStyleSheet(button_style)
+        self.waypoint_menu.setStyleSheet(canvas_button_style)
 
         # self.button2d = QPushButton("2D",self)
         # self.button2d.setStyleSheet(button_style)
@@ -79,19 +85,38 @@ class CanvasWidget(QWidget):
 
         #clear button
         self.button_clear = QPushButton("Clear", self)
-        self.button_clear.setStyleSheet(button_style)
+        self.button_clear.setStyleSheet(canvas_button_style)
         self.button_clear.setFixedSize(90, 50)
-        self.button_clear.move(150, 5)
+        self.button_clear.move(180, 5)
         self.button_clear.clicked.connect(self.clear_waypoints)
         self.button_clear.setVisible(False)  
 
         #upload button
-        self.button_uploadmission = QPushButton("upload", self)
-        self.button_uploadmission.setStyleSheet(button_style)
-        self.button_uploadmission.setFixedSize(90, 50)
-        self.button_uploadmission.move(240, 5)
+        self.button_uploadmission = QPushButton("Upload", self)
+        self.button_uploadmission.setStyleSheet(canvas_button_style)
+        self.button_uploadmission.setFixedSize(110, 50)
+        self.button_uploadmission.move(275, 5)
         self.button_uploadmission.clicked.connect(self.upload_waypoints)
         self.button_uploadmission.setVisible(False)  
+
+    def vehicle_status_init(self):
+        # status text
+        self.statusLabel = QLabel("Vehicle unconnected", self)
+        self.statusLabel.setFont(self.font)
+        self.statusLabel.setStyleSheet("color: #395B64;")
+        self.statusLabel.move(630,18)  # Di chuyển label trạng thái gần vị trí mong muốn
+        
+        # status dot
+        self.statusDot = QLabel(self)
+        self.statusDot.setFixedSize(20, 20)
+        self.statusDot.setStyleSheet("border-radius: 10px; background-color: gray; border: 1px solid black;")
+        self.statusDot.move(600,20)  
+    
+    def system_info_init(self):
+        self.infoLabel = QLabel(f"Depth: {self.depth_info}   Temp: {self.temp_info}" , self)
+        self.infoLabel.setFont(self.font)
+        self.infoLabel.setStyleSheet("color: #395B64; font-size: 22px;")
+        self.infoLabel.move(15, 530)
 
     def show_waypoint_menu(self):
         button_pos = self.wbutton.mapToGlobal(self.wbutton.rect().bottomLeft())
@@ -138,8 +163,3 @@ class CanvasWidget(QWidget):
 
             self.selected_points.append(scene_pos)  # Lưu điểm đã chọn
 
-if __name__ == "__main__":
-    app = QApplication([])
-    window = CanvasWidget()
-    window.show()
-    app.exec_()

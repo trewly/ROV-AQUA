@@ -65,8 +65,7 @@ buttonStyle = """
 class settingLayout(QWidget):
     def __init__(self):
         super().__init__()
-        self.setFixedSize(900,1100)
-
+        self.setFixedSize(917,1029)
         #khoi tao view widget
         self.view_init()
         #khoi tao canvas

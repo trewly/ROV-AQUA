@@ -77,7 +77,7 @@ class STLLoaderThread(QThread):
 class STLViewerWidget(QWidget):
     def __init__(self, stl_file):
         super().__init__()
-        self.setFixedSize(960,450)
+        self.setFixedSize(950, 395)
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         
@@ -87,8 +87,8 @@ class STLViewerWidget(QWidget):
         self.view = gl.GLViewWidget()
         layout.addWidget(self.view)
         self.view.setCameraPosition(distance=80)
-        self.view.setBackgroundColor((255, 255, 255))
-        self.view.setFixedSize(850, 450)
+        self.view.setBackgroundColor("#F3F3E0")
+        self.view.setFixedSize(730, 395)
         self.mesh_item = None
         self.stl_loader = STLLoaderThread(stl_file)
         self.stl_loader.finished.connect(self.on_stl_loaded)
@@ -100,19 +100,24 @@ class STLViewerWidget(QWidget):
 
         #layout chua instrument
         instrument_widget=QWidget()
+        
         instrument_layout= QVBoxLayout(instrument_widget)
+        instrument_widget.setFixedSize(220, 395)
+
+        instrument_widget.setStyleSheet("background-color: #395B64;")
         #them instrument vao layout chinh
         layout.addWidget(instrument_widget)
         
 
-        self._scaleX = 0.8
-        self._scaleY = 0.8
+        self._scaleX = 0.7
+        self._scaleY = 0.7
         #them widget compass    
 
         self.compass_faceZ = 1
         self.compass_caseZ = 2  
         self.compass_view = QGraphicsView(self)
-        self.compass_view.setFixedSize(250, 250) 
+        self.compass_view.setFixedSize(200,200) 
+        self.compass_view.setStyleSheet("background-color: #395B64;")
         self.compass_screen = QGraphicsScene(self)
         self.compass_view.setScene(self.compass_screen)
         instrument_layout.addWidget(self.compass_view)
@@ -129,7 +134,8 @@ class STLViewerWidget(QWidget):
         self.ai_backZ = 0             
         self.ai_ringZ = 3      
         self.ai_view = QGraphicsView(self)
-        self.ai_view.setFixedSize(250,250)
+        self.ai_view.setFixedSize(200,200)
+        self.ai_view.setStyleSheet("background-color: #395B64;")
         self.ai_screen=QGraphicsScene(self)
         self.ai_view.setScene(self.ai_screen)
         instrument_layout.addWidget(self.ai_view)
@@ -139,7 +145,7 @@ class STLViewerWidget(QWidget):
         self.ai_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.ai_view.setFrameShape(QFrame.NoFrame)
 
-        # Khởi động luồng đọc dữ liệu xoay giả lập
+        #Khởi động luồng đọc dữ liệu xoay giả lập
         self.rotation_thread = RotationThread()
         self.rotation_thread.new_rotation.connect(self.rotate_model)  # xoay theo truc the gioi
         self.rotation_thread.new_rotation.connect(self.attitude_indicator_position_change)  # xoay pitch roll
@@ -328,12 +334,3 @@ class STLViewerWidget(QWidget):
         # Cập nhật giao diện
         self.update_attitude_view()
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    stl_path = os.path.join(script_dir, "resources\\shell_assem.STL")
-
-    viewer = STLViewerWidget(stl_path)
-    viewer.show()
-
-    sys.exit(app.exec_())

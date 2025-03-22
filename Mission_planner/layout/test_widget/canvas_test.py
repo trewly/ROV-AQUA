@@ -41,10 +41,3 @@ class GridCanvasWidget(QWidget):
         proxy.setPos(x, y)
         self.scene.addItem(proxy)
 
-if __name__ == "__main__":
-    import sys
-    app = QApplication(sys.argv)
-    window = GridCanvasWidget()
-    window.resize(200, 200)  # Đặt kích thước của widget
-    window.show()
-    sys.exit(app.exec_())

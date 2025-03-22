@@ -93,7 +93,3 @@ class QFI_AI(QWidget):
 
 
 
-app = QApplication(sys.argv)
-hsi = QFI_AI()
-hsi.show()
-sys.exit(app.exec_())

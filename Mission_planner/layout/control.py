@@ -64,8 +64,4 @@ class Ui_Form(QWidget):
         self.video_receiver.closeEvent(event)
         event.accept()
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    controller = Ui_Form()
-    controller.show()
-    sys.exit(app.exec_())
+

@@ -202,5 +202,4 @@ class MavlinkController:
             -1
         )
 
-# create an instance for the controller
-MAV = MavlinkController()
+#MAV = MavlinkController()
