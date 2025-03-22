@@ -26,6 +26,7 @@ def run_streaming():
     process.wait()
 thread = threading.Thread(target=run_streaming, daemon=True)
 thread.start()
+thread.join()
 
 def stop_video_stream():
     print("Stopping GStreamer UDP Stream...")

@@ -2,7 +2,6 @@ import time
 import threading
 import sys
 import os
-import socket
 
 from pymavlink import mavutil
 
@@ -13,8 +12,7 @@ from Autopilot.system_info.status import raspi_status as status
 from Autopilot.system_info.sensor import raspi_sensor_calibrate as calibrate
 from Autopilot.control.motor import raspi_motor_control as rov
 
-last_hearbeat = 0
-
+# define the commands
 SURFACE = 1000
 DIVE = 1001
 LEFT = 1002
@@ -119,21 +117,26 @@ def handle_received_msg(msg):
             print("Mag calibration started")
             calibrate.calibrate_mag()
 
+last_heartbeat = time.time()
 def received_msg(master):
+    global last_heartbeat
     while True:
-        msg = master.recv_match(blocking=True)
-        if msg.get_type() == "HEARTBEAT":
-            last_hearbeat = time.time()
-            print("Received heartbeat")
-        elif msg.get_type() == "COMMAND_LONG":
-            print("Received command")
-            handle_received_msg(msg)
-        elif time.time() - last_hearbeat > 10:
-            print("Connection lost, surfacing")
-            status.update_status(key="disconnect", value=True)
-            while status.read_status(key="depth") > 0:
-                rov.surface()
-                time.sleep(1000)
+        msg = master.recv_match(blocking=True, timeout=1)
+        if msg:
+            if msg.get_type() == "HEARTBEAT":
+                last_heartbeat = time.time()
+                print("Received heartbeat")
+            elif msg.get_type() == "COMMAND_LONG":
+                print("Received command")
+                handle_received_msg(msg)
+        else:
+            if time.time() - last_heartbeat > 10:
+                print("Connection lost, surfacing")
+                status.update_status(key="disconnect", value=True)
+                while status.read_status(key="depth") > 0:
+                    rov.surface()
+                    time.sleep(1)
+        
 
 def send_status(master):
     while True:
@@ -156,13 +159,13 @@ def send_status(master):
                 print(f"Error sending {key}: {e}")
             time.sleep(0.01)
 
+# initialize the communication
 master_receive = mavutil.mavlink_connection("udpin:0.0.0.0:5000")
 thread1 = threading.Thread(target=received_msg, args=(master_receive,), daemon=True)
 thread1.start()
+thread1.join()
 
 master_send = mavutil.mavlink_connection("udpout:169.254.54.121:5001")
 thread2 = threading.Thread(target=send_status, args=(master_send,), daemon=True)
 thread2.start()
-
-while True:
-    time.sleep(1)
+thread2.join()

@@ -8,7 +8,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 
 import Mission_planner.status.pc_status as status
 
+# This class is used to send and receive mavlink messages to and from the Raspberry Pi
 class MavlinkController:
+    # define the commands
     SURFACE = 1000
     DIVE = 1001
     LEFT = 1002
@@ -31,6 +33,7 @@ class MavlinkController:
 
     START_MAG_CALIBRATION = 1200
 
+    # initialize the mavlink connection
     def __init__(self):
         self.master_send = mavutil.mavlink_connection("udpout:169.254.54.120:5000")
         send_thread = threading.Thread(target=self.send_heartbeat, daemon=True)
@@ -42,6 +45,7 @@ class MavlinkController:
 
         self.timer = time.time()
 
+    
     def send_heartbeat(self):
         while True:
             self.master_send.mav.heartbeat_send(
@@ -53,28 +57,26 @@ class MavlinkController:
 
     def receive_msg(self):
         while True:
-            try:
-                msg = self.master_receive.recv_match(blocking=True)
-                if msg is not None:
-                    self.timer = time.time()
-                    if msg.get_type() == "PARAM_VALUE":
-                        param_id = msg.param_id.rstrip('\x00')
-                        param_value = msg.param_value
-                        status.update_status(param_id, param_value)
-                        print(f"Received: {param_id} = {param_value}")
-                if time.time() - self.timer > 5:
-                    print("Connection lost")
-                    status.update_status("disconnect", True)
-            except Exception as e:
-                print(f"Error receiving message: {e}")
+            msg = self.master_receive.recv_match(blocking=True, timeout=1)
+            if msg is not None:
+                self.timer = time.time()
+                if msg.get_type() == "PARAM_VALUE":
+                    param_id = msg.param_id.rstrip('\x00')
+                    param_value = msg.param_value
+                    status.update_status(param_id, param_value)
+                    print(f"Received: {param_id} = {param_value}")
+            if time.time() - self.timer > 10:
+                print("Connection lost, surfacing the ROV")
+                status.update_status("disconnect", True)
 
+    # mainly use COMMAND_LONG to send commands to the Raspberry Pi
     def send_control_cmd(self, cmd):
         self.master_send.mav.command_long_send(
             self.master_send.target_system,       # ID_SYSTEM
             self.master_send.target_component,    # ID_COMPONENT
-            cmd,                             # Encoded command
-            0,                               # Confirmation - How many commands to send
-            0, 0, 0, 0, 0, 0, 0              # Parameters
+            cmd,                                  # Encoded command
+            0,                                    # Confirmation - How many commands to send
+            0, 0, 0, 0, 0, 0, 0                   # Parameters
         )
 
     def set_manual_mode(self):
@@ -200,4 +202,5 @@ class MavlinkController:
             -1
         )
 
+# create an instance for the controller
 MAV = MavlinkController()
