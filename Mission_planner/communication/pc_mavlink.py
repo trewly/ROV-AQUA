@@ -68,7 +68,6 @@ class MavlinkController:
             except Exception as e:
                 print(f"Error receiving message: {e}")
 
-
     def send_control_cmd(self, cmd):
         self.master_send.mav.command_long_send(
             self.master_send.target_system,       # ID_SYSTEM
