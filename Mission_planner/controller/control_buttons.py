@@ -1,5 +1,7 @@
 from .mode_change import ModeChangeDialog
-from Mission_planner.communication.pc_mavlink import MAV
+from Mission_planner.communication.pc_mavlink import MavlinkController 
+
+Mav = MavlinkController()
 
 from PyQt5.QtCore import Qt
 

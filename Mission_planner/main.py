@@ -1,56 +1,50 @@
 import sys
 import os
-from PyQt5.QtWidgets import QApplication, QVBoxLayout, QMainWindow, QWidget, QHBoxLayout, QSplitter
-from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication, QWidget
+from PyQt5.QtGui import QFont, QPalette, QColor
+import time
+from PyQt5.QtCore import QTimer
 
 from layout import screen3d
-from layout import setting
-from layout import control
+#from layout import control
+from layout import new_setting
+from layout.test_widget.just_widget import testLayout
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ""))) 
-
-class MainWindow(QMainWindow):  # ✅ Sửa QMainwindow → QMainWindow
+class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("AQUA MISSION PLANNER")
-        self.setGeometry(0, 0, 1920, 1080)
+        self.setGeometry(0,0, 1890, 990)  
 
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
+        palette = self.palette()
+        palette.setColor(QPalette.Window, QColor("#2C3333")) 
+        self.setPalette(palette)
+        self.setAutoFillBackground(True)
 
-        self.main_layout = QHBoxLayout(central_widget)
-        self.main_layout.setContentsMargins(0, 0, 0, 0)  # Xóa khoảng cách mép
-        self.main_layout.setSpacing(0)  # Xóa khoảng trống giữa các widget
-
-        self.splitter = QSplitter(Qt.Horizontal)
-        self.main_layout.addWidget(self.splitter)
-
-        self.left_screen_init()
-        self.right_screen_init()
-
-    def left_screen_init(self):
-        self.left_screen = QWidget()
-        self.left_screen_layout = QVBoxLayout(self.left_screen)
-        self.left_screen_layout.setContentsMargins(0, 0, 0, 0)
-
-        # ✅ Thêm widget hiển thị 3D
-        self.up_screen = screen3d.STLViewerWidget("./layout/resources/shell_assem.STL")
-        self.left_screen_layout.addWidget(self.up_screen)
-
-        self.down_screen = control.Ui_Form()
-        self.left_screen_layout.addWidget(self.down_screen)
+        self.upscreen_init()
+        self.down_screen_init()
+        self.rightscreen_init()
 
 
+    def upscreen_init(self):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        stl_path = os.path.join(script_dir, "layout/resources/shell_assem.STL")
 
-        # ✅ Thêm vào splitter
-        self.splitter.addWidget(self.left_screen)
+        self.up_screen = screen3d.STLViewerWidget(stl_path)
+        self.up_screen.setParent(self)
+        self.up_screen.setGeometry(15, 20,950, 395)  
 
-    def right_screen_init(self):
-        self.right_screen = setting.settingLayout()
+    def down_screen_init(self):
+        # self.down_screen = control.Ui_Form()
+        self.down_screen = testLayout()
+        self.down_screen.setParent(self)
+        self.down_screen.setGeometry(10, 425,960, 540)  
 
-        # ✅ Thêm vào splitter
-        self.splitter.addWidget(self.right_screen)
-
+    def rightscreen_init(self):
+        self.right_screen = new_setting.settingLayout()
+        self.right_screen.setParent(self)
+        self.right_screen.setGeometry(975, 20, 910, 944)
+            
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()

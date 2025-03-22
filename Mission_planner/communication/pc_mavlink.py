@@ -183,4 +183,4 @@ class MavlinkController:
             -1
         )
 
-MAV = MavlinkController()
+#MAV = MavlinkController()

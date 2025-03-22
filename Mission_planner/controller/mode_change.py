@@ -1,7 +1,9 @@
 from PyQt5.QtWidgets import (QApplication, QWidget, QPushButton, QVBoxLayout, QDialog, QRadioButton, QButtonGroup, QLabel, QSpinBox, QMessageBox)
 from PyQt5.QtCore import QRect
 
-from Mission_planner.communication.pc_mavlink import MAV
+from Mission_planner.communication.pc_mavlink import MavlinkController
+
+Mav=MavlinkController()
 
 class ModeChangeDialog(QDialog):
     current_mode = "Manual"

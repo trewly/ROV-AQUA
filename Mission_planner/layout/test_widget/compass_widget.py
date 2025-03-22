@@ -66,8 +66,3 @@ class QFI_HI(QWidget):
         self._itemCase.setRotation(angle)
         print(angle)
         
-    
-app = QApplication(sys.argv)
-hsi = QFI_HI()
-hsi.show()
-sys.exit(app.exec_())
