@@ -7,9 +7,9 @@ from PyQt5.QtCore import Qt, QTimer
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))) 
 
-from Mission_planner.controller.joystick import VirtualJoystick
-from Mission_planner.controller import control_buttons as buttons_controller
-from Mission_planner.controller.video import VideoReceiver
+from Mission_planner.controller.joystick_controller import VirtualJoystick
+from Mission_planner.controller import button_controller as buttons_controller
+from Mission_planner.controller.video_controller import VideoReceiver
 
 class Ui_Form(QWidget):
     def __init__(self):

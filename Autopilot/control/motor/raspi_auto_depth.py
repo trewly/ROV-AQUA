@@ -1,4 +1,4 @@
-import raspi_motor_control as motor
+import raspi_motor_control as rov
 from Autopilot.system_info.status import raspi_status as status
 # from . import raspi_PID as pid
 
@@ -23,7 +23,7 @@ def auto_depth(pid):
         status.update_status(key="left_depth_speed", value=left_depth_motor_speed)
         status.update_status(key="right_depth_speed", value=right_depth_motor_speed)
 
-        left_pwm = motor.scale_to_pwm(value=left_depth_motor_speed)
-        right_pwm = motor.scale_to_pwm(value=right_depth_motor_speed)
+        left_pwm = rov.scale_to_pwm(value=left_depth_motor_speed)
+        right_pwm = rov.scale_to_pwm(value=right_depth_motor_speed)
 
-        motor.set_speed_depth(right_pwm=right_pwm, left_pwm=left_pwm)
+        rov.set_speed_depth(right_pwm=right_pwm, left_pwm=left_pwm)

@@ -32,13 +32,15 @@ class MavlinkController:
     START_MAG_CALIBRATION = 1200
 
     def __init__(self):
-        self.master_send = mavutil.mavlink_connection("udpout:169.254.54.120:50000")
+        self.master_send = mavutil.mavlink_connection("udpout:169.254.54.120:5000")
         send_thread = threading.Thread(target=self.send_heartbeat, daemon=True)
         send_thread.start()
 
-        self.master_receive = mavutil.mavlink_connection("udpin:0.0.0.0:50001")
+        self.master_receive = mavutil.mavlink_connection("udpin:0.0.0.0:5001")
         receive_thread = threading.Thread(target=self.receive_msg, daemon=True)
         receive_thread.start()
+
+        self.timer = time.time()
 
     def send_heartbeat(self):
         while True:
@@ -54,12 +56,15 @@ class MavlinkController:
             try:
                 msg = self.master_receive.recv_match(blocking=True)
                 if msg is not None:
+                    self.timer = time.time()
                     if msg.get_type() == "PARAM_VALUE":
                         param_id = msg.param_id.rstrip('\x00')
                         param_value = msg.param_value
                         status.update_status(param_id, param_value)
                         print(f"Received: {param_id} = {param_value}")
-
+                if time.time() - self.timer > 5:
+                    print("Connection lost")
+                    status.update_status("disconnect", True)
             except Exception as e:
                 print(f"Error receiving message: {e}")
 
@@ -82,22 +87,22 @@ class MavlinkController:
             0, 0, 0, 0, 0, 0, 0
         )
 
-    def set_auto_heading(self, enable, heading):
+    def set_auto_heading(self, heading):
         self.master_send.mav.command_long_send(
             self.master_send.target_system,
             self.master_send.target_component,
             self.SET_AUTO_HEADING,
             0,
-            enable, heading, 0, 0, 0, 0, 0
+            heading, 0, 0, 0, 0, 0, 0
         )
 
-    def set_auto_depth(self, enable, depth):
+    def set_auto_depth(self, depth):
         self.master_send.mav.command_long_send(
             self.master_send.target_system,
             self.master_send.target_component,
             self.SET_AUTO_DEPTH,
             0,
-            enable, depth, 0, 0, 0, 0, 0
+            depth, 0, 0, 0, 0, 0, 0
         )
 
     def set_max_speed_forward(self, max_speed):

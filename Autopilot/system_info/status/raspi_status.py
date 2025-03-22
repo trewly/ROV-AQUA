@@ -59,8 +59,7 @@ def init_status():
         "Kd": 0,
 
         "mode": "manual",
-        "light": 0,
-        "camera": 0
+        "disconnect": False
     }
 
     with open("/home/khanhisme1/Desktop/ROV-AQUA/Autopilot/system_info/status/status.json", "w") as file:

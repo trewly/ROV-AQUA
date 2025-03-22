@@ -70,16 +70,28 @@ def handle_received_msg(msg):
             print("Manual mode set")
 
         elif msg.command == SET_AUTO_HEADING:
-            status.update_status(key="auto_heading", value=msg.param1)
-            status.update_status(key="target_heading", value=msg.param2)
+            status.update_status(key="auto_heading", value=True)
+            if msg.param1 < 0:
+                heading = 0
+            elif msg.param1 > 360:
+                heading = 360
+            else:
+                heading = msg.param1
+            status.update_status(key="target_heading", value=heading)
             status.update_status(key="mode", value="auto_heading")
-            print("Auto heading set to: ", msg.param1, msg.param2)
+            print("Auto heading set to: ", heading)
 
         elif msg.command == SET_AUTO_DEPTH:
-            status.update_status(key="auto_depth", value=msg.param1)
-            status.update_status(key="target_depth", value=msg.param2)
+            status.update_status(key="auto_depth", value=True)
+            if msg.param1 < 0:
+                depth = 0
+            elif msg.param1 > 10:
+                    depth = 10
+            else:
+                depth = msg.param1
+            status.update_status(key="target_depth", value=depth)
             status.update_status(key="mode", value="auto_depth")
-            print("Auto depth set to: ", msg.param1, msg.param2)
+            print("Auto depth set to: ", msg.param1)
 
         elif msg.command == SET_PID:
             status.update_status(key="Kp", value=msg.param1)
@@ -112,18 +124,20 @@ def received_msg(master):
         msg = master.recv_match(blocking=True)
         if msg.get_type() == "HEARTBEAT":
             last_hearbeat = time.time()
-
-        elif time.time() - last_hearbeat > 5:
+            print("Received heartbeat")
+        elif msg.get_type() == "COMMAND_LONG":
+            print("Received command")
+            handle_received_msg(msg)
+        elif time.time() - last_hearbeat > 10:
             print("Connection lost, surfacing")
+            status.update_status(key="disconnect", value=True)
             while status.read_status(key="depth") > 0:
                 rov.surface()
-        handle_received_msg(msg)
-
+                time.sleep(1000)
 
 def send_status(master):
     while True:
         status_data = status.read_all_status()
-        
         for key in ["roll", "pitch", "heading", "temp", "depth"]:
             try:
                 value = float(status_data.get(key, 0))
@@ -141,14 +155,12 @@ def send_status(master):
             except Exception as e:
                 print(f"Error sending {key}: {e}")
             time.sleep(0.01)
-        
-        time.sleep(1)
 
-master_receive = mavutil.mavlink_connection("udpin:0.0.0.0:50000")
+master_receive = mavutil.mavlink_connection("udpin:0.0.0.0:5000")
 thread1 = threading.Thread(target=received_msg, args=(master_receive,), daemon=True)
 thread1.start()
 
-master_send = mavutil.mavlink_connection("udpout:169.254.54.121:50001")
+master_send = mavutil.mavlink_connection("udpout:169.254.54.121:5001")
 thread2 = threading.Thread(target=send_status, args=(master_send,), daemon=True)
 thread2.start()
 
