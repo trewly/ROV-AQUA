@@ -1,34 +1,49 @@
-import Autopilot.system_info.sensor.raspi_sensor_read as sensor
 import time
+import math
+import numpy as np
 
-from Autopilot.system_info.status import raspi_status as status
 
-def calibrate_mag():
-    max_mag_x = 0
-    max_mag_y = 0
-    max_mag_z = 0
-    min_mag_x = 999999
-    min_mag_y = 999999
-    min_mag_z = 999999
-    print("Calibrating magnetometer...")
-    for i in range(100):
-        mag_x, mag_y, mag_z = sensor.read_mag_data()
-        if mag_x > max_mag_x:
-            max_mag_x = mag_x
-        if mag_y > max_mag_y:
-            max_mag_y = mag_y
-        if mag_z > max_mag_z:
-            max_mag_z = mag_z
+import Autopilot.system_info.sensor.raspi_sensor_read as sensor
 
-        if mag_x < min_mag_x:
-            min_mag_x = mag_x
-        if mag_y < min_mag_y:
-            min_mag_y = mag_y
-        if mag_z < min_mag_z:
-            min_mag_z = mag_z
-        time.sleep(0.1)
-    print("Calibration done")
+def calibrate_mag(sample_count=1500):
+    print("Di chuyển cảm biến theo hình số 8 để hiệu chuẩn...")
+    time.sleep(2)
 
-    status.update_status(key="calib_mag_x", value=(max_mag_x + min_mag_x) / 2)
-    status.update_status(key="calib_mag_y", value=(max_mag_y + min_mag_y) / 2)
-    status.update_status(key="calib_mag_z", value=(max_mag_z + min_mag_z) / 2)
+    mag_min = np.array([999999, 999999, 999999], dtype=float)
+    mag_max = np.array([-999999, -999999, -999999], dtype=float)
+
+    for i in range(sample_count):
+        status = sensor.read_mag_status()
+        if status & 0x01:
+            mag = sensor.read_mag_data()
+            mag_min = np.minimum(mag_min, mag)
+            mag_max = np.maximum(mag_max, mag)
+        time.sleep(0.013)
+
+    print("Hoàn tất hiệu chuẩn!")
+
+    m_bias = (mag_max + mag_min) / 2
+    print(f"Hard Iron Bias: {m_bias}")
+
+    scale_factors = (mag_max - mag_min) / 2
+    avg_radius = np.mean(scale_factors)
+    m_scale = avg_radius / scale_factors
+    print(f"Soft Iron Scale: {m_scale}")
+
+    return m_bias, m_scale
+
+# m_bias, m_scale = calibrate_mag()
+
+# while True:
+#     status = sensor.read_mag_status()
+#     if status & 0x01:  # Kiểm tra dữ liệu mới
+#         mag = sensor.read_mag_data()
+#         mag_corrected = (mag - m_bias) * m_scale  # Áp dụng hiệu chỉnh
+#         angle_xy = math.atan2(mag_corrected[1], mag_corrected[0])
+#         if angle_xy < 0:
+#             angle_xy += 2 * math.pi
+#         angle_xy = 360 - math.degrees(angle_xy)
+#         print(f"Angle XY: {angle_xy:.2f}°")
+#     else:
+#         print("Chưa có dữ liệu mới, chờ thêm...")
+#     time.sleep(0.013)  # 75Hz

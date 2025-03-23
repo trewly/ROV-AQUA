@@ -1,16 +1,21 @@
 import smbus2 as smbus
 import time
 import math
+import numpy as np
+
+from Autopilot.system_info.status import raspi_status as status
 
 G = 9.80665
 
 MPU9250_ADDR = 0x68
-AK09911C_ADDR = 0x0D
+HMC5883L_ADDR = 0x1E
 
-REG_WIA = 0x01
-REG_ST1 = 0x10
-REG_ST2 = 0x18
-REG_CNTL2 = 0x31
+MAG_CONFIG_A = 0x00
+MAG_CONFIG_B = 0x01
+MAG_MODE = 0x02
+STATUS_REG = 0x09
+
+MAG_MODE_CONTINUOUS = 0x00
 
 TEMP_OUT = 0x41
 
@@ -28,12 +33,12 @@ GYRO_YOUT_L = 0x46
 GYRO_ZOUT_H = 0x47
 GYRO_ZOUT_L = 0x48
 
-MAG_XOUT_L = 0x11
-MAG_XOUT_H = 0x12
-MAG_YOUT_L = 0x13
-MAG_YOUT_H = 0x14
-MAG_ZOUT_L = 0x15
-MAG_ZOUT_H = 0x16
+MAG_XOUT_L = 0x03
+MAG_XOUT_H = 0x04
+MAG_YOUT_L = 0x05
+MAG_YOUT_H = 0x06
+MAG_ZOUT_L = 0x07
+MAG_ZOUT_H = 0x08
 
 XA_OFFSET_H = 0x77
 XA_OFFSET_L = 0x78
@@ -44,21 +49,20 @@ ZA_OFFSET_L = 0x7E
 
 bus = smbus.SMBus(1)
 
+def mag_init():
+    bus.write_byte_data(HMC5883L_ADDR, MAG_CONFIG_A, 0x78)
+    bus.write_byte_data(HMC5883L_ADDR, MAG_CONFIG_B, 0x20)
+    bus.write_byte_data(HMC5883L_ADDR, MAG_MODE, MAG_MODE_CONTINUOUS)
+
+def read_mag_status():
+    bus.write_byte(HMC5883L_ADDR, STATUS_REG)
+    return bus.read_byte(HMC5883L_ADDR)
+
 def read_word_mpu(register):
     high = bus.read_byte_data(MPU9250_ADDR, register)
     low = bus.read_byte_data(MPU9250_ADDR, register + 1)
     value = (high << 8) + low
     if value >= 0x8000:
-        value -= 0x10000
-    return value
-
-def read_word_ak(register):
-    low = bus.read_byte_data(AK09911C_ADDR, register)
-    bus.read_byte_data(AK09911C_ADDR, REG_ST2)
-    high = bus.read_byte_data(AK09911C_ADDR, register + 1)
-    bus.read_byte_data(AK09911C_ADDR, REG_ST2)
-    value = (high << 8) | low
-    if value > 0x8000:
         value -= 0x10000
     return value
 
@@ -80,16 +84,27 @@ def read_accel_data():
     return accel_x, accel_y, accel_z
 
 def read_mag_data():
-    mag_x = read_word_ak(MAG_XOUT_L)
-    mag_y = read_word_ak(MAG_YOUT_L)
-    mag_z = read_word_ak(MAG_ZOUT_L)
-    return mag_x, mag_y, mag_z
+    bus.write_byte(HMC5883L_ADDR, MAG_XOUT_L)
+    data = bus.read_i2c_block_data(HMC5883L_ADDR, MAG_XOUT_L, 6)
 
-def read_mag_data_calibrated(calib_x, calib_y, calib_z):
+    x = (data[0] << 8) | data[1]
+    z = (data[2] << 8) | data[3]
+    y = (data[4] << 8) | data[5]
+
+    x = x - 65536 if x > 32767 else x
+    y = y - 65536 if y > 32767 else y
+    z = z - 65536 if z > 32767 else z
+
+    return np.array([x, y, z], dtype=float)
+
+def read_mag_data_calibrated():
     mag_x, mag_y, mag_z = read_mag_data()
-    mag_x -= calib_x
-    mag_y -= calib_y
-    mag_z -= calib_z
+    mag_x -= status.read_status("mag_x")
+    mag_y -= status.read_status("mag_y")
+    mag_z -= status.read_status("mag_z")
+    mag_x = mag_x * status.read_status("mag_scale_x")
+    mag_y = mag_y * status.read_status("mag_scale_y")
+    mag_z = mag_z * status.read_status("mag_scale_z")
     return mag_x, mag_y, mag_z
 
 def read_angle_xy(x, y):
