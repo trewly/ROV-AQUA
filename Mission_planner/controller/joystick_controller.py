@@ -4,7 +4,6 @@ from PyQt5.QtCore import Qt, QPointF, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor
 from Mission_planner.communication.pc_mavlink import MAV
 
-
 class VirtualJoystick(QGraphicsView):
     joystickMoved = pyqtSignal(float, float)
 
@@ -109,8 +108,3 @@ class VirtualJoystick(QGraphicsView):
             print("BACKWARD")
             MAV.send_control_cmd(MAV.BACKWARD)
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    joystick = VirtualJoystick()
-    joystick.show()
-    sys.exit(app.exec_())

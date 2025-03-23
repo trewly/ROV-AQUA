@@ -6,7 +6,7 @@ import time
 from PyQt5.QtCore import QTimer
 
 from layout import screen3d
-#from layout import control
+from layout import control
 from layout import new_setting
 from layout.test_widget.just_widget import testLayout
 
@@ -35,8 +35,8 @@ class MainWindow(QWidget):
         self.up_screen.setGeometry(15, 20,950, 395)  
 
     def down_screen_init(self):
-        # self.down_screen = control.Ui_Form()
-        self.down_screen = testLayout()
+        self.down_screen = control.Ui_Form()
+        #self.down_screen = testLayout()
         self.down_screen.setParent(self)
         self.down_screen.setGeometry(10, 425,960, 540)  
 

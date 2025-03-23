@@ -82,9 +82,3 @@ class VideoReceiver(QWidget):
         self.video_thread.wait()
         event.accept()
         print(f"Đã lưu video tại: {self.save_path}")
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = VideoReceiver()
-    window.show()
-    sys.exit(app.exec_())
