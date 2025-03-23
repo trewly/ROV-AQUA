@@ -40,6 +40,8 @@ class MavlinkController:
         receive_thread = threading.Thread(target=self.receive_msg, daemon=True)
         receive_thread.start()
 
+        print("Mavlink controller initialized")
+
         self.timer = time.time()
 
     def send_heartbeat(self):
@@ -200,4 +202,4 @@ class MavlinkController:
             -1
         )
 
-#MAV = MavlinkController()
+MAV = MavlinkController()
