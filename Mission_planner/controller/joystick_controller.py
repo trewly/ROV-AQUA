@@ -2,9 +2,8 @@ import sys
 from PyQt5.QtWidgets import QApplication, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem
 from PyQt5.QtCore import Qt, QPointF, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor
-from Mission_planner.communication.pc_mavlink import MavlinkController
+from Mission_planner.communication.pc_mavlink import MAV
 
-Mav=MavlinkController()
 
 class VirtualJoystick(QGraphicsView):
     joystickMoved = pyqtSignal(float, float)
