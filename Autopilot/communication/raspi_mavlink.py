@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 
 from Autopilot.system_info.status import raspi_status as status
 from Autopilot.system_info.sensor import raspi_sensor_calibrate as calibrate
-from Autopilot.control.motor import raspi_motor_control as rov
+from Autopilot.controller.motor import raspi_motor_control as rov
 
 # define the commands
 SURFACE = 1000
