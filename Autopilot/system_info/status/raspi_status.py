@@ -39,6 +39,9 @@ def init_status():
         "mag_calib_x": 0,
         "mag_calib_y": 0,
         "mag_calib_z": 0,
+        "mag_calib_scale_x": 0,
+        "mag_calib_scale_y": 0,
+        "mag_calib_scale_z": 0,
 
         "auto_heading": False,
         "target_heading": 0,
