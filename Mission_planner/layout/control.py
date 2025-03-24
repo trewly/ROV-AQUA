@@ -7,7 +7,9 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHB
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QIcon
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))) 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
+
+from resources import style as st
 
 from Mission_planner.controller.joystick_controller import VirtualJoystick
 from Mission_planner.controller import button_controller as buttons_controller
@@ -18,7 +20,7 @@ class ControlButton(QPushButton):
     def __init__(self, text, parent=None):
         super().__init__(text, parent)
         self.setMinimumSize(100, 30)
-        self.setFont(QFont('Arial', 9, QFont.Bold))
+        self.setStyleSheet(st.control_button_style)
         self.setCursor(Qt.PointingHandCursor)
 
 class ControlPanel(QWidget):

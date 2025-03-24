@@ -50,12 +50,12 @@ class VirtualJoystick(QGraphicsView):
 
         self.base = QGraphicsEllipseItem(0, 0, self.size - 25, self.size - 25)
         self.base.setBrush(QBrush(QColor(0, 0, 0, 0)))
-        self.base.setPen(QColor(100, 100, 100, 150))
+        self.base.setPen(QColor("#F3F3E0"))
         self.base.setPos(12.5, 12.5)
         self.scene.addItem(self.base)
 
         self.knob = QGraphicsEllipseItem(0, 0, self.knob_size, self.knob_size)
-        self.knob.setBrush(QBrush(QColor(0, 0, 255, 150)))
+        self.knob.setBrush(QBrush(QColor("#F3F3E0")))
         self.center_position = (self.size - self.knob_size) / 2
         self.knob.setPos(self.center_position, self.center_position)
         self.scene.addItem(self.knob)

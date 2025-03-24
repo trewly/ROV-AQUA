@@ -2,11 +2,27 @@ canvas_button_style="""
             QPushButton {
                 background-color: #3E5A60;  /* Màu nền xanh đậm */
                 color: #F0EED4;  /* Màu chữ kem */
-                font-size: 18px;
+                font-size: 16px;
                 font-weight: bold;
-                border-radius: 15px;  /* Bo tròn góc */
-                padding: 10px 20px;
-                border: 2px solid black;
+                padding: 10px 10px;
+                border: 1px solid black;
+            }
+            QPushButton:hover {
+                background-color: #4A6D75; /* Màu sáng hơn khi hover */
+            }
+            QPushButton:pressed {
+                background-color: #2D4146; /* Màu đậm hơn khi bấm */
+            }
+        """
+
+control_button_style="""
+            QPushButton {
+                background-color: #3E5A60;  /* Màu nền xanh đậm */
+                color: #F0EED4;  /* Màu chữ kem */
+                font-size: 12px;
+                font-weight: bold;
+                padding: 10px 10px;
+                border: 1px solid black;
             }
             QPushButton:hover {
                 background-color: #4A6D75; /* Màu sáng hơn khi hover */
