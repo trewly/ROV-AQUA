@@ -1,4 +1,4 @@
-import raspi_motor_control as rov
+from Autopilot.controller.motor import raspi_motor_control as rov
 from Autopilot.system_info.status import raspi_status as status
 # from . import raspi_PID as pid
 
