@@ -28,5 +28,5 @@
     "Ki": 0,
     "Kd": 0,
     "mode": "manual",
-    "disconnect": false
+    "disconnect": true
 }
