@@ -35,6 +35,9 @@ class CanvasWidget(QWidget):
         #canvas button
         self.button_init()
 
+        #state button 
+        self.state_button_init()
+
         #vehicle status
         self.vehicle_status_init()
 
@@ -68,6 +71,26 @@ class CanvasWidget(QWidget):
         self.canvas.centerOn(2500, 2500)
         self.canvas.setStyleSheet("background-color: #F3F3E0;") 
         self.draw_grid(50)  
+
+    def state_button_init(self):
+        #khoi tao mode button
+        self.mode_button = QPushButton("MODE", self)
+        self.mode_button.setStyleSheet(canvas_button_style)
+        self.mode_button.setFixedSize(160, 50)
+        self.mode_button.move(534, 508) 
+        self.mode_button.clicked.connect(self.show_mode)
+        #khoi tao state button -> bieu do he thogn cac gov raw, pitch, roll
+        self.state_button = QPushButton("STATE", self)
+        self.state_button.setStyleSheet(canvas_button_style)
+        self.state_button.setFixedSize(160, 50)
+        self.state_button.move(704, 508) 
+        self.state_button.clicked.connect(self.show_state)
+
+    def show_state(self):
+        pass
+
+    def show_mode(self):
+        pass
 
     def button_init(self):
         self.wbutton = QPushButton("WAYPOINT", self)
