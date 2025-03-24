@@ -42,21 +42,18 @@ class VirtualJoystick(QGraphicsView):
         self.joystickMoved.connect(self.on_joystick_moved)
 
     def _setup_ui(self):
-        # Setup scene
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
         self.setFixedSize(self.size, self.size)
         self.setStyleSheet("background: transparent;")
         self.setFrameShape(QGraphicsView.NoFrame)
 
-        # Setup base
         self.base = QGraphicsEllipseItem(0, 0, self.size - 25, self.size - 25)
         self.base.setBrush(QBrush(QColor(0, 0, 0, 0)))
         self.base.setPen(QColor(100, 100, 100, 150))
         self.base.setPos(12.5, 12.5)
         self.scene.addItem(self.base)
 
-        # Setup knob
         self.knob = QGraphicsEllipseItem(0, 0, self.knob_size, self.knob_size)
         self.knob.setBrush(QBrush(QColor(0, 0, 255, 150)))
         self.center_position = (self.size - self.knob_size) / 2
@@ -107,7 +104,6 @@ class VirtualJoystick(QGraphicsView):
             self.move_knob(0, 0)
             return
 
-        # Use the most recently pressed key
         key = self.pressed_keys_order[-1]
         x, y = self.KEY_MAP.get(key, (0, 0))
         self.move_knob(x, y)

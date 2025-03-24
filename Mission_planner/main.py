@@ -28,14 +28,14 @@ class MainWindow(QWidget):
 
     def upscreen_init(self):
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        stl_path = os.path.join(script_dir, "./Mission_planner/layout/resources/shell_assem.STL")
+        stl_path = os.path.join(script_dir, "./layout/resources/shell_assem.STL")
 
         self.up_screen = screen3d.STLViewerWidget(stl_path)
         self.up_screen.setParent(self)
         self.up_screen.setGeometry(15, 20,950, 395)  
 
     def down_screen_init(self):
-        self.down_screen = control.Ui_Form()
+        self.down_screen = control.ControlPanel()
         #self.down_screen = testLayout()
         self.down_screen.setParent(self)
         self.down_screen.setGeometry(10, 425,960, 540)  

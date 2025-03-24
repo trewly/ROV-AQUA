@@ -19,7 +19,7 @@ class CanvasWidget(QWidget):
         self.temp_info = 0
 
         #font setup
-        font_id = QFontDatabase.addApplicationFont("./Mission_planner/layout/resources/Orbitron/static/Orbitron-Regular.ttf")
+        font_id = QFontDatabase.addApplicationFont("./layout/resources/Orbitron/static/Orbitron-Regular.ttf")
         if font_id != -1:  # Kiểm tra nếu thêm thành công
             font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
             self.font = QFont(font_family, 10, QFont.Bold)

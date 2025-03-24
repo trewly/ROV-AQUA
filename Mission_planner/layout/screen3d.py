@@ -242,7 +242,7 @@ class STLViewerWidget(QWidget):
 
         self.compass_reset()
 
-        self.cp_itemFace = QGraphicsSvgItem("./Mission_planner/layout/resources/compass/hi_face.svg")
+        self.cp_itemFace = QGraphicsSvgItem("./layout/resources/compass/hi_face.svg")
         self.cp_itemFace.setCacheMode(QGraphicsItem.NoCache)
         self.cp_itemFace.setZValue(self.compass_faceZ)
         self.cp_itemFace.setTransform(QTransform().scale(self._scaleX, self._scaleY), True)
@@ -254,7 +254,7 @@ class STLViewerWidget(QWidget):
         # Đặt điểm xoay đúng vị trí
         self.cp_itemFace.setTransformOriginPoint(self.cp_originalHsiCtr)
 
-        self.cp_itemCase = QGraphicsSvgItem("./Mission_planner/layout/resources/compass/hi_face.svg")
+        self.cp_itemCase = QGraphicsSvgItem("./layout/resources/compass/hi_face.svg")
         self.cp_itemCase.setCacheMode(QGraphicsItem.NoCache)
         self.cp_itemCase.setZValue(self.compass_caseZ)
         self.cp_itemCase.setTransform(QTransform().scale(self._scaleX, self._scaleY), True)
@@ -278,7 +278,7 @@ class STLViewerWidget(QWidget):
         self.attitude_reset()
 
         # **Background**
-        self.ai_itemBack = QGraphicsSvgItem("./Mission_planner/layout/resources/compass/hi_face.svg")
+        self.ai_itemBack = QGraphicsSvgItem("./layout/resources/compass/hi_face.svg")
         self.ai_itemBack.setZValue(self.ai_backZ)
         self.ai_itemBack.setTransform(QTransform().scale(self._scaleX, self._scaleY), True)
         self.ai_screen.addItem(self.ai_itemBack)
@@ -288,21 +288,21 @@ class STLViewerWidget(QWidget):
         self.ai_itemBack.setTransformOriginPoint(self.ai_originalAdiCtr)
 
         # **Face (mặt attitude)**
-        self.ai_itemFace = QGraphicsSvgItem("./Mission_planner/layout/resources/compass/hi_face.svg")
+        self.ai_itemFace = QGraphicsSvgItem("./layout/resources/compass/hi_face.svg")
         self.ai_itemFace.setZValue(self.ai_faceZ)
         self.ai_itemFace.setTransform(QTransform().scale(self._scaleX, self._scaleY), True)
         self.ai_screen.addItem(self.ai_itemFace)
         self.ai_itemFace.setTransformOriginPoint(self.ai_originalAdiCtr)
 
         # **Ring**
-        self.ai_itemRing = QGraphicsSvgItem("./Mission_planner/layout/resources/compass/hi_face.svg")
+        self.ai_itemRing = QGraphicsSvgItem("./layout/resources/compass/hi_face.svg")
         self.ai_itemRing.setZValue(self.ai_ringZ)
         self.ai_itemRing.setTransform(QTransform().scale(self._scaleX, self._scaleY), True)
         self.ai_screen.addItem(self.ai_itemRing)
         self.ai_itemRing.setTransformOriginPoint(self.ai_originalAdiCtr)
 
         # **Case**
-        self.ai_itemCase = QGraphicsSvgItem("./Mission_planner/layout/resources/compass/hi_face.svg")
+        self.ai_itemCase = QGraphicsSvgItem("./layout/resources/compass/hi_face.svg")
         self.ai_itemCase.setZValue(self.ai_caseZ)
         self.ai_itemCase.setTransform(QTransform().scale(self._scaleX, self._scaleY), True)
         self.ai_screen.addItem(self.ai_itemCase)
