@@ -38,6 +38,7 @@ class MotorSlider(QWidget):
 
         motorxy_slider = QWidget()
         motorxy_layout = QVBoxLayout()
+        motorxy_slider.setFixedWidth(300)
         motorxy_slider.setLayout(motorxy_layout)
 
         self.motorxy_forward = QSlider(Qt.Horizontal)
@@ -67,6 +68,7 @@ class MotorSlider(QWidget):
         self.set_z_speed.setLayout(z_layout)
 
         motorz_slider = QWidget()
+        motorz_slider.setFixedWidth(300)
         motorz_layout = QVBoxLayout()
         motorz_slider.setLayout(motorz_layout)
 
