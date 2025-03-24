@@ -6,35 +6,64 @@ from Mission_planner.communication.pc_mavlink import MAV
 
 class VirtualJoystick(QGraphicsView):
     joystickMoved = pyqtSignal(float, float)
+    
+    # Define direction constants
+    STOP = (0, 0)
+    RIGHT = (1, 0)
+    LEFT = (-1, 0)
+    FORWARD = (0, 1)
+    BACKWARD = (0, -1)
+    
+    # Map keys to directions
+    KEY_MAP = {
+        Qt.Key_Left: LEFT,
+        Qt.Key_Right: RIGHT,
+        Qt.Key_Up: FORWARD,
+        Qt.Key_Down: BACKWARD
+    }
+    
+    # Map directions to MAV commands
+    DIRECTION_TO_COMMAND = {
+        STOP: (MAV.STOP, "STOP"),
+        RIGHT: (MAV.RIGHT, "RIGHT"),
+        LEFT: (MAV.LEFT, "LEFT"),
+        FORWARD: (MAV.FORWARD, "FORWARD"),
+        BACKWARD: (MAV.BACKWARD, "BACKWARD")
+    }
 
     def __init__(self, parent=None, size=150, knob_size=40, max_distance=50):
         super().__init__(parent)
         self.size = size
         self.knob_size = knob_size
         self.max_distance = max_distance
+        self.pressed_keys_order = []
+        
+        self._setup_ui()
+        self.joystickMoved.connect(self.on_joystick_moved)
 
+    def _setup_ui(self):
+        # Setup scene
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
-        self.setFixedSize(size, size)
+        self.setFixedSize(self.size, self.size)
         self.setStyleSheet("background: transparent;")
         self.setFrameShape(QGraphicsView.NoFrame)
 
-        self.base = QGraphicsEllipseItem(0, 0, size - 25, size - 25)
+        # Setup base
+        self.base = QGraphicsEllipseItem(0, 0, self.size - 25, self.size - 25)
         self.base.setBrush(QBrush(QColor(0, 0, 0, 0)))
         self.base.setPen(QColor(100, 100, 100, 150))
         self.base.setPos(12.5, 12.5)
         self.scene.addItem(self.base)
 
-        self.knob = QGraphicsEllipseItem(0, 0, knob_size, knob_size)
+        # Setup knob
+        self.knob = QGraphicsEllipseItem(0, 0, self.knob_size, self.knob_size)
         self.knob.setBrush(QBrush(QColor(0, 0, 255, 150)))
-        self.knob.setPos((size - knob_size) / 2, (size - knob_size) / 2)
+        self.center_position = (self.size - self.knob_size) / 2
+        self.knob.setPos(self.center_position, self.center_position)
         self.scene.addItem(self.knob)
 
-        self.center = QPointF((size - knob_size) / 2, (size - knob_size) / 2)
-
-        self.pressed_keys_order = []
-        
-        self.joystickMoved.connect(self.on_joystick_moved)
+        self.center = QPointF(self.center_position, self.center_position)
 
     def move_knob(self, x, y):
         dx = x * self.max_distance
@@ -50,7 +79,7 @@ class VirtualJoystick(QGraphicsView):
             return
 
         key = event.key()
-        if key in {Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down}:
+        if key in self.KEY_MAP:
             if key not in self.pressed_keys_order:
                 self.pressed_keys_order.append(key)
                 self.update_knob_position()
@@ -62,49 +91,30 @@ class VirtualJoystick(QGraphicsView):
             return
 
         key = event.key()
-
-        if key in {Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down}:
+        if key in self.KEY_MAP:
             if key in self.pressed_keys_order:
                 self.pressed_keys_order.remove(key)
 
-            if not any(k in {Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down} for k in self.pressed_keys_order):
+            if not self.pressed_keys_order:
                 self.move_knob(0, 0)
+            else:
+                self.update_knob_position()
         else:
             super().keyReleaseEvent(event)
 
     def update_knob_position(self):
-        if len(self.pressed_keys_order) == 0:
+        if not self.pressed_keys_order:
             self.move_knob(0, 0)
             return
 
-        key = self.pressed_keys_order[0]
-        x, y = 0, 0
-
-        if key == Qt.Key_Left:
-            x = -1
-        elif key == Qt.Key_Right:
-            x = 1
-        elif key == Qt.Key_Up:
-            y = 1
-        elif key == Qt.Key_Down:
-            y = -1
-
+        # Use the most recently pressed key
+        key = self.pressed_keys_order[-1]
+        x, y = self.KEY_MAP.get(key, (0, 0))
         self.move_knob(x, y)
 
     def on_joystick_moved(self, x, y):
-        if x == 0 and y == 0:
-            print("STOP")
-            MAV.send_control_cmd(MAV.STOP)
-        elif x == 1 and y == 0:
-            print("RIGHT")
-            MAV.send_control_cmd(MAV.RIGHT)
-        elif x == -1 and y == 0:
-            print("LEFT")
-            MAV.send_control_cmd(MAV.LEFT)
-        elif x == 0 and y == 1:
-            print("FORWARD")
-            MAV.send_control_cmd(MAV.FORWARD)
-        elif x == 0 and y == -1:
-            print("BACKWARD")
-            MAV.send_control_cmd(MAV.BACKWARD)
-
+        direction = (x, y)
+        if direction in self.DIRECTION_TO_COMMAND:
+            command, label = self.DIRECTION_TO_COMMAND[direction]
+            print(label)
+            MAV.send_control_cmd(command)

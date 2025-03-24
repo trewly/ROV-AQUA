@@ -1,26 +1,48 @@
+from PyQt5.QtCore import Qt
+
 from .mode_controller import ModeChangeDialog
 from Mission_planner.communication.pc_mavlink import MAV
 
-from PyQt5.QtCore import Qt
-
 class ButtonController:
+    KEY_MAPPINGS = {
+        Qt.Key_Shift: 'surface',
+        Qt.Key_Control: 'dive',
+        Qt.Key_L: 'light'
+    }
+    
     def __init__(self):
-        pass
-
+        self.active_buttons = set()
+    
+    def on_button_clicked(self, button_type):
+        self.active_buttons.add(button_type)
+        
+        if button_type == 'surface':
+            MAV.send_control_cmd(MAV.SURFACE)
+        
+        elif button_type == 'dive':
+            MAV.send_control_cmd(MAV.DIVE)
+    
+    def on_button_released(self, button_type):
+        if button_type in self.active_buttons:
+            self.active_buttons.remove(button_type)
+        
+        if button_type in ('surface', 'dive'):
+            MAV.send_control_cmd(MAV.STOP)
+    
     def on_surface_button_clicked(self):
-        MAV.send_control_cmd(MAV.SURFACE)
+        self.on_button_clicked('surface')
         print("Surface button clicked")
 
     def on_surface_button_released(self):
-        MAV.send_control_cmd(MAV.STOP)
+        self.on_button_released('surface')
         print("Surface button released")
 
     def on_dive_button_clicked(self):
-        MAV.send_control_cmd(MAV.DIVE)
+        self.on_button_clicked('dive')
         print("Dive button clicked")
 
     def on_dive_button_released(self):
-        MAV.send_control_cmd(MAV.STOP)
+        self.on_button_released('dive')
         print("Dive button released")
 
     def on_mode_change_button_clicked(self):
@@ -41,7 +63,6 @@ class ButtonController:
     def on_light_button_released(self):
         pass
 
-    # Các phương thức xử lý sự kiện phím
     def handle_key_press(self, parent_widget, event):
         if event.isAutoRepeat():
             return False
@@ -72,6 +93,5 @@ class ButtonController:
         elif key == Qt.Key_L:
             return True
         return False
-
 
 controller = ButtonController()
