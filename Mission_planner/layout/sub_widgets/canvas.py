@@ -79,7 +79,23 @@ class CanvasWidget(QWidget):
         self.waypoint_menu = QMenu(self)
         self.waypoint_menu.addAction("Go to point", lambda: self.select_waypoint_mode("Go to point"))
         self.waypoint_menu.addAction("Pattern", lambda: self.select_waypoint_mode("pattern"))
-        self.waypoint_menu.setStyleSheet(canvas_button_style)
+        self.waypoint_menu.setStyleSheet("""
+            QMenu {
+                background-color: #2C3333;  /* Màu nền đỏ */
+                border: 1px solid #2C3333;  /* Viền đỏ đậm */
+                color: white;  /* Màu chữ trắng */
+                font-size: 14px;  /* Cỡ chữ */
+            }
+            
+            QMenu::item {
+                padding: 8px 20px;
+                background-color: transparent;
+            }
+            
+            QMenu::item:selected {
+                background-color: #395B64;  /* Màu đỏ đậm khi hover */
+            }
+        """)
 
         # self.button2d = QPushButton("2D",self)
         # self.button2d.setStyleSheet(button_style)
