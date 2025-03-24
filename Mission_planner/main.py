@@ -10,6 +10,10 @@ from layout import control
 from layout import new_setting
 from layout.test_widget.just_widget import testLayout
 
+# Định nghĩa đường dẫn tới STL
+STL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
+                       "layout", "resources", "shell_assem.STL")
+
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -25,12 +29,8 @@ class MainWindow(QWidget):
         self.down_screen_init()
         self.rightscreen_init()
 
-
     def upscreen_init(self):
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        stl_path = os.path.join(script_dir, "./layout/resources/shell_assem.STL")
-
-        self.up_screen = screen3d.STLViewerWidget(stl_path)
+        self.up_screen = screen3d.STLViewerWidget(STL_PATH)
         self.up_screen.setParent(self)
         self.up_screen.setGeometry(15, 20,950, 395)  
 

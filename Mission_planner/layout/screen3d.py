@@ -16,6 +16,14 @@ import random
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))) 
 
+RESOURCE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources")
+COMPASS_FACE_PATH = os.path.join(RESOURCE_DIR, "compass", "hi_face.svg")
+COMPASS_CASE_PATH = os.path.join(RESOURCE_DIR, "compass", "hi_case.svg")
+ATTITUDE_INDICATOR_FACE_PATH = os.path.join(RESOURCE_DIR, "attitude_indicator", "ai_face.svg")
+ATTITUDE_INDICATOR_RING_PATH = os.path.join(RESOURCE_DIR, "attitude_indicator", "ai_ring.svg")
+ATTITUDE_INDICATOR_CASE_PATH = os.path.join(RESOURCE_DIR, "attitude_indicator", "ai_case.svg")
+ATTITUDE_INDICATOR_BACK_PATH = os.path.join(RESOURCE_DIR, "attitude_indicator", "ai_back.svg")
+
 #from Mission_planner.controller import state_status #phan dung de doc du lieu
 
 #phan gia lap xoay
@@ -24,34 +32,11 @@ class RotationThread(QThread):
 
     def run(self):
         while True:
-            #test ngau nhien
-            # # ngau nhien roll,pitch,yaw
-            # pitch = random.uniform(-20,20) 
-            # roll = random.uniform(-90,90)   
-            # yaw = random.uniform(0,360)    
-            
-            # self.new_rotation.emit(roll,pitch,yaw)
-            # print(roll,pitch,yaw)
-            # time.sleep(2)  
-            
             #test goc pitch
             for pitch in range(-90, 90, 5):  
                 self.new_rotation.emit(0, pitch, 0)  
-                #print(f"Pitch: {pitch}")  
                 time.sleep(0.05)  
             
-            #test goc roll
-            # for roll in range(-90, 90, 5):  
-            #     self.new_rotation.emit(roll, 0, 0)  
-            #     print(f"Roll: {roll}")  
-            #     time.sleep(0.05) 
-
-            #test goc yaw
-            # for yaw in range(0,360, 5):  
-            #     self.new_rotation.emit(0,0,yaw)  
-            #     print(f"Yaw: {yaw}")  
-            #     time.sleep(0.05) 
-
             # Reset về 0 và lặp lại
             self.new_rotation.emit(0, 0, 0)
             time.sleep(0.5)  
@@ -239,10 +224,9 @@ class STLViewerWidget(QWidget):
 
     #ham khoi tao, chuc nang compass
     def compass_init(self):
-
         self.compass_reset()
 
-        self.cp_itemFace = QGraphicsSvgItem("./layout/resources/compass/hi_face.svg")
+        self.cp_itemFace = QGraphicsSvgItem(COMPASS_FACE_PATH)
         self.cp_itemFace.setCacheMode(QGraphicsItem.NoCache)
         self.cp_itemFace.setZValue(self.compass_faceZ)
         self.cp_itemFace.setTransform(QTransform().scale(self._scaleX, self._scaleY), True)
@@ -254,7 +238,7 @@ class STLViewerWidget(QWidget):
         # Đặt điểm xoay đúng vị trí
         self.cp_itemFace.setTransformOriginPoint(self.cp_originalHsiCtr)
 
-        self.cp_itemCase = QGraphicsSvgItem("./layout/resources/compass/hi_face.svg")
+        self.cp_itemCase = QGraphicsSvgItem(COMPASS_CASE_PATH)
         self.cp_itemCase.setCacheMode(QGraphicsItem.NoCache)
         self.cp_itemCase.setZValue(self.compass_caseZ)
         self.cp_itemCase.setTransform(QTransform().scale(self._scaleX, self._scaleY), True)
@@ -278,7 +262,7 @@ class STLViewerWidget(QWidget):
         self.attitude_reset()
 
         # **Background**
-        self.ai_itemBack = QGraphicsSvgItem("./layout/resources/compass/hi_face.svg")
+        self.ai_itemBack = QGraphicsSvgItem(ATTITUDE_INDICATOR_BACK_PATH)
         self.ai_itemBack.setZValue(self.ai_backZ)
         self.ai_itemBack.setTransform(QTransform().scale(self._scaleX, self._scaleY), True)
         self.ai_screen.addItem(self.ai_itemBack)
@@ -288,21 +272,21 @@ class STLViewerWidget(QWidget):
         self.ai_itemBack.setTransformOriginPoint(self.ai_originalAdiCtr)
 
         # **Face (mặt attitude)**
-        self.ai_itemFace = QGraphicsSvgItem("./layout/resources/compass/hi_face.svg")
+        self.ai_itemFace = QGraphicsSvgItem(ATTITUDE_INDICATOR_FACE_PATH)
         self.ai_itemFace.setZValue(self.ai_faceZ)
         self.ai_itemFace.setTransform(QTransform().scale(self._scaleX, self._scaleY), True)
         self.ai_screen.addItem(self.ai_itemFace)
         self.ai_itemFace.setTransformOriginPoint(self.ai_originalAdiCtr)
 
         # **Ring**
-        self.ai_itemRing = QGraphicsSvgItem("./layout/resources/compass/hi_face.svg")
+        self.ai_itemRing = QGraphicsSvgItem(ATTITUDE_INDICATOR_RING_PATH)
         self.ai_itemRing.setZValue(self.ai_ringZ)
         self.ai_itemRing.setTransform(QTransform().scale(self._scaleX, self._scaleY), True)
         self.ai_screen.addItem(self.ai_itemRing)
         self.ai_itemRing.setTransformOriginPoint(self.ai_originalAdiCtr)
 
         # **Case**
-        self.ai_itemCase = QGraphicsSvgItem("./layout/resources/compass/hi_face.svg")
+        self.ai_itemCase = QGraphicsSvgItem(ATTITUDE_INDICATOR_CASE_PATH)
         self.ai_itemCase.setZValue(self.ai_caseZ)
         self.ai_itemCase.setTransform(QTransform().scale(self._scaleX, self._scaleY), True)
         self.ai_screen.addItem(self.ai_itemCase)
@@ -333,4 +317,3 @@ class STLViewerWidget(QWidget):
         self.ai_itemFace.setY(pitch * 2 * self._scaleY)
         # Cập nhật giao diện
         self.update_attitude_view()
-
