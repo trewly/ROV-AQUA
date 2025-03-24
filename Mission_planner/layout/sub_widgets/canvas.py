@@ -1,12 +1,13 @@
 from PyQt5.QtWidgets import QLabel,QApplication, QWidget, QVBoxLayout, QGraphicsView, QGraphicsScene, QPushButton, QMenu, QGraphicsEllipseItem, QGraphicsLineItem
 from PyQt5.QtGui import QPen, QColor, QFont, QFontDatabase
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 
 import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from resources.style import canvas_button_style
+from Mission_planner.status import pc_status as status
 
 class CanvasWidget(QWidget):
     def __init__(self):
@@ -18,7 +19,7 @@ class CanvasWidget(QWidget):
         self.temp_info = 0
 
         #font setup
-        font_id = QFontDatabase.addApplicationFont("./layout/resources/Orbitron/static/Orbitron-Regular.ttf")
+        font_id = QFontDatabase.addApplicationFont("./Mission_planner/layout/resources/Orbitron/static/Orbitron-Regular.ttf")
         if font_id != -1:  # Kiểm tra nếu thêm thành công
             font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
             self.font = QFont(font_family, 10, QFont.Bold)
@@ -43,6 +44,13 @@ class CanvasWidget(QWidget):
         #bien 
         self.selected_points = []
         self.go_to_point_mode = False  # Chế độ chọn waypoint
+
+        self.status_timer = QTimer(self)
+        self.status_timer.timeout.connect(self.update_vehicle_status)
+        self.status_timer.start(1000)  # Cập nhật mỗi 1 giây
+        
+        # Đọc trạng thái ban đầu
+        self.update_vehicle_status()
 
     def draw_grid(self, grid_size):
         pen = QPen(QColor(200, 200, 200))  
@@ -112,6 +120,15 @@ class CanvasWidget(QWidget):
         self.statusDot.setStyleSheet("border-radius: 10px; background-color: gray; border: 1px solid black;")
         self.statusDot.move(600,20)  
     
+    def update_vehicle_status(self):
+        disconnected = status.read_status("disconnect")
+        if disconnected:
+            self.statusLabel.setText("Vehicle unconnected")
+            self.statusDot.setStyleSheet("border-radius: 10px; background-color: gray; border: 1px solid black;")
+        else:
+            self.statusLabel.setText("Vehicle connected")
+            self.statusDot.setStyleSheet("border-radius: 10px; background-color: green; border: 1px solid black;")
+
     def system_info_init(self):
         self.infoLabel = QLabel(f"Depth: {self.depth_info}   Temp: {self.temp_info}" , self)
         self.infoLabel.setFont(self.font)

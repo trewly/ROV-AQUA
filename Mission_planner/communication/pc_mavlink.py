@@ -6,7 +6,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-import Mission_planner.status.pc_status as status
+from Mission_planner.status import pc_status as status
 
 # This class is used to send and receive mavlink messages to and from the Raspberry Pi
 class MavlinkController:
@@ -47,7 +47,6 @@ class MavlinkController:
 
         self.timer = time.time()
 
-    
     def send_heartbeat(self):
         while True:
             self.master_send.mav.heartbeat_send(
@@ -61,13 +60,14 @@ class MavlinkController:
         while True:
             msg = self.master_receive.recv_match(blocking=True, timeout=1)
             if msg is not None:
+                status.update_status("disconnect", False)
                 self.timer = time.time()
                 if msg.get_type() == "PARAM_VALUE":
                     param_id = msg.param_id.rstrip('\x00')
                     param_value = msg.param_value
                     status.update_status(param_id, param_value)
                     print(f"Received: {param_id} = {param_value}")
-            if time.time() - self.timer > 10:
+            if time.time() - self.timer > 3:
                 print("Connection lost, surfacing the ROV")
                 status.update_status("disconnect", True)
 

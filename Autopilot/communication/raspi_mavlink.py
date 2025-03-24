@@ -123,6 +123,7 @@ def received_msg(master):
     while True:
         msg = master.recv_match(blocking=True, timeout=1)
         if msg:
+            status.update_status(key="disconnect", value=False)
             if msg.get_type() == "HEARTBEAT":
                 last_heartbeat = time.time()
                 print("Received heartbeat")

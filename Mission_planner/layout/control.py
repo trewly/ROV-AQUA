@@ -65,3 +65,8 @@ class Ui_Form(QWidget):
         event.accept()
 
 
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = Ui_Form()
+    window.show()
+    sys.exit(app.exec_())

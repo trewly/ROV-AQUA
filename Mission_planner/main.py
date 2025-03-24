@@ -28,7 +28,7 @@ class MainWindow(QWidget):
 
     def upscreen_init(self):
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        stl_path = os.path.join(script_dir, "layout/resources/shell_assem.STL")
+        stl_path = os.path.join(script_dir, "./Mission_planner/layout/resources/shell_assem.STL")
 
         self.up_screen = screen3d.STLViewerWidget(stl_path)
         self.up_screen.setParent(self)

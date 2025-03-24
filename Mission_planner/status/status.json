@@ -1,8 +1,8 @@
 {
-    "depth": 0,
+    "depth": 0.0,
     "horizontal_velocity": 0,
     "vertical_velocity": 0,
-    "temp": 0,
+    "temp": 0.0,
     "accel_x": 0,
     "accel_y": 0,
     "accel_z": 0,
@@ -12,9 +12,9 @@
     "mag_x": 0,
     "mag_y": 0,
     "mag_z": 0,
-    "pitch": 0,
-    "roll": 0,
-    "heading": 0,
+    "pitch": 0.0,
+    "roll": 0.0,
+    "heading": 0.0,
     "previous_accel_x": 0,
     "previous_accel_y": 0,
     "previous_accel_z": 0,
@@ -46,5 +46,5 @@
     "Ki": 0,
     "Kd": 0,
     "mode": "manual",
-    "disconnect": false
+    "disconnect": true
 }
