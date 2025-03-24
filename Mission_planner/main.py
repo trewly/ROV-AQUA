@@ -1,6 +1,7 @@
 import sys
 import os
-from PyQt5.QtWidgets import QApplication, QWidget
+from PyQt5.QtWidgets import QApplication, QWidget, QSplashScreen, QDialog
+from PyQt5.QtGui import QPixmap
 from PyQt5.QtGui import QFont, QPalette, QColor
 import time
 from PyQt5.QtCore import QTimer
@@ -44,9 +45,18 @@ class MainWindow(QWidget):
         self.right_screen = new_setting.settingLayout()
         self.right_screen.setParent(self)
         self.right_screen.setGeometry(975, 20, 910, 944)
-            
+
+class SplashScreen(QSplashScreen):
+    def __init__(self):
+        super().__init__(QPixmap("./layout/resources/splash_screen_v1.png"))  # Thay "logo.png" bằng đường dẫn ảnh của bạn
+    
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+
+    splash = SplashScreen()
+    splash.show()
+
     window = MainWindow()
-    window.show()
+
+    QTimer.singleShot(1200, lambda: (window.show(), splash.finish(window)))
     sys.exit(app.exec_())
