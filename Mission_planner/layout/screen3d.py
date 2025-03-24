@@ -4,7 +4,7 @@ import pyqtgraph.opengl as gl
 from stl import mesh
 from PyQt5.QtWidgets import QLabel, QApplication, QWidget,QFrame, QGraphicsScene,QGraphicsItem,QGraphicsView,QVBoxLayout, QHBoxLayout,QGraphicsItem
 from PyQt5.QtCore import QThread, pyqtSignal
-from PyQt5.QtGui import QTransform
+from PyQt5.QtGui import QTransform, QFontDatabase, QFont
 from PyQt5.QtCore import Qt
 from PyQt5.QtSvg import QGraphicsSvgItem
 import os
@@ -79,6 +79,20 @@ class STLViewerWidget(QWidget):
         self.stl_loader.finished.connect(self.on_stl_loaded)
         self.stl_loader.start()
 
+        #them info len open gl
+        self.yaw_info=0
+        self.pitch_info=0
+        self.roll_info=0
+
+        font_id = QFontDatabase.addApplicationFont("./layout/resources/Orbitron/static/Orbitron-Regular.ttf")
+        if font_id != -1:  # Kiểm tra nếu thêm thành công
+            font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
+            self.font = QFont(font_family, 10, QFont.Bold)
+        else:
+            print("Không thể tải font!")
+
+        self.state_show()
+        
         #them truc the gioi
         self.add_axes()
         self.add_arrows()
@@ -317,3 +331,11 @@ class STLViewerWidget(QWidget):
         self.ai_itemFace.setY(pitch * 2 * self._scaleY)
         # Cập nhật giao diện
         self.update_attitude_view()
+
+    #ham theo doi trang thai he thong
+    def state_show(self):
+        self.state_status=QLabel(f"Pitch: {self.pitch_info}   Roll: {self.roll_info}   Yaw: {self.yaw_info}",self.view)
+        self.state_status.setFont(self.font)
+        self.state_status.setStyleSheet("color: #395B64; font-size: 20px;")
+        self.state_status.move(0, 0)
+        
