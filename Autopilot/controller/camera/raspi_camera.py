@@ -1,69 +1,234 @@
 import subprocess
 import socket
 import time
+import os
 import cv2
 import threading
-from picamera2 import Picamera2, encoders # type: ignore
+import signal
+from picamera2 import Picamera2, encoders #type: ignore
+
+DEFAULT_SERVER_IP = "169.254.54.121"
+DEFAULT_SERVER_PORT = 5001
+DEFAULT_STREAM_PORT = 5002
+DEFAULT_RESOLUTION = (1920, 1080)
+DEFAULT_FRAMERATE = 30
+DEFAULT_BITRATE = 3000000
+DEFAULT_OUTPUT_DIR = "/tmp"
+
+stream_process = None
+stream_thread = None
+is_streaming = False
+stream_lock = threading.Lock()
 
 def send_file(server_ip, server_port, file_path):
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((server_ip, server_port))
+    try:
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.settimeout(10)
+        client_socket.connect((server_ip, server_port))
 
-    file_name = file_path.split("/")[-1] + "\n"
-    client_socket.sendall(file_name.encode("utf-8"))
+        file_name = os.path.basename(file_path) + "\n"
+        client_socket.sendall(file_name.encode("utf-8"))
 
-    with open(file_path, "rb") as file:
-        while chunk := file.read(4096):
-            client_socket.sendall(chunk)
+        with open(file_path, "rb") as file:
+            while chunk := file.read(4096):
+                client_socket.sendall(chunk)
 
-    print(f"Đã gửi file: {file_path}")
-    client_socket.close()
+        print(f"Đã gửi file: {file_path}")
+        return True
+    except Exception as e:
+        print(f"Lỗi khi gửi file: {e}")
+        return False
+    finally:
+        try:
+            client_socket.close()
+        except:
+            pass
 
-def run_streaming():
-    command = "libcamera-vid -t 0 --width 1920 --height 1080 --framerate 30 --codec h264 --bitrate 3000000 -o - | gst-launch-1.0 fdsrc ! h264parse config-interval = 1000 ! mpegtsmux ! udpsink host=169.254.54.121 port=5002 sync=false async=false"
-    global process
-    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    process.wait()
-thread = threading.Thread(target=run_streaming, daemon=True)
-thread.start()
-thread.join()
+def capture_image(file_path=None, rotate=True, resolution=DEFAULT_RESOLUTION):
+    if file_path is None:
+        file_path = os.path.join(DEFAULT_OUTPUT_DIR, f"image_{int(time.time())}.jpg")
+    
+    try:
+        picam2 = Picamera2()
+        config = picam2.create_still_configuration(main={"size": resolution})
+        picam2.configure(config)
 
-def stop_video_stream():
-    print("Stopping GStreamer UDP Stream...")
-    process.terminate()
+        picam2.start()
+        time.sleep(2)
 
-# def capture_and_send(server_ip, server_port, file_path="image.jpg"):
-#     picam2 = Picamera2()
-#     config = picam2.create_still_configuration(main={"size": (1920, 1080)})
-#     picam2.configure(config)
+        picam2.capture_file(file_path)
+        picam2.close()
+        
+        if rotate:
+            image = cv2.imread(file_path)
+            rotated_image = cv2.rotate(image, cv2.ROTATE_180)
+            cv2.imwrite(file_path, rotated_image)
+            
+        print(f"Đã chụp ảnh: {file_path}")
+        return file_path
+    except Exception as e:
+        print(f"Lỗi khi chụp ảnh: {e}")
+        return None
 
-#     picam2.start()
-#     time.sleep(2)
+def capture_and_send(server_ip=DEFAULT_SERVER_IP, server_port=DEFAULT_SERVER_PORT, file_path=None, rotate=True):
+    file_path = capture_image(file_path, rotate)
+    if file_path:
+        return send_file(server_ip, server_port, file_path)
+    return False
 
-#     picam2.capture_file(file_path)
-#     print(f"Đã chụp ảnh gốc: {file_path}")
+def record_video(file_path=None, duration=5, resolution=DEFAULT_RESOLUTION, bitrate=10000000):
+    if file_path is None:
+        file_path = os.path.join(DEFAULT_OUTPUT_DIR, f"video_{int(time.time())}.h264")
+    
+    try:
+        picam2 = Picamera2()
+        config = picam2.create_video_configuration(main={"size": resolution})
+        picam2.configure(config)
 
-#     image = cv2.imread(file_path)
-#     rotated_image = cv2.rotate(image, cv2.ROTATE_180)
+        encoder = encoders.H264Encoder(bitrate=bitrate)
 
-#     cv2.imwrite(file_path, rotated_image)
-#     print(f"Ảnh đã xoay 180°: {file_path}")
+        print(f"Đang quay video ({duration} giây)...")
+        picam2.start_recording(encoder, file_path)
+        time.sleep(duration)
+        picam2.stop_recording()
+        picam2.close()
 
-#     send_file(server_ip, server_port, file_path)
-#capture_and_send(server_ip="169.254.54.121", server_port=5001)
+        print(f"Đã quay xong video: {file_path}")
+        return file_path
+    except Exception as e:
+        print(f"Lỗi khi quay video: {e}")
+        return None
 
-# def record_and_send(server_ip, server_port, file_path="video.h264", duration=5):
-#     picam2 = Picamera2()
-#     config = picam2.create_video_configuration(main={"size": (1920, 1080)})
-#     picam2.configure(config)
+def record_and_send(server_ip=DEFAULT_SERVER_IP, server_port=DEFAULT_SERVER_PORT, file_path=None, duration=5):
+    file_path = record_video(file_path, duration)
+    if file_path:
+        return send_file(server_ip, server_port, file_path)
+    return False
 
-#     encoder = encoders.H264Encoder(bitrate=10000000)
+def build_gstreamer_command(host, port, width, height, framerate, bitrate):
+    return (
+        f"libcamera-vid -t 0 --width {width} --height {height} "
+        f"--framerate {framerate} --codec h264 --bitrate {bitrate} -o - | "
+        f"gst-launch-1.0 fdsrc ! h264parse config-interval=1 ! "
+        f"rtph264pay ! udpsink host={host} port={port} sync=false async=false"
+    )
 
-#     print(f"Đang quay video ({duration} giây)...")
-#     picam2.start_recording(encoder, file_path)
-#     time.sleep(duration)
-#     picam2.stop_recording()
+def _run_streaming(command):
+    global stream_process, is_streaming
+    
+    try:
+        stream_process = subprocess.Popen(
+            command, 
+            shell=True, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE,
+            preexec_fn=os.setsid
+        )
+        
+        is_streaming = True
+        print(f"Stream started with command: {command}")
+        
+        return_code = stream_process.wait()
+        print(f"Stream process exited with code: {return_code}")
+        
+    except Exception as e:
+        print(f"Streaming error: {e}")
+    finally:
+        is_streaming = False
+        print("Stream terminated")
 
-#     print(f"Đã quay xong video: {file_path}")
-#     send_file(server_ip, server_port, file_path)
-#record_and_send(server_ip="169.254.54.121", server_port=5001, duration=10)
+def start_stream(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT, 
+                resolution=DEFAULT_RESOLUTION, framerate=DEFAULT_FRAMERATE, 
+                bitrate=DEFAULT_BITRATE):
+    global stream_thread, is_streaming
+    
+    with stream_lock:
+        if is_streaming:
+            print("Stream already running")
+            return False
+            
+        width, height = resolution
+        command = build_gstreamer_command(host, port, width, height, framerate, bitrate)
+        
+        stream_thread = threading.Thread(
+            target=_run_streaming, 
+            args=(command,),
+            daemon=True
+        )
+        stream_thread.start()
+        
+        time.sleep(1)
+        
+        if not is_streaming:
+            print("Failed to start stream")
+            return False
+            
+        return True
+
+def stop_stream():
+    global stream_process, is_streaming
+    
+    with stream_lock:
+        if not is_streaming or stream_process is None:
+            print("No active stream to stop")
+            return False
+            
+        try:
+            os.killpg(os.getpgid(stream_process.pid), signal.SIGTERM)
+            
+            stream_process.terminate()
+            
+            stream_process.wait(timeout=3)
+            print("Stream stopped successfully")
+            return True
+        except Exception as e:
+            print(f"Error stopping stream: {e}")
+            try:
+                os.killpg(os.getpgid(stream_process.pid), signal.SIGKILL)
+            except:
+                pass
+            return False
+        finally:
+            is_streaming = False
+            stream_process = None
+
+def is_stream_active():
+    with stream_lock:
+        if is_streaming and stream_process is not None:
+            if stream_process.poll() is None:
+                return True
+            else:
+                is_streaming = False
+                return False
+        return False
+
+def restart_stream(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT, 
+                 resolution=DEFAULT_RESOLUTION, framerate=DEFAULT_FRAMERATE, 
+                 bitrate=DEFAULT_BITRATE):
+    stop_stream()
+    time.sleep(1)
+    return start_stream(host, port, resolution, framerate, bitrate)
+
+def cleanup():
+    if is_streaming:
+        stop_stream()
+
+if __name__ == "__main__":
+    try:
+        print("Starting video stream...")
+        success = start_stream()
+        
+        if success:
+            print("Stream started successfully")
+            print("Press Ctrl+C to stop streaming")
+            
+            time.sleep(5)
+            while True:
+                time.sleep(1)
+        else:
+            print("Failed to start stream")
+            
+    except KeyboardInterrupt:
+        print("\nStopping streaming...")
+    finally:
+        cleanup()
