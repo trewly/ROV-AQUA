@@ -196,22 +196,20 @@ class CanvasWidget(QWidget):
         self.statusLabel = QLabel("Vehicle unconnected", self)
         self.statusLabel.setFont(self.font)
         self.statusLabel.setStyleSheet("color: #395B64;")
-        self.statusLabel.move(630,18)  # Di chuyển label trạng thái gần vị trí mong muốn
+        self.statusLabel.move(690,18)  
         
         # status dot
         self.statusDot = QLabel(self)
         self.statusDot.setFixedSize(20, 20)
         self.statusDot.setStyleSheet("border-radius: 10px; background-color: gray; border: 1px solid black;")
-        self.statusDot.move(600,20)  
+        self.statusDot.move(665,15)  
     
     def update_vehicle_status(self):
         disconnected = status.read_status("disconnect")
         if disconnected:
             self.statusLabel.setText("Vehicle unconnected")
-            self.statusDot.setStyleSheet("border-radius: 10px; background-color: gray; border: 1px solid black;")
         else:
             self.statusLabel.setText("Vehicle connected")
-            self.statusDot.setStyleSheet("border-radius: 10px; background-color: green; border: 1px solid black;")
 
     def system_info_init(self):
         self.infoLabel = QLabel(f"Depth: {self.depth_info}   Temp: {self.temp_info}" , self)
