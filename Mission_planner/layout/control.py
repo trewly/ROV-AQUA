@@ -9,7 +9,7 @@ from PyQt5.QtGui import QFont, QIcon
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from resources import style as st
+from Mission_planner.layout.resources import style as st
 
 from Mission_planner.controller.joystick_controller import VirtualJoystick
 from Mission_planner.controller import button_controller as buttons_controller
