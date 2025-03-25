@@ -1,13 +1,54 @@
-from PyQt5.QtWidgets import QLabel,QApplication, QWidget, QVBoxLayout, QGraphicsView, QGraphicsScene, QPushButton, QMenu, QGraphicsEllipseItem, QGraphicsLineItem
-from PyQt5.QtGui import QPen, QColor, QFont, QFontDatabase
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtWidgets import QLabel,QApplication, QWidget, QVBoxLayout, QGraphicsView, QGraphicsScene, QPushButton, QMenu, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsPixmapItem
+from PyQt5.QtGui import QPen, QColor, QFont, QFontDatabase, QPixmap, QTransform
+from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 
 import sys
 import os
+import math
+import time
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from resources.style import canvas_button_style
 from Mission_planner.status import pc_status as status
+
+#test gia lap
+class ROVSimulationThread(QThread):
+    update_position = pyqtSignal(float, float, float)  # Tín hiệu gửi tọa độ mới và góc yaw
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.running = True
+        self.dt = 0.1 
+        self.velocity_x = 0
+        self.velocity_y = 0 
+        self.position_x = 2200
+        self.position_y = 2400 
+        self.acceleration_x = 2  
+        self.angle = 30
+
+    def run(self):
+        while self.running:
+            # Chuyển đổi gia tốc theo góc yaw
+            a_world_x = self.acceleration_x * math.cos(math.radians(self.angle))
+            a_world_y = self.acceleration_x * math.sin(math.radians(self.angle))
+
+            # Cập nhật vận tốc trong hệ toàn cục
+            self.velocity_x += a_world_x * self.dt
+            self.velocity_y += a_world_y * self.dt  # Thêm cập nhật vận tốc Y
+
+            # Cập nhật vị trí trong hệ toàn cục
+            self.position_x += self.velocity_x * self.dt
+            self.position_y += self.velocity_y * self.dt  # Thêm cập nhật vị trí Y
+
+            # Phát tín hiệu cập nhật
+            self.update_position.emit(self.position_x, self.position_y, self.angle)
+            time.sleep(self.dt)
+
+    def stop(self):
+        self.running = False
+        self.quit()
+        self.wait()
+
 
 class CanvasWidget(QWidget):
     def __init__(self):
@@ -30,7 +71,11 @@ class CanvasWidget(QWidget):
         self.canvas_init()
 
         #vehicle location track
-        
+        self.vehicle_locate_init()
+
+        self.simulation_thread = ROVSimulationThread()
+        self.simulation_thread.update_position.connect(self.update_motion_canvas)
+        self.simulation_thread.start()
 
         #canvas button
         self.button_init()
@@ -188,10 +233,24 @@ class CanvasWidget(QWidget):
             print("Pattern mode selected (Chưa triển khai)")
 
     def clear_waypoints(self):
-        """Xóa toàn bộ các điểm đã chọn trên canvas"""
+        """Xóa toàn bộ các điểm đã chọn trên canvas mà không xóa vehicle_dot"""
         self.selected_points = []
-        self.scene.clear()
-        self.draw_grid(50)  # Vẽ lại lưới
+
+        # Lưu lại vị trí của vehicle_dot trước khi xóa
+        vehicle_pos = self.vehicle_dot.pos()
+
+        # Xóa tất cả item trừ vehicle_dot
+        items_to_remove = [item for item in self.scene.items() if item is not self.vehicle_dot]
+        for item in items_to_remove:
+            self.scene.removeItem(item)
+
+        # Vẽ lại lưới trước
+        self.draw_grid(50)
+
+        # Đặt lại vehicle_dot lên trên cùng
+        self.scene.addItem(self.vehicle_dot)  
+        self.vehicle_dot.setPos(vehicle_pos)  # Đặt lại vị trí cũ
+
         self.go_to_point_mode = False
         self.button_clear.setVisible(False)  # Ẩn nút "Clear"
         self.button_uploadmission.setVisible(False)
@@ -219,3 +278,23 @@ class CanvasWidget(QWidget):
 
             self.selected_points.append(scene_pos)  # Lưu điểm đã chọn
 
+    def vehicle_locate_init(self):
+        self.vehicle_dot = QGraphicsPixmapItem(QPixmap("./layout/resources/vehicle_sym.png"))
+        self.scene.addItem(self.vehicle_dot)
+        
+        # Đặt tâm xoay về trung tâm hình ảnh
+        self.vehicle_dot.setTransformOriginPoint(self.vehicle_dot.boundingRect().width() / 2, 
+                                                self.vehicle_dot.boundingRect().height() / 2)
+
+        pixmap = self.vehicle_dot.pixmap()
+        transform = QTransform().rotate(90)
+        rotated_pixmap = pixmap.transformed(transform, Qt.SmoothTransformation)
+        
+        self.vehicle_dot.setPixmap(rotated_pixmap)  # Cập nhật ảnh đã xoay
+
+        # Đặt vị trí ban đầu
+        self.vehicle_dot.setPos(2200, 2400)
+
+    def update_motion_canvas(self,x,y,yaw):
+        self.vehicle_dot.setPos(x, y)
+        self.vehicle_dot.setTransform(QTransform().rotate(yaw))
