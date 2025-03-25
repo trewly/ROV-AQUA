@@ -9,7 +9,7 @@ from picamera2 import Picamera2, encoders #type: ignore
 
 DEFAULT_SERVER_IP = "169.254.54.121"
 DEFAULT_SERVER_PORT = 5001
-DEFAULT_STREAM_PORT = 5002
+DEFAULT_STREAM_PORT = 5000
 DEFAULT_RESOLUTION = (1920, 1080)
 DEFAULT_FRAMERATE = 30
 DEFAULT_BITRATE = 3000000
@@ -117,6 +117,7 @@ def _run_streaming(command):
     global stream_process, is_streaming
     
     try:
+        print(f"Starting stream with command: {command}")
         stream_process = subprocess.Popen(
             command, 
             shell=True, 
@@ -125,8 +126,16 @@ def _run_streaming(command):
             preexec_fn=os.setsid
         )
         
+        # Kiểm tra xem process có chạy thành công không
+        time.sleep(0.5)
+        if stream_process.poll() is not None:
+            error_output = stream_process.stderr.read().decode('utf-8')
+            print(f"Stream failed to start. Error: {error_output}")
+            is_streaming = False
+            return
+            
         is_streaming = True
-        print(f"Stream started with command: {command}")
+        print("Stream started successfully")
         
         return_code = stream_process.wait()
         print(f"Stream process exited with code: {return_code}")
@@ -145,7 +154,10 @@ def start_stream(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT,
     with stream_lock:
         if is_streaming:
             print("Stream already running")
-            return False
+            return True  # Trả về True vì stream đã chạy
+            
+        # Đặt is_streaming = False trước khi bắt đầu
+        is_streaming = False
             
         width, height = resolution
         command = build_gstreamer_command(host, port, width, height, framerate, bitrate)
@@ -156,13 +168,16 @@ def start_stream(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT,
             daemon=True
         )
         stream_thread.start()
+        stream_thread.join(1)
+        # Chờ lâu hơn để process khởi động
+        time.sleep(10)
         
-        time.sleep(1)
-        
+        # Kiểm tra lại trạng thái sau khi khởi động
         if not is_streaming:
             print("Failed to start stream")
             return False
             
+        print(f"Stream started successfully to {host}:{port}")
         return True
 
 def stop_stream():
@@ -174,11 +189,22 @@ def stop_stream():
             return False
             
         try:
+            print("Stopping stream...")
+            
+            # Gửi SIGTERM trước để tắt gracefully
             os.killpg(os.getpgid(stream_process.pid), signal.SIGTERM)
             
-            stream_process.terminate()
-            
-            stream_process.wait(timeout=3)
+            # Chờ tối đa 3 giây
+            for _ in range(30):
+                if stream_process.poll() is not None:
+                    break
+                time.sleep(0.1)
+                
+            # Nếu process vẫn chạy, buộc tắt
+            if stream_process.poll() is None:
+                print("Force killing stream process...")
+                os.killpg(os.getpgid(stream_process.pid), signal.SIGKILL)
+                
             print("Stream stopped successfully")
             return True
         except Exception as e:

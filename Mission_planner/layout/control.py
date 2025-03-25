@@ -7,14 +7,13 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHB
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QIcon
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from resources import style as st
 
 from Mission_planner.controller.joystick_controller import VirtualJoystick
 from Mission_planner.controller import button_controller as buttons_controller
 from Mission_planner.controller.video_controller import VideoReceiver
-from Mission_planner.communication.pc_mavlink import MAV
 
 class ControlButton(QPushButton):
     def __init__(self, text, parent=None):
@@ -89,7 +88,6 @@ class ControlPanel(QWidget):
     def closeEvent(self, event):
         print("Closing ROV Control Panel...")
         self.video_receiver.closeEvent(event)
-        MAV.shutdown()
         event.accept()
 
 def main():

@@ -35,6 +35,7 @@ class VideoWorker(QThread):
             if cap is None:
                 try:
                     cap = cv2.VideoCapture(f"udp://{self.udp_ip}:{self.udp_port}", cv2.CAP_FFMPEG)
+                    print(f"Connecting to video stream udp://{self.udp_ip}:{self.udp_port}")
                     if not cap.isOpened():
                         if self.connected:
                             self.connected = False
@@ -43,6 +44,7 @@ class VideoWorker(QThread):
                         cap = None
                         time.sleep(reconnect_delay)
                         continue
+                    print("Video stream connected")
                 except Exception as e:
                     print(f"Connection error: {e}")
                     if cap:
@@ -106,7 +108,7 @@ class VideoWorker(QThread):
         self.wait()
 
 class VideoReceiver(QWidget):
-    def __init__(self, udp_ip="169.254.54.121", udp_port=5002, save_path="received_video.mp4", parent=None):
+    def __init__(self, udp_ip="169.254.54.121", udp_port=5000, save_path="received_video.mp4", parent=None):
         super().__init__(parent)
         self.setGeometry(0, 0, 960, 540)
         
