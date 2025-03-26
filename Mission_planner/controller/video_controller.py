@@ -27,16 +27,27 @@ class VideoWorker(QThread):
         frame_size = (1920, 1080)
         reconnect_delay = 0.5
         last_frame_time = 0
-        frame_timeout = 2.0  
+        frame_timeout = 2.0
+        retry_count = 0
+        max_retries = 20  # Số lần thử lại tối đa
 
         while self.running:
             current_time = time.time()
             
             if cap is None:
                 try:
-                    cap = cv2.VideoCapture(f"udp://{self.udp_ip}:{self.udp_port}", cv2.CAP_FFMPEG)
-                    print(f"Connecting to video stream udp://{self.udp_ip}:{self.udp_port}")
-                    if not cap.isOpened():
+                    if (retry_count > 10):
+                        time.sleep(2) 
+                    
+                    retry_count += 1
+                    
+                    gstream = f"udp://{self.udp_ip}:{self.udp_port}?overrun_nonfatal=1&fifo_size=50000000"
+                    print(f"Attempt {retry_count}: Connecting to video stream {gstream}")
+                    
+                    cap = cv2.VideoCapture(gstream, cv2.CAP_FFMPEG)
+                    
+                    ret, _ = cap.read()
+                    if not ret or not cap.isOpened():
                         if self.connected:
                             self.connected = False
                             self.connection_signal.emit(False)
@@ -44,7 +55,10 @@ class VideoWorker(QThread):
                         cap = None
                         time.sleep(reconnect_delay)
                         continue
-                    print("Video stream connected")
+                    
+                    retry_count = 0
+                    print("Video stream connected successfully")
+                    
                 except Exception as e:
                     print(f"Connection error: {e}")
                     if cap:
@@ -105,7 +119,10 @@ class VideoWorker(QThread):
 
     def stop(self):
         self.running = False
-        self.wait()
+        self.wait(3000)
+        
+        if not self.isFinished():
+            self.terminate()
 
 class VideoReceiver(QWidget):
     def __init__(self, udp_ip="169.254.54.121", udp_port=5000, save_path="received_video.mp4", parent=None):

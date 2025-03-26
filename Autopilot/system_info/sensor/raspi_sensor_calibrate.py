@@ -2,7 +2,6 @@ import time
 import math
 import numpy as np
 
-
 import Autopilot.system_info.sensor.raspi_sensor_read as sensor
 
 def calibrate_mag(sample_count=1500):

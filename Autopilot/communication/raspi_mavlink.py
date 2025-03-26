@@ -2,171 +2,387 @@ import time
 import threading
 import sys
 import os
-
+import signal
+import logging
+from logging.handlers import RotatingFileHandler
+from enum import IntEnum
+from typing import Dict, List, Optional, Any, Union
 from pymavlink import mavutil
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+log_dir = os.path.join(os.path.dirname(__file__), "logs")
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, "mavlink.log")
 
+logger = logging.getLogger("MAVLink")
+logger.setLevel(logging.INFO)
+
+if not logger.handlers:
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(console_formatter)
+    logger.addHandler(console_handler)
+
+    file_handler = RotatingFileHandler(
+        log_file, 
+        maxBytes=100*1024*1024,
+        backupCount=5
+    )
+    file_handler.setLevel(logging.INFO)
+    file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levellevel)s - %(message)s')
+    file_handler.setFormatter(file_formatter)
+    logger.addHandler(file_handler)
+
+logger.propagate = False
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from Autopilot.system_info.status import raspi_status as status
 from Autopilot.system_info.sensor import raspi_sensor_calibrate as calibrate
 from Autopilot.controller.motor import raspi_motor_control as rov
 
-# define the commands
-SURFACE = 1000
-DIVE = 1001
-LEFT = 1002
-RIGHT = 1003
-FORWARD = 1004
-BACKWARD = 1005
-STOP = 1006
+class MavCommand(IntEnum):
+    SURFACE = 1000
+    DIVE = 1001
+    LEFT = 1002
+    RIGHT = 1003
+    FORWARD = 1004
+    BACKWARD = 1005
+    STOP = 1006
 
-SET_MANUAL = 1100
-SET_AUTO_HEADING = 1101
-SET_AUTO_DEPTH = 1102
-SET_PID = 1103
-SET_SPEED_FORWARD = 1104        # Forward speed range is from 1 to 100
-SET_SPEED_BACKWARD = 1105       # Backward speed range is from -100 to -1
+    SET_MANUAL = 1100
+    SET_AUTO_HEADING = 1101
+    SET_AUTO_DEPTH = 1102
+    SET_PID = 1103
+    
+    SET_SPEED_FORWARD = 1104
+    SET_SPEED_BACKWARD = 1105
+    SET_SPEED_DIVE = 1107
+    SET_SPEED_SURFACE = 1108
 
-SET_LIGHT = 1106
-SET_CAMERA = 1107
+    SET_LIGHT = 1106
+    SET_CAMERA = 1107
 
-START_MAG_CALIBRATION = 1200
+    START_MAG_CALIBRATION = 1200
 
-def handle_received_msg(msg):
-    if msg == None:
-        return
 
-    if msg.get_type() == "COMMAND_LONG":
-        if status.read_status(key="mode") == "manual":
-            if msg.command == SURFACE:
-                print("SURFACE")
-                rov.surface()
-            elif msg.command == DIVE:
-                print("DIVE")
-                rov.dive()
-            elif msg.command == LEFT:
-                print("LEFT")
-                rov.turn_left()
-            elif msg.command == RIGHT:
-                print("RIGHT")
-                rov.turn_right()
-            elif msg.command == FORWARD:
-                print("FORWARD")
-                rov.move_forward()
-            elif msg.command == BACKWARD:
-                print("BACKWARD")
-                rov.move_backward()
-            elif msg.command == STOP:
-                print("STOP")
-                rov.stop_all()
+class MavlinkController:
+
+    def __init__(self, receive_port: int = 5000, 
+                 send_ip: str = "169.254.54.121", 
+                 send_port: int = 5001):
+        self.receive_port = receive_port
+        self.send_ip = send_ip
+        self.send_port = send_port
         
-        if msg.command == SET_MANUAL:
-            status.update_status(key="mode", value="manual")
-            status.update_status(key="auto_heading", value=False)
-            status.update_status(key="auto_depth", value=False)
-            print("Manual mode set")
-
-        elif msg.command == SET_AUTO_HEADING:
-            status.update_status(key="auto_heading", value=True)
-            if msg.param1 < 0:
-                heading = 0
-            elif msg.param1 > 360:
-                heading = 360
-            else:
-                heading = msg.param1
-            status.update_status(key="target_heading", value=heading)
-            status.update_status(key="mode", value="auto_heading")
-            print("Auto heading set to: ", heading)
-
-        elif msg.command == SET_AUTO_DEPTH:
-            status.update_status(key="auto_depth", value=True)
-            if msg.param1 < 0:
-                depth = 0
-            elif msg.param1 > 10:
-                    depth = 10
-            else:
-                depth = msg.param1
-            status.update_status(key="target_depth", value=depth)
-            status.update_status(key="mode", value="auto_depth")
-            print("Auto depth set to: ", msg.param1)
-
-        elif msg.command == SET_PID:
-            status.update_status(key="Kp", value=msg.param1)
-            status.update_status(key="Ki", value=msg.param2)
-            status.update_status(key="Kd", value=msg.param3)
-            print("PID set to: ", msg.param1, msg.param2, msg.param3)
-
-        elif msg.command == SET_SPEED_FORWARD:
-            status.update_status(key="max_speed_forward", value=msg.param1)
-            print("Speed set to: ", msg.param1)
-
-        elif msg.command == SET_SPEED_BACKWARD:
-            status.update_status(key="max_speed_backward", value=msg.param1)
-            print("Speed set to: ", msg.param1)
+        self.status_send_interval = 0.01
+        self.heartbeat_timeout = 10.0
+        self.last_heartbeat = time.time()
         
-        elif msg.command == SET_LIGHT:
-            status.update_status(key="light", value=msg.param1)
-            print("Light set to: ", msg.param1)
-
-        elif msg.command == SET_CAMERA:
-            status.update_status(key="camera", value=msg.param1)
-            print("Camera set to: ", msg.param1)
+        self.running = False
+        self.threads: List[threading.Thread] = []
+        self.connection_lost_reported = False
         
-        elif msg.command == START_MAG_CALIBRATION:
-            print("Mag calibration started")
-            calibrate.calibrate_mag()
-
-last_heartbeat = time.time()
-def received_msg(master):
-    global last_heartbeat
-    while True:
-        msg = master.recv_match(blocking=True, timeout=1)
-        if msg:
-            status.update_status(key="disconnect", value=False)
-            if msg.get_type() == "HEARTBEAT":
-                last_heartbeat = time.time()
-                print("Received heartbeat")
-            elif msg.get_type() == "COMMAND_LONG":
-                print("Received command")
-                handle_received_msg(msg)
+        self.receiver = None
+        self.transmitter = None
+        
+        self.status_params = [
+            "roll", "pitch", "heading", "temp", "depth", 
+            "horizontal_velocity", "vertical_velocity", "battery_voltage"
+        ]
+        
+        self._lock = threading.RLock()
+    
+    def _handle_manual_command(self, command: MavCommand) -> None:
+        command_handlers = {
+            MavCommand.SURFACE: rov.surface,
+            MavCommand.DIVE: rov.dive,
+            MavCommand.LEFT: rov.turn_left,
+            MavCommand.RIGHT: rov.turn_right,
+            MavCommand.FORWARD: rov.move_forward,
+            MavCommand.BACKWARD: rov.move_backward,
+            MavCommand.STOP: rov.stop_all,
+        }
+        
+        handler = command_handlers.get(command)
+        if handler:
+            handler()
         else:
-            if time.time() - last_heartbeat > 10:
-                print("Connection lost, surfacing")
-                status.update_status(key="disconnect", value=True)
-                while status.read_status(key="depth") > 0:
-                    rov.surface()
-                    time.sleep(1)
+            logger.warning(f"Unknown manual command: {command}")
+    
+    def _handle_mode_commands(self, msg) -> None:
+        command = msg.command
         
+        if command == MavCommand.SET_MANUAL:
+            status.update_multiple({
+                "mode": "manual",
+                "auto_heading": False,
+                "auto_depth": False
+            })
+            rov.stop_all()
+            
+        elif command == MavCommand.SET_AUTO_HEADING:
+            heading = max(0, min(360, msg.param1))
+            status.update_multiple({
+                "auto_heading": True,
+                "target_heading": heading,
+                "mode": "auto_heading"
+            })
+            
+        elif command == MavCommand.SET_AUTO_DEPTH:
+            depth = max(0, min(10, msg.param1))
+            status.update_multiple({
+                "auto_depth": True,
+                "target_depth": depth,
+                "mode": "auto_depth"
+            })
+            
+        elif command == MavCommand.SET_PID:
+            status.update_multiple({
+                "Kp": msg.param1,
+                "Ki": msg.param2,
+                "Kd": msg.param3
+            })
+    
+    def _handle_configuration_commands(self, msg) -> None:
+        command = msg.command
+        
+        if command == MavCommand.SET_SPEED_FORWARD:
+            status.update_status(key="max_speed_forward", value=msg.param1)
+            
+        elif command == MavCommand.SET_SPEED_BACKWARD:
+            status.update_status(key="max_speed_backward", value=msg.param1)
+            
+        elif command == MavCommand.SET_SPEED_DIVE:
+            status.update_status(key="max_speed_dive", value=msg.param1)
+            
+        elif command == MavCommand.SET_SPEED_SURFACE:
+            status.update_status(key="max_speed_surface", value=msg.param1)
+        
+        elif command == MavCommand.SET_LIGHT:
+            status.update_status(key="light", value=msg.param1)
+            
+        elif command == MavCommand.SET_CAMERA:
+            status.update_status(key="camera", value=msg.param1)
+        
+        elif command == MavCommand.START_MAG_CALIBRATION:
+            calibrate.calibrate_mag()
+    
+    def handle_received_msg(self, msg) -> None:
+        if msg is None:
+            return
 
-def send_status(master):
-    while True:
-        status_data = status.read_all_status()
-        for key in ["roll", "pitch", "heading", "temp", "depth"]:
+        if msg.get_type() == "COMMAND_LONG":
             try:
-                value = float(status_data.get(key, 0))
-                param_id = key.ljust(16, '\0')
-                param_type = mavutil.mavlink.MAV_PARAM_TYPE_REAL32
+                command = MavCommand(msg.command)
+                current_mode = status.read_status(key="mode")
                 
-                master.mav.param_value_send(
-                    param_id.encode("ascii"),
-                    value,
-                    param_type,
-                    0,
-                    5
-                )
-                print(f"Sent {key}: {value}")
+                if current_mode == "manual" and command in {
+                    MavCommand.SURFACE, MavCommand.DIVE,
+                    MavCommand.LEFT, MavCommand.RIGHT,
+                    MavCommand.FORWARD, MavCommand.BACKWARD,
+                    MavCommand.STOP
+                }:
+                    self._handle_manual_command(command)
+                
+                self._handle_mode_commands(msg)
+                
+                self._handle_configuration_commands(msg)
+                
+            except ValueError:
+                logger.warning(f"Received unknown command ID: {msg.command}")
             except Exception as e:
-                print(f"Error sending {key}: {e}")
-            time.sleep(0.01)
+                logger.error(f"Error handling command: {e}", exc_info=True)
 
-# initialize the communication
-master_receive = mavutil.mavlink_connection("udpin:0.0.0.0:5000")
-thread1 = threading.Thread(target=received_msg, args=(master_receive,), daemon=True)
-thread1.start()
-thread1.join()
+    def _handle_connection_lost(self) -> None:
+        if not self.connection_lost_reported:
+            logger.warning("Connection lost with ground station, initiating surface maneuver")
+            self.connection_lost_reported = True
+            
+        status.update_status(key="disconnect", value=True)
+        
+        current_depth = status.read_status(key="depth", default=0)
+        if current_depth > 0:
+            rov.surface()
 
-master_send = mavutil.mavlink_connection("udpout:169.254.54.121:5001")
-thread2 = threading.Thread(target=send_status, args=(master_send,), daemon=True)
-thread2.start()
-thread2.join()
+    def receive_messages(self) -> None:
+        logger.info(f"MAVLink receiver started on port {self.receive_port}")
+        
+        while self.running:
+            try:
+                msg = self.receiver.recv_match(blocking=True, timeout=1)
+                if msg:
+                    with self._lock:
+                        status.update_status(key="disconnect", value=False)
+                        self.connection_lost_reported = False
+                        
+                        if msg.get_type() == "HEARTBEAT":
+                            self.last_heartbeat = time.time()
+                        elif msg.get_type() == "COMMAND_LONG":
+                            self.handle_received_msg(msg)
+                else:
+                    with self._lock:
+                        if time.time() - self.last_heartbeat > self.heartbeat_timeout:
+                            if not status.read_status(key="disconnect", default=False):
+                                self._handle_connection_lost()
+            except ConnectionError as e:
+                logger.error(f"Connection error in receiver: {e}")
+                time.sleep(1)
+            except Exception as e:
+                logger.error(f"Error in receiver thread: {e}", exc_info=True)
+                time.sleep(1)
+
+    def send_status_updates(self):
+        logger.info(f"MAVLink transmitter sending to {self.send_ip}:{self.send_port}")
+        
+        param_type = mavutil.mavlink.MAV_PARAM_TYPE_REAL32
+        last_send_time = 0
+        
+        while self.running:
+            try:
+                current_time = time.time()
+                
+                if current_time - last_send_time >= self.status_send_interval:
+                    last_send_time = current_time
+                    
+                    status_data = status.read_all_status()
+                    
+                    for key in self.status_params:
+                        try:
+                            value = float(status_data.get(key, 0))
+                            param_id = key.ljust(16, '\0')
+                            
+                            self.transmitter.mav.param_value_send(
+                                param_id.encode("ascii"),
+                                value,
+                                param_type,
+                                0,
+                                len(self.status_params)
+                            )
+                        except (ValueError, TypeError) as e:
+                            logger.warning(f"Invalid value for {key}: {e}")
+                        except Exception as e:
+                            logger.error(f"Error sending {key}: {e}")
+                    
+                    # self.transmitter.mav.heartbeat_send(
+                    #     mavutil.mavlink.MAV_TYPE_SUBMARINE,
+                    #     mavutil.mavlink.MAV_AUTOPILOT_GENERIC,
+                    #     0,
+                    #     0,
+                    #     mavutil.mavlink.MAV_STATE_ACTIVE
+                    # )
+                
+                time.sleep(0.01)
+                
+            except Exception as e:
+                logger.error(f"Error in transmitter thread: {e}", exc_info=True)
+                time.sleep(1)
+
+    def start(self):
+        with self._lock:
+            if self.running:
+                logger.warning("MAVLink controller already running")
+                return False
+                
+            self.running = True
+        
+        try:
+            self.receiver = mavutil.mavlink_connection(f"udpin:0.0.0.0:{self.receive_port}")
+            receiver_thread = threading.Thread(
+                target=self.receive_messages, 
+                daemon=True,
+                name="MAVLink-Receiver"
+            )
+            receiver_thread.start()
+            self.threads.append(receiver_thread)
+            
+            self.transmitter = mavutil.mavlink_connection(f"udpout:{self.send_ip}:{self.send_port}")
+            transmitter_thread = threading.Thread(
+                target=self.send_status_updates, 
+                daemon=True,
+                name="MAVLink-Transmitter"
+            )
+            transmitter_thread.start()
+            self.threads.append(transmitter_thread)
+            
+            logger.info("MAVLink controller started successfully")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to start MAVLink controller: {e}", exc_info=True)
+            self.stop()
+            return False
+
+    def stop(self):
+        logger.info("Stopping MAVLink controller...")
+        
+        with self._lock:
+            self.running = False
+        
+        for thread in self.threads:
+            if thread.is_alive():
+                thread.join(timeout=2)
+                if thread.is_alive():
+                    logger.warning(f"Thread {thread.name} did not terminate gracefully")
+        
+        self.threads = []
+        
+        if self.receiver:
+            try:
+                self.receiver.close()
+            except Exception:
+                pass
+            self.receiver = None
+            
+        if self.transmitter:
+            try:
+                self.transmitter.close()
+            except Exception:
+                pass
+            self.transmitter = None
+            
+        logger.info("MAVLink controller stopped")
+
+
+controller = None
+
+def init_mavlink(receive_port=5000, 
+                 send_ip="169.254.54.121", 
+                 send_port=5001):
+
+    global controller
+    
+    if controller is None:
+        controller = MavlinkController(receive_port, send_ip, send_port)
+    
+    return controller.start()
+
+def stop_mavlink():
+    global controller
+    
+    if controller is not None:
+        controller.stop()
+
+def signal_handler(sig, frame) -> None:
+    logger.info("Received shutdown signal, stopping MAVLink connections...")
+    stop_mavlink()
+    sys.exit(0)
+
+if __name__ == "__main__":
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    if init_mavlink():
+        logger.info("MAVLink communication started successfully")
+        
+        try:
+            # Keep main process running
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            logger.info("Manual shutdown initiated...")
+        finally:
+            stop_mavlink()
+    else:
+        logger.error("Failed to initialize MAVLink communication")
+        sys.exit(1)
