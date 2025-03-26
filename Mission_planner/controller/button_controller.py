@@ -7,7 +7,9 @@ class ButtonController:
     KEY_MAPPINGS = {
         Qt.Key_Shift: 'surface',
         Qt.Key_Control: 'dive',
-        Qt.Key_L: 'light'
+        Qt.Key_L: 'light',
+        Qt.Key_R: 'roll_right',
+        Qt.Key_F: 'roll_left',
     }
     
     def __init__(self):
@@ -21,12 +23,18 @@ class ButtonController:
         
         elif button_type == 'dive':
             MAV.send_control_cmd(MAV.DIVE)
+        
+        elif button_type == 'roll_right':
+            MAV.send_control_cmd(MAV.ROLL_RIGHT)
+
+        elif button_type == 'roll_left':
+            MAV.send_control_cmd(MAV.ROLL_LEFT)
     
     def on_button_released(self, button_type):
         if button_type in self.active_buttons:
             self.active_buttons.remove(button_type)
         
-        if button_type in ('surface', 'dive'):
+        if button_type in ('surface', 'dive', 'roll_right', 'roll_left'):
             MAV.send_control_cmd(MAV.STOP)
     
     def on_surface_button_clicked(self):
@@ -44,6 +52,22 @@ class ButtonController:
     def on_dive_button_released(self):
         self.on_button_released('dive')
         print("Dive button released")
+
+    def on_roll_right_button_clicked(self):
+        self.on_button_clicked('roll_right')
+        print("Roll right button clicked")
+
+    def on_roll_right_button_released(self):
+        self.on_button_released('roll_right')
+        print("Roll right button released")
+    
+    def on_roll_left_button_clicked(self):
+        self.on_button_clicked('roll_left')
+        print("Roll left button clicked")
+    
+    def on_roll_left_button_released(self):
+        self.on_button_released('roll_left')
+        print("Roll left button released")
 
     def on_mode_change_button_clicked(self):
         dialog = ModeChangeDialog()
@@ -74,6 +98,12 @@ class ButtonController:
         elif key == Qt.Key_Control:
             self.on_dive_button_clicked()
             return True
+        elif key == Qt.Key_R:
+            self.on_roll_right_button_clicked()
+            return True
+        elif key == Qt.Key_F:
+            self.on_roll_left_button_clicked()
+            return True
         elif key == Qt.Key_L:
             parent_widget.light_button.click()
             return True
@@ -90,8 +120,15 @@ class ButtonController:
         elif key == Qt.Key_Control:
             self.on_dive_button_released()
             return True
+        elif key == Qt.Key_R:
+            self.on_roll_right_button_released()
+            return True
+        elif key == Qt.Key_F:
+            self.on_roll_left_button_released()
+            return True
         elif key == Qt.Key_L:
             return True
+        
         return False
 
 controller = ButtonController()

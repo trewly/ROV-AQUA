@@ -41,7 +41,7 @@ class ControlPanel(QWidget):
         self.overlay_widget.setAttribute(Qt.WA_TranslucentBackground)
         
         self.control_frame = QFrame(self.overlay_widget)
-        self.control_frame.setGeometry(800, 10, 150, 200)
+        self.control_frame.setGeometry(800, 10, 150, 275)
         
         control_layout = QVBoxLayout(self.control_frame)
         control_layout.setContentsMargins(10, 10, 10, 10)
@@ -50,11 +50,15 @@ class ControlPanel(QWidget):
         self.surface_button = ControlButton("SURFACE")
         self.dive_button = ControlButton("DIVE")
         self.mode_change_button = ControlButton("MODE CHANGE")
+        self.roll_right_button = ControlButton("ROLL RIGHT")
+        self.roll_left_button = ControlButton("ROLL LEFT")
         self.light_button = ControlButton("LIGHT OFF")
         
         control_layout.addWidget(self.surface_button)
         control_layout.addWidget(self.dive_button)
         control_layout.addWidget(self.mode_change_button)
+        control_layout.addWidget(self.roll_right_button)
+        control_layout.addWidget(self.roll_left_button)
         control_layout.addWidget(self.light_button)
         control_layout.addStretch()
         
@@ -70,6 +74,12 @@ class ControlPanel(QWidget):
         
         self.dive_button.pressed.connect(buttons_controller.controller.on_dive_button_clicked)
         self.dive_button.released.connect(buttons_controller.controller.on_dive_button_released)
+
+        self.roll_right_button.pressed.connect(buttons_controller.controller.on_roll_right_button_clicked)
+        self.roll_right_button.released.connect(buttons_controller.controller.on_roll_right_button_released)
+
+        self.roll_left_button.pressed.connect(buttons_controller.controller.on_roll_left_button_clicked)
+        self.roll_left_button.released.connect(buttons_controller.controller.on_roll_left_button_released)
         
         self.mode_change_button.clicked.connect(buttons_controller.controller.on_mode_change_button_clicked)
         

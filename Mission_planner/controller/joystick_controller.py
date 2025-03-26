@@ -7,22 +7,19 @@ from Mission_planner.communication.pc_mavlink import MAV
 class VirtualJoystick(QGraphicsView):
     joystickMoved = pyqtSignal(float, float)
     
-    # Define direction constants
     STOP = (0, 0)
     RIGHT = (1, 0)
     LEFT = (-1, 0)
     FORWARD = (0, 1)
     BACKWARD = (0, -1)
     
-    # Map keys to directions
     KEY_MAP = {
-        Qt.Key_Left: LEFT,
-        Qt.Key_Right: RIGHT,
-        Qt.Key_Up: FORWARD,
-        Qt.Key_Down: BACKWARD
+        Qt.Key_A: LEFT,
+        Qt.Key_D: RIGHT,
+        Qt.Key_W: FORWARD,
+        Qt.Key_S: BACKWARD
     }
     
-    # Map directions to MAV commands
     DIRECTION_TO_COMMAND = {
         STOP: (MAV.STOP, "STOP"),
         RIGHT: (MAV.RIGHT, "RIGHT"),
