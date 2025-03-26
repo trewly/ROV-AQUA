@@ -76,14 +76,14 @@ class Motor:
             self.direction = STOP
             self.last_speed = 0
             
-    def set_speed_forward(self, status_key="max_speed_forward"):
-        speed = status.read_status(status_key, 100)
+    def thrust_forward(self):
+        speed = status.read_status("max_speed_forward", 100)
         dutycycle = scale_to_pwm(speed)
         self.set_dutycycle(dutycycle)
         return speed
             
-    def set_speed_backward(self, status_key="max_speed_backward"):
-        speed = status.read_status(status_key, -100)
+    def thrust_backward(self):
+        speed = status.read_status("max_speed_backward", -100)
         dutycycle = scale_to_pwm(speed)
         self.set_dutycycle(dutycycle)
         return speed
@@ -129,83 +129,37 @@ def initialize_motors(left_pin=5, right_pin=6, left_depth_pin=7, right_depth_pin
         print(f"Error initializing motors: {e}")
         return False
 
-def self_balance(threshold=1.0):
-    try:
-        pitch = status.read_status("pitch", 0)
-        roll = status.read_status("roll", 0)
-        previous_pitch = status.read_status("previous_pitch", pitch)
-        previous_roll = status.read_status("previous_roll", roll)
-        
-        pitch_diff = pitch - previous_pitch
-        roll_diff = roll - previous_roll
-        
-        status.update_multiple({
-            "previous_pitch": pitch,
-            "previous_roll": roll
-        })
+def move_forward():
+    LEFT_MOTOR.thrust_forward()
+    RIGHT_MOTOR.thrust_forward()
 
-        if abs(pitch_diff) > threshold:
-            if pitch_diff > 0:
-                LEFT_DEPTH_MOTOR.set_speed_forward()
-                RIGHT_DEPTH_MOTOR.set_speed_forward()
-            else:
-                LEFT_DEPTH_MOTOR.set_speed_backward()
-                RIGHT_DEPTH_MOTOR.set_speed_backward()
+def move_backward():
+    LEFT_MOTOR.thrust_backward()
+    RIGHT_MOTOR.thrust_backward()
 
-        if abs(roll_diff) > threshold:
-            if roll_diff > 0:
-                LEFT_DEPTH_MOTOR.set_speed_forward()
-                RIGHT_DEPTH_MOTOR.set_speed_backward()
-            else:
-                LEFT_DEPTH_MOTOR.set_speed_backward()
-                RIGHT_DEPTH_MOTOR.set_speed_forward()
-                
-        return True
-    except Exception as e:
-        print(f"Self-balance error: {e}")
-        return False
+def turn_left():
+    LEFT_MOTOR.thrust_backward()
+    RIGHT_MOTOR.thrust_forward()
 
-def move_forward(speed=None):
-    if speed is not None:
-        status.update_status("max_speed_forward", speed)
-    LEFT_MOTOR.set_speed_forward()
-    RIGHT_MOTOR.set_speed_forward()
+def turn_right():
+    LEFT_MOTOR.thrust_forward()
+    RIGHT_MOTOR.thrust_backward()
 
-def move_backward(speed=None):
-    if speed is not None:
-        status.update_status("max_speed_backward", speed)
-    LEFT_MOTOR.set_speed_backward()
-    RIGHT_MOTOR.set_speed_backward()
+def dive():
+    LEFT_DEPTH_MOTOR.thrust_forward()
+    RIGHT_DEPTH_MOTOR.thrust_forward()
 
-def turn_left(speed=None):
-    if speed is not None:
-        status.update_multiple({
-            "max_speed_backward": -speed,
-            "max_speed_forward": speed
-        })
-    LEFT_MOTOR.set_speed_backward()
-    RIGHT_MOTOR.set_speed_forward()
+def surface():
+    LEFT_DEPTH_MOTOR.thrust_backward()
+    RIGHT_DEPTH_MOTOR.thrust_backward()
 
-def turn_right(speed=None):
-    if speed is not None:
-        status.update_multiple({
-            "max_speed_forward": speed,
-            "max_speed_backward": -speed
-        })
-    LEFT_MOTOR.set_speed_forward()
-    RIGHT_MOTOR.set_speed_backward()
+def roll_right():
+    LEFT_DEPTH_MOTOR.thrust_forward()
+    RIGHT_DEPTH_MOTOR.thrust_backward()
 
-def dive(speed=None):
-    if speed is not None:
-        status.update_status("max_speed_dive", speed)
-    LEFT_DEPTH_MOTOR.set_speed_forward("max_speed_dive")
-    RIGHT_DEPTH_MOTOR.set_speed_forward("max_speed_dive")
-
-def surface(speed=None):
-    if speed is not None:
-        status.update_status("max_speed_surface", speed)
-    LEFT_DEPTH_MOTOR.set_speed_backward("max_speed_surface")
-    RIGHT_DEPTH_MOTOR.set_speed_backward("max_speed_surface")
+def roll_left():
+    LEFT_DEPTH_MOTOR.thrust_backward()
+    RIGHT_DEPTH_MOTOR.thrust_forward()
 
 def stop_all():
     for motor in motors.values():

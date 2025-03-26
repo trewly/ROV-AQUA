@@ -30,7 +30,7 @@ def init_status():
         "auto_depth": False,
         "target_depth": 0,
         "max_speed_forward": 100.0,
-        "max_speed_backward": -1.0,
+        "max_speed_backward": -100.0,
         "max_speed_dive": 100.0,
         "max_speed_surface": 100.0,
         "left_speed": 100,
