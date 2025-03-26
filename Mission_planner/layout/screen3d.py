@@ -23,7 +23,7 @@ ATTITUDE_INDICATOR_FACE_PATH = os.path.join(RESOURCE_DIR, "attitude_indicator", 
 ATTITUDE_INDICATOR_RING_PATH = os.path.join(RESOURCE_DIR, "attitude_indicator", "ai_ring.svg")
 ATTITUDE_INDICATOR_CASE_PATH = os.path.join(RESOURCE_DIR, "attitude_indicator", "ai_case.svg")
 ATTITUDE_INDICATOR_BACK_PATH = os.path.join(RESOURCE_DIR, "attitude_indicator", "ai_back.svg")
-
+FONT_PATH = os.path.join(RESOURCE_DIR, "Orbitron", "static", "Orbitron-Regular.ttf")
 #from Mission_planner.controller import state_status #phan dung de doc du lieu
 
 #phan gia lap xoay
@@ -84,7 +84,7 @@ class STLViewerWidget(QWidget):
         self.pitch_info=0
         self.roll_info=0
 
-        font_id = QFontDatabase.addApplicationFont("./layout/resources/Orbitron/static/Orbitron-Regular.ttf")
+        font_id = QFontDatabase.addApplicationFont(FONT_PATH)
         if font_id != -1:  # Kiểm tra nếu thêm thành công
             font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
             self.font = QFont(font_family, 10, QFont.Bold)
