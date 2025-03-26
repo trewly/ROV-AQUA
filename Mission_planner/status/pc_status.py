@@ -160,4 +160,4 @@ def force_refresh():
         _last_update_time = 0
     return read_all_status()
 
-#init_status()
+init_status()
