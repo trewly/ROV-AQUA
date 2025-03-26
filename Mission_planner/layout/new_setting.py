@@ -11,9 +11,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 # Import canvas từ module
 from layout.sub_widgets import canvas, motor_slider, setting_area
 from Mission_planner.status import pc_status as status
+from Mission_planner.communication.system_update_timer import SystemStatusManager
 
 class settingLayout(QWidget):
-    def __init__(self):
+    def __init__(self, status_manager: SystemStatusManager):
         super().__init__()
         self.setFixedSize(910,944)
         palette = self.palette()
@@ -21,13 +22,14 @@ class settingLayout(QWidget):
         self.setPalette(palette)
         self.setAutoFillBackground(True)
          
-            
+        self.status_manager = status_manager    
+        
         self.canvas_init()
         self.motor_slider_init()
         self.button_setting_init()
 
     def canvas_init(self):
-        self.canvas = canvas.CanvasWidget()
+        self.canvas = canvas.CanvasWidget(self.status_manager)
         self.canvas.setParent(self)
         self.canvas.move(15,20)
 

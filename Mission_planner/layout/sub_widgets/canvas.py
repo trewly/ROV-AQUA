@@ -10,6 +10,7 @@ import time
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from resources.style import canvas_button_style
 from Mission_planner.status import pc_status as status
+from Mission_planner.communication.system_update_timer import SystemStatusManager
 
 #test gia lap
 class ROVSimulationThread(QThread):
@@ -51,7 +52,7 @@ class ROVSimulationThread(QThread):
 
 
 class CanvasWidget(QWidget):
-    def __init__(self):
+    def __init__(self,status_manager: SystemStatusManager):
         super().__init__()
         self.setFixedSize(881, 566)
 
@@ -93,12 +94,13 @@ class CanvasWidget(QWidget):
         self.selected_points = []
         self.go_to_point_mode = False  # Chế độ chọn waypoint
 
-        self.status_timer = QTimer(self)
-        self.status_timer.timeout.connect(self.update_vehicle_status)
-        self.status_timer.start(1000)  # Cập nhật mỗi 1 giây
-        
+        #Cap nhat su kien
+        self.status_manager = status_manager
+        self.status_manager.got_disconnected_info.connect(self.update_vehicle_status)
+        self.status_manager.got_temp_depth_info.connect(self.update_temp_depth_info)
+
         # Đọc trạng thái ban đầu
-        self.update_vehicle_status()
+        self.update_vehicle_status(0)
 
     def draw_grid(self, grid_size):
         pen = QPen(QColor(200, 200, 200))  
@@ -204,18 +206,22 @@ class CanvasWidget(QWidget):
         self.statusDot.setStyleSheet("border-radius: 10px; background-color: gray; border: 1px solid black;")
         self.statusDot.move(665,15)  
     
-    def update_vehicle_status(self):
-        disconnected = status.read_status("disconnect")
+    def update_vehicle_status(self,disconnected: bool):
         if disconnected:
             self.statusLabel.setText("Vehicle unconnected")
         else:
             self.statusLabel.setText("Vehicle connected")
+        #print("update connected info")
 
     def system_info_init(self):
         self.infoLabel = QLabel(f"Depth: {self.depth_info}   Temp: {self.temp_info}" , self)
         self.infoLabel.setFont(self.font)
         self.infoLabel.setStyleSheet("color: #395B64; font-size: 22px;")
         self.infoLabel.move(15, 530)
+
+    def update_temp_depth_info(self,temp,depth):
+        self.infoLabel.setText(f"Depth: {self.depth_info}   Temp: {self.temp_info}")
+        #print("update tempdepth info")
 
     def show_waypoint_menu(self):
         button_pos = self.wbutton.mapToGlobal(self.wbutton.rect().bottomLeft())

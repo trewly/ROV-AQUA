@@ -10,6 +10,7 @@ from layout import screen3d
 from layout import control
 from layout import new_setting
 from layout.test_widget.just_widget import testLayout
+from communication.system_update_timer import SystemStatusManager
 
 # Định nghĩa đường dẫn tới STL
 STL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
@@ -25,6 +26,9 @@ class MainWindow(QWidget):
         palette.setColor(QPalette.Window, QColor("#2C3333")) 
         self.setPalette(palette)
         self.setAutoFillBackground(True)
+
+        #khoi tao timer cap nhat du lieu
+        self.status_manager=SystemStatusManager()
 
         self.upscreen_init()
         self.down_screen_init()
@@ -42,7 +46,7 @@ class MainWindow(QWidget):
         self.down_screen.setGeometry(10, 425,960, 540)  
 
     def rightscreen_init(self):
-        self.right_screen = new_setting.settingLayout()
+        self.right_screen = new_setting.settingLayout(self.status_manager)
         self.right_screen.setParent(self)
         self.right_screen.setGeometry(975, 20, 910, 944)
 
