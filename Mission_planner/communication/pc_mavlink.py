@@ -54,6 +54,8 @@ class MavCommands:
     FORWARD = 1004
     BACKWARD = 1005
     STOP = 1006
+    ROLL_LEFT = 1007
+    ROLL_RIGHT = 1008
 
     SET_MANUAL = 1100
     SET_AUTO_HEADING = 1101
@@ -180,7 +182,6 @@ class MavlinkController:
             except Exception as e:
                 logger.error(f"Error processing parameter: {e}")
         elif msg_type == "COMMAND_ACK":
-            # More detailed command acknowledgment logging
             result_str = "ACCEPTED" if msg.result == 0 else f"FAILED ({msg.result})"
             logger.info(f"CMD_ACK: Command {msg.command} {result_str}")
         elif msg_type == "STATUSTEXT":
@@ -190,7 +191,6 @@ class MavlinkController:
                 else:
                     text = str(msg.text)
                 
-                # Log with severity level
                 severity = msg.severity
                 severity_str = {
                     0: "EMERGENCY",

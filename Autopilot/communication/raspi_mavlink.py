@@ -7,25 +7,34 @@ import logging
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 from enum import IntEnum
-from typing import Dict, List, Optional, Any, Union
+from typing import List
 from pymavlink import mavutil
 
-log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../logs"))
-os.makedirs(log_dir, exist_ok=True)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-current_date = datetime.now().strftime("%Y-%m-%d")
-log_file = os.path.join(log_dir, f"mavlink_raspi_{current_date}.log")
+from Autopilot.system_info.status import raspi_status as status
+from Autopilot.system_info.sensor import raspi_sensor_calibrate as calibrate
+from Autopilot.controller.motor import raspi_motor_control as rov
 
-logger = logging.getLogger("MAVLink")
-logger.setLevel(logging.INFO)
-
-if not logger.handlers:
+def setup_logger(name="MAVLink", log_subdir="../logs"):
+    log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), log_subdir))
+    os.makedirs(log_dir, exist_ok=True)
+    
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    log_file = os.path.join(log_dir, f"mavlink_raspi_{current_date}.log")
+    
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+    
+    if logger.handlers:
+        logger.handlers.clear()
+    
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
     console_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
-
+    
     file_handler = TimedRotatingFileHandler(
         log_file, 
         when='midnight',
@@ -37,19 +46,17 @@ if not logger.handlers:
     file_handler.setFormatter(file_formatter)
     file_handler.suffix = "%Y-%m-%d"
     logger.addHandler(file_handler)
+    
+    logger.propagate = False
+    
+    logger.info("=" * 50)
+    logger.info(f"{name} Logger initialized")
+    logger.info(f"Log file: {log_file}")
+    logger.info("=" * 50)
+    
+    return logger
 
-logger.propagate = False
-
-logger.info("=" * 50)
-logger.info("MAVLink Controller starting up")
-logger.info(f"Log file: {log_file}")
-logger.info("=" * 50)
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-
-from Autopilot.system_info.status import raspi_status as status
-from Autopilot.system_info.sensor import raspi_sensor_calibrate as calibrate
-from Autopilot.controller.motor import raspi_motor_control as rov
+logger = None
 
 class MavCommand(IntEnum):
     SURFACE = 1000
@@ -59,6 +66,8 @@ class MavCommand(IntEnum):
     FORWARD = 1004
     BACKWARD = 1005
     STOP = 1006
+    ROLL_LEFT = 1007
+    ROLL_RIGHT = 1008
 
     SET_MANUAL = 1100
     SET_AUTO_HEADING = 1101
@@ -81,6 +90,13 @@ class MavlinkController:
     def __init__(self, receive_port: int = 5000, 
                  send_ip: str = "169.254.54.121", 
                  send_port: int = 5001):
+        global logger
+        
+        if logger is None:
+            logger = setup_logger("MAVLink", "../logs")
+            
+        logger.info("Initializing MAVLink controller")
+            
         self.receive_port = receive_port
         self.send_ip = send_ip
         self.send_port = send_port
@@ -111,6 +127,8 @@ class MavlinkController:
             MavCommand.RIGHT: rov.turn_right,
             MavCommand.FORWARD: rov.move_forward,
             MavCommand.BACKWARD: rov.move_backward,
+            MavCommand.ROLL_LEFT: rov.roll_left,
+            MavCommand.ROLL_RIGHT: rov.roll_right,
             MavCommand.STOP: rov.stop_all,
         }
         
@@ -185,8 +203,46 @@ class MavlinkController:
         if msg.get_type() == "COMMAND_LONG":
             try:
                 command = MavCommand(msg.command)
-                logger.info(f"Received MAVLink command: {command.name} (ID: {msg.command}), Params: {msg.param1}, {msg.param2}, {msg.param3}, {msg.param4}, {msg.param5}, {msg.param6}, {msg.param7}")
-
+                
+                important_commands = {
+                    MavCommand.SET_MANUAL, 
+                    MavCommand.SET_AUTO_HEADING,
+                    MavCommand.SET_AUTO_DEPTH,
+                    MavCommand.SET_PID,
+                    MavCommand.SET_SPEED_FORWARD,
+                    MavCommand.SET_SPEED_BACKWARD,
+                    MavCommand.SET_SPEED_DIVE,
+                    MavCommand.SET_SPEED_SURFACE,
+                    MavCommand.SET_LIGHT,
+                    MavCommand.SET_CAMERA,
+                    MavCommand.START_MAG_CALIBRATION
+                }
+                
+                if command in important_commands:
+                    if command == MavCommand.SET_MANUAL:
+                        logger.info(f"Mode changed: Manual control")
+                    elif command == MavCommand.SET_AUTO_HEADING:
+                        logger.info(f"Mode changed: Auto heading with target {msg.param1}°")
+                    elif command == MavCommand.SET_AUTO_DEPTH:
+                        logger.info(f"Mode changed: Auto depth with target {msg.param1}m")
+                    elif command == MavCommand.SET_PID:
+                        logger.info(f"PID parameters set: Kp={msg.param1:.2f}, Ki={msg.param2:.2f}, Kd={msg.param3:.2f}")
+                    elif command == MavCommand.SET_SPEED_FORWARD:
+                        logger.info(f"Forward speed set to {msg.param1}%")
+                    elif command == MavCommand.SET_SPEED_BACKWARD:
+                        logger.info(f"Backward speed set to {msg.param1}%") 
+                    elif command == MavCommand.SET_SPEED_DIVE:
+                        logger.info(f"Dive speed set to {msg.param1}%")
+                    elif command == MavCommand.SET_SPEED_SURFACE:
+                        logger.info(f"Surface speed set to {msg.param1}%")
+                    elif command == MavCommand.SET_LIGHT:
+                        logger.info(f"Light set to {msg.param1}%")
+                    elif command == MavCommand.SET_CAMERA:
+                        mode_str = "ON" if int(msg.param1) == 1 else "OFF"
+                        logger.info(f"Camera set to {mode_str}")
+                    elif command == MavCommand.START_MAG_CALIBRATION:
+                        logger.info(f"Starting magnetometer calibration")
+                
                 current_mode = status.read_status(key="mode")
 
                 if current_mode == "manual" and command in {
@@ -361,8 +417,10 @@ controller = None
 def init_mavlink(receive_port=5000, 
                  send_ip="169.254.54.121", 
                  send_port=5001):
-
-    global controller
+    global controller, logger
+    
+    if logger is None:
+        logger = setup_logger("MAVLink", "../logs")
     
     if controller is None:
         controller = MavlinkController(receive_port, send_ip, send_port)
@@ -376,11 +434,18 @@ def stop_mavlink():
         controller.stop()
 
 def signal_handler(sig, frame) -> None:
+    global logger
+    
+    if logger is None:
+        logger = setup_logger("MAVLink", "../logs")
+        
     logger.info("Received shutdown signal, stopping MAVLink connections...")
     stop_mavlink()
     sys.exit(0)
 
 if __name__ == "__main__":
+    logger = setup_logger("MAVLink", "../logs")
+    
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     
@@ -388,7 +453,6 @@ if __name__ == "__main__":
         logger.info("MAVLink communication started successfully")
         
         try:
-            # Keep main process running
             while True:
                 time.sleep(1)
         except KeyboardInterrupt:
