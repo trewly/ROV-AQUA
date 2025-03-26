@@ -16,6 +16,8 @@ import random
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))) 
 
+from Mission_planner.communication.system_update_timer import SystemStatusManager
+
 RESOURCE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources")
 COMPASS_FACE_PATH = os.path.join(RESOURCE_DIR, "compass", "hi_face.svg")
 COMPASS_CASE_PATH = os.path.join(RESOURCE_DIR, "compass", "hi_case.svg")
@@ -60,7 +62,7 @@ class STLLoaderThread(QThread):
         self.finished.emit(vertices, faces)
 
 class STLViewerWidget(QWidget):
-    def __init__(self, stl_file):
+    def __init__(self, stl_file,status_manager: SystemStatusManager):
         super().__init__()
         self.setFixedSize(950, 395)
         layout = QHBoxLayout()
@@ -150,6 +152,10 @@ class STLViewerWidget(QWidget):
         self.rotation_thread.new_rotation.connect(self.attitude_indicator_position_change)  # xoay pitch roll
         self.rotation_thread.new_rotation.connect(self.compass_position_change)  # xoay compass
         self.rotation_thread.start()
+        
+        #cap nhat giao dien voi timer
+        self.status_manager = status_manager
+        self.status_manager.got_roll_pitch_yaw_info.connect(self.update_sate_show)
 
     #ham khoi tao, chuc nang mo hinh
     def on_stl_loaded(self, vertices, faces):
@@ -338,4 +344,10 @@ class STLViewerWidget(QWidget):
         self.state_status.setFont(self.font)
         self.state_status.setStyleSheet("color: #395B64; font-size: 20px;")
         self.state_status.move(0, 0)
-        
+
+    def update_sate_show(self,roll,pitch,yaw):
+        self.roll_info=roll
+        self.pitch_info=pitch
+        self.yaw_info=yaw
+
+        self.state_status.setText(f"Pitch: {self.pitch_info}   Roll: {self.roll_info}   Yaw: {self.yaw_info}")

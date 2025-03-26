@@ -35,7 +35,7 @@ class MainWindow(QWidget):
         self.rightscreen_init()
 
     def upscreen_init(self):
-        self.up_screen = screen3d.STLViewerWidget(STL_PATH)
+        self.up_screen = screen3d.STLViewerWidget(STL_PATH,self.status_manager)
         self.up_screen.setParent(self)
         self.up_screen.setGeometry(15, 20,950, 395)  
 

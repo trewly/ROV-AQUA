@@ -220,6 +220,8 @@ class CanvasWidget(QWidget):
         self.infoLabel.move(15, 530)
 
     def update_temp_depth_info(self,temp,depth):
+        self.temp_info=temp
+        self.depth_info=depth
         self.infoLabel.setText(f"Depth: {self.depth_info}   Temp: {self.temp_info}")
         #print("update tempdepth info")
 

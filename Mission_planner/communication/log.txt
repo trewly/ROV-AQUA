@@ -1,264 +1,83 @@
-2025-03-25 01:16:44 - INFO - ==================================================
-2025-03-25 01:16:44 - INFO - MAVLink Controller starting up
-2025-03-25 01:16:44 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
-2025-03-25 01:16:44 - INFO - ==================================================
-2025-03-25 01:16:44 - INFO - Sender initialized to 169.254.54.120:5000
-2025-03-25 01:16:44 - INFO - Receiver initialized on port 5001
-2025-03-25 01:16:44 - INFO - Heartbeat thread started
-2025-03-25 01:16:44 - INFO - Receive thread started
-2025-03-25 01:16:44 - INFO - MAVLink controller initialized successfully
-2025-03-25 01:16:49 - WARNING - Connection lost!
-2025-03-25 01:16:51 - WARNING - Connection lost!
-2025-03-25 01:16:52 - WARNING - Connection lost!
-2025-03-25 01:16:53 - WARNING - Connection lost!
-2025-03-25 01:16:54 - WARNING - Connection lost!
-2025-03-25 01:16:55 - WARNING - Connection lost!
-2025-03-25 01:16:56 - WARNING - Connection lost!
-2025-03-25 01:16:57 - WARNING - Connection lost!
-2025-03-25 01:16:58 - WARNING - Connection lost!
-2025-03-25 01:16:59 - WARNING - Connection lost!
-2025-03-25 01:17:00 - WARNING - Connection lost!
-2025-03-25 01:17:01 - WARNING - Connection lost!
-2025-03-25 01:17:02 - WARNING - Connection lost!
-2025-03-25 01:17:03 - WARNING - Connection lost!
-2025-03-25 01:17:04 - WARNING - Connection lost!
-2025-03-25 01:17:05 - WARNING - Connection lost!
-2025-03-25 01:17:06 - WARNING - Connection lost!
-2025-03-25 01:17:07 - WARNING - Connection lost!
-2025-03-25 01:17:08 - WARNING - Connection lost!
-2025-03-25 01:17:09 - WARNING - Connection lost!
-2025-03-25 01:17:10 - WARNING - Connection lost!
-2025-03-25 01:17:11 - WARNING - Connection lost!
-2025-03-25 01:17:12 - WARNING - Connection lost!
-2025-03-25 01:17:13 - WARNING - Connection lost!
-2025-03-25 01:17:14 - WARNING - Connection lost!
-2025-03-25 01:17:15 - WARNING - Connection lost!
-2025-03-25 01:17:16 - WARNING - Connection lost!
-2025-03-25 01:17:17 - WARNING - Connection lost!
-2025-03-25 01:17:18 - WARNING - Connection lost!
-2025-03-25 01:17:19 - WARNING - Connection lost!
-2025-03-25 01:17:20 - WARNING - Connection lost!
-2025-03-25 01:17:21 - WARNING - Connection lost!
-2025-03-25 01:17:22 - WARNING - Connection lost!
-2025-03-25 01:17:23 - WARNING - Connection lost!
-2025-03-25 01:17:24 - WARNING - Connection lost!
-2025-03-25 01:17:25 - WARNING - Connection lost!
-2025-03-25 01:17:26 - WARNING - Connection lost!
-2025-03-25 01:17:27 - WARNING - Connection lost!
-2025-03-25 01:17:28 - WARNING - Connection lost!
-2025-03-26 09:25:08 - INFO - ==================================================
-2025-03-26 09:25:08 - INFO - MAVLink Controller starting up
-2025-03-26 09:25:08 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
-2025-03-26 09:25:08 - INFO - ==================================================
-2025-03-26 09:25:08 - INFO - Sender initialized to 169.254.54.120:5000
-2025-03-26 09:25:08 - INFO - Receiver initialized on port 5001
-2025-03-26 09:25:08 - INFO - Heartbeat thread started
-2025-03-26 09:25:08 - INFO - Receive thread started
-2025-03-26 09:25:08 - INFO - MAVLink controller initialized successfully
-2025-03-26 09:25:14 - WARNING - Connection lost!
-2025-03-26 09:25:15 - WARNING - Connection lost!
-2025-03-26 09:25:16 - WARNING - Connection lost!
-2025-03-26 09:25:17 - WARNING - Connection lost!
-2025-03-26 09:25:18 - WARNING - Connection lost!
-2025-03-26 09:25:19 - WARNING - Connection lost!
-2025-03-26 09:25:20 - WARNING - Connection lost!
-2025-03-26 09:25:21 - WARNING - Connection lost!
-2025-03-26 09:25:22 - WARNING - Connection lost!
-2025-03-26 09:52:22 - INFO - ==================================================
-2025-03-26 09:52:22 - INFO - MAVLink Controller starting up
-2025-03-26 09:52:22 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
-2025-03-26 09:52:22 - INFO - ==================================================
-2025-03-26 09:52:22 - INFO - Sender initialized to 169.254.54.120:5000
-2025-03-26 09:52:22 - INFO - Receiver initialized on port 5001
-2025-03-26 09:52:22 - INFO - Heartbeat thread started
-2025-03-26 09:52:22 - INFO - Receive thread started
-2025-03-26 09:52:22 - INFO - MAVLink controller initialized successfully
-2025-03-26 09:52:28 - WARNING - Connection lost!
-2025-03-26 09:52:29 - WARNING - Connection lost!
-2025-03-26 09:54:05 - INFO - ==================================================
-2025-03-26 09:54:05 - INFO - MAVLink Controller starting up
-2025-03-26 09:54:05 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
-2025-03-26 09:54:05 - INFO - ==================================================
-2025-03-26 09:54:05 - INFO - Sender initialized to 169.254.54.120:5000
-2025-03-26 09:54:05 - INFO - Receiver initialized on port 5001
-2025-03-26 09:54:05 - INFO - Heartbeat thread started
-2025-03-26 09:54:05 - INFO - Receive thread started
-2025-03-26 09:54:05 - INFO - MAVLink controller initialized successfully
-2025-03-26 09:54:10 - WARNING - Connection lost!
-2025-03-26 09:54:39 - INFO - ==================================================
-2025-03-26 09:54:39 - INFO - MAVLink Controller starting up
-2025-03-26 09:54:39 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
-2025-03-26 09:54:39 - INFO - ==================================================
-2025-03-26 09:54:39 - INFO - Sender initialized to 169.254.54.120:5000
-2025-03-26 09:54:39 - INFO - Receiver initialized on port 5001
-2025-03-26 09:54:39 - INFO - Heartbeat thread started
-2025-03-26 09:54:39 - INFO - Receive thread started
-2025-03-26 09:54:39 - INFO - MAVLink controller initialized successfully
-2025-03-26 09:54:45 - WARNING - Connection lost!
-2025-03-26 10:27:56 - INFO - ==================================================
-2025-03-26 10:27:56 - INFO - MAVLink Controller starting up
-2025-03-26 10:27:56 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
-2025-03-26 10:27:56 - INFO - ==================================================
-2025-03-26 10:27:56 - INFO - Sender initialized to 169.254.54.120:5000
-2025-03-26 10:27:56 - INFO - Receiver initialized on port 5001
-2025-03-26 10:27:56 - INFO - Heartbeat thread started
-2025-03-26 10:27:56 - INFO - Receive thread started
-2025-03-26 10:27:56 - INFO - MAVLink controller initialized successfully
-2025-03-26 10:28:01 - WARNING - Connection lost!
-2025-03-26 10:44:55 - INFO - ==================================================
-2025-03-26 10:44:55 - INFO - MAVLink Controller starting up
-2025-03-26 10:44:55 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
-2025-03-26 10:44:55 - INFO - ==================================================
-2025-03-26 10:44:55 - INFO - Sender initialized to 169.254.54.120:5000
-2025-03-26 10:44:55 - INFO - Receiver initialized on port 5001
-2025-03-26 10:44:55 - INFO - Heartbeat thread started
-2025-03-26 10:44:55 - INFO - Receive thread started
-2025-03-26 10:44:55 - INFO - MAVLink controller initialized successfully
-2025-03-26 10:50:39 - INFO - ==================================================
-2025-03-26 10:50:39 - INFO - MAVLink Controller starting up
-2025-03-26 10:50:39 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
-2025-03-26 10:50:39 - INFO - ==================================================
-2025-03-26 10:50:39 - INFO - Sender initialized to 169.254.54.120:5000
-2025-03-26 10:50:39 - INFO - Receiver initialized on port 5001
-2025-03-26 10:50:39 - INFO - Heartbeat thread started
-2025-03-26 10:50:39 - INFO - Receive thread started
-2025-03-26 10:50:39 - INFO - MAVLink controller initialized successfully
-2025-03-26 10:50:58 - INFO - ==================================================
-2025-03-26 10:50:58 - INFO - MAVLink Controller starting up
-2025-03-26 10:50:58 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
-2025-03-26 10:50:58 - INFO - ==================================================
-2025-03-26 10:50:58 - INFO - Sender initialized to 169.254.54.120:5000
-2025-03-26 10:50:58 - INFO - Receiver initialized on port 5001
-2025-03-26 10:50:58 - INFO - Heartbeat thread started
-2025-03-26 10:50:58 - INFO - Receive thread started
-2025-03-26 10:50:58 - INFO - MAVLink controller initialized successfully
-2025-03-26 10:51:40 - INFO - ==================================================
-2025-03-26 10:51:40 - INFO - MAVLink Controller starting up
-2025-03-26 10:51:40 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
-2025-03-26 10:51:40 - INFO - ==================================================
-2025-03-26 10:51:40 - INFO - Sender initialized to 169.254.54.120:5000
-2025-03-26 10:51:40 - INFO - Receiver initialized on port 5001
-2025-03-26 10:51:40 - INFO - Heartbeat thread started
-2025-03-26 10:51:40 - INFO - Receive thread started
-2025-03-26 10:51:40 - INFO - MAVLink controller initialized successfully
-2025-03-26 10:52:56 - INFO - ==================================================
-2025-03-26 10:52:56 - INFO - MAVLink Controller starting up
-2025-03-26 10:52:56 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
-2025-03-26 10:52:56 - INFO - ==================================================
-2025-03-26 10:52:56 - INFO - Sender initialized to 169.254.54.120:5000
-2025-03-26 10:52:56 - INFO - Receiver initialized on port 5001
-2025-03-26 10:52:56 - INFO - Heartbeat thread started
-2025-03-26 10:52:56 - INFO - Receive thread started
-2025-03-26 10:52:56 - INFO - MAVLink controller initialized successfully
-2025-03-26 10:53:36 - INFO - ==================================================
-2025-03-26 10:53:36 - INFO - MAVLink Controller starting up
-2025-03-26 10:53:36 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
-2025-03-26 10:53:36 - INFO - ==================================================
-2025-03-26 10:53:36 - INFO - Sender initialized to 169.254.54.120:5000
-2025-03-26 10:53:36 - INFO - Receiver initialized on port 5001
-2025-03-26 10:53:36 - INFO - Heartbeat thread started
-2025-03-26 10:53:36 - INFO - Receive thread started
-2025-03-26 10:53:36 - INFO - MAVLink controller initialized successfully
-2025-03-26 10:54:35 - INFO - ==================================================
-2025-03-26 10:54:35 - INFO - MAVLink Controller starting up
-2025-03-26 10:54:35 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
-2025-03-26 10:54:35 - INFO - ==================================================
-2025-03-26 10:54:35 - INFO - Sender initialized to 169.254.54.120:5000
-2025-03-26 10:54:35 - INFO - Receiver initialized on port 5001
-2025-03-26 10:54:35 - INFO - Heartbeat thread started
-2025-03-26 10:54:35 - INFO - Receive thread started
-2025-03-26 10:54:35 - INFO - MAVLink controller initialized successfully
-2025-03-26 10:54:52 - INFO - ==================================================
-2025-03-26 10:54:52 - INFO - MAVLink Controller starting up
-2025-03-26 10:54:52 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
-2025-03-26 10:54:52 - INFO - ==================================================
-2025-03-26 10:54:52 - INFO - Sender initialized to 169.254.54.120:5000
-2025-03-26 10:54:52 - INFO - Receiver initialized on port 5001
-2025-03-26 10:54:52 - INFO - Heartbeat thread started
-2025-03-26 10:54:52 - INFO - Receive thread started
-2025-03-26 10:54:52 - INFO - MAVLink controller initialized successfully
-2025-03-26 10:55:41 - INFO - ==================================================
-2025-03-26 10:55:41 - INFO - MAVLink Controller starting up
-2025-03-26 10:55:41 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
-2025-03-26 10:55:41 - INFO - ==================================================
-2025-03-26 10:55:41 - INFO - Sender initialized to 169.254.54.120:5000
-2025-03-26 10:55:41 - INFO - Receiver initialized on port 5001
-2025-03-26 10:55:41 - INFO - Heartbeat thread started
-2025-03-26 10:55:41 - INFO - Receive thread started
-2025-03-26 10:55:41 - INFO - MAVLink controller initialized successfully
-2025-03-26 10:55:46 - WARNING - Connection lost!
-2025-03-26 10:55:47 - WARNING - Connection lost!
-2025-03-26 10:55:48 - WARNING - Connection lost!
-2025-03-26 10:55:49 - WARNING - Connection lost!
-2025-03-26 10:55:50 - WARNING - Connection lost!
-2025-03-26 10:55:51 - WARNING - Connection lost!
-2025-03-26 10:55:52 - WARNING - Connection lost!
-2025-03-26 10:55:53 - WARNING - Connection lost!
-2025-03-26 10:55:54 - WARNING - Connection lost!
-2025-03-26 10:55:55 - WARNING - Connection lost!
-2025-03-26 10:55:56 - WARNING - Connection lost!
-2025-03-26 10:55:57 - WARNING - Connection lost!
-2025-03-26 10:55:58 - WARNING - Connection lost!
-2025-03-26 10:55:59 - WARNING - Connection lost!
-2025-03-26 10:56:00 - WARNING - Connection lost!
-2025-03-26 10:56:01 - WARNING - Connection lost!
-2025-03-26 10:56:02 - WARNING - Connection lost!
-2025-03-26 10:56:03 - WARNING - Connection lost!
-2025-03-26 10:56:04 - WARNING - Connection lost!
-2025-03-26 10:56:05 - WARNING - Connection lost!
-2025-03-26 10:56:06 - WARNING - Connection lost!
-2025-03-26 10:56:07 - WARNING - Connection lost!
-2025-03-26 10:56:08 - WARNING - Connection lost!
-2025-03-26 10:56:09 - WARNING - Connection lost!
-2025-03-26 10:56:10 - WARNING - Connection lost!
-2025-03-26 10:56:39 - INFO - ==================================================
-2025-03-26 10:56:39 - INFO - MAVLink Controller starting up
-2025-03-26 10:56:39 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
-2025-03-26 10:56:39 - INFO - ==================================================
-2025-03-26 10:56:39 - INFO - Sender initialized to 169.254.54.120:5000
-2025-03-26 10:56:39 - INFO - Receiver initialized on port 5001
-2025-03-26 10:56:39 - INFO - Heartbeat thread started
-2025-03-26 10:56:39 - INFO - Receive thread started
-2025-03-26 10:56:39 - INFO - MAVLink controller initialized successfully
-2025-03-26 10:56:44 - WARNING - Connection lost!
-2025-03-26 10:56:45 - WARNING - Connection lost!
-2025-03-26 10:56:46 - WARNING - Connection lost!
-2025-03-26 10:56:47 - WARNING - Connection lost!
-2025-03-26 10:56:48 - WARNING - Connection lost!
-2025-03-26 10:56:49 - WARNING - Connection lost!
-2025-03-26 10:56:50 - WARNING - Connection lost!
-2025-03-26 10:56:51 - WARNING - Connection lost!
-2025-03-26 10:56:52 - WARNING - Connection lost!
-2025-03-26 10:56:53 - WARNING - Connection lost!
-2025-03-26 10:56:54 - WARNING - Connection lost!
-2025-03-26 10:56:55 - WARNING - Connection lost!
-2025-03-26 10:56:56 - WARNING - Connection lost!
-2025-03-26 10:56:57 - WARNING - Connection lost!
-2025-03-26 10:56:58 - WARNING - Connection lost!
-2025-03-26 10:56:59 - WARNING - Connection lost!
-2025-03-26 10:57:00 - WARNING - Connection lost!
-2025-03-26 10:57:01 - WARNING - Connection lost!
-2025-03-26 10:57:02 - WARNING - Connection lost!
-2025-03-26 10:57:03 - WARNING - Connection lost!
-2025-03-26 10:57:04 - WARNING - Connection lost!
-2025-03-26 10:57:05 - WARNING - Connection lost!
-2025-03-26 10:57:06 - WARNING - Connection lost!
-2025-03-26 10:57:07 - WARNING - Connection lost!
-2025-03-26 10:57:08 - WARNING - Connection lost!
-2025-03-26 10:57:09 - WARNING - Connection lost!
-2025-03-26 10:57:10 - WARNING - Connection lost!
-2025-03-26 10:57:11 - WARNING - Connection lost!
-2025-03-26 10:57:12 - WARNING - Connection lost!
-2025-03-26 11:01:51 - INFO - ==================================================
-2025-03-26 11:01:51 - INFO - MAVLink Controller starting up
-2025-03-26 11:01:51 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
-2025-03-26 11:01:51 - INFO - ==================================================
-2025-03-26 11:01:51 - INFO - Sender initialized to 169.254.54.120:5000
-2025-03-26 11:01:51 - INFO - Receiver initialized on port 5001
-2025-03-26 11:01:51 - INFO - Heartbeat thread started
-2025-03-26 11:01:51 - INFO - Receive thread started
-2025-03-26 11:01:51 - INFO - MAVLink controller initialized successfully
-2025-03-26 11:01:56 - WARNING - Connection lost!
-2025-03-26 11:01:57 - WARNING - Connection lost!
-2025-03-26 11:01:58 - WARNING - Connection lost!
-2025-03-26 11:01:59 - WARNING - Connection lost!
+2025-03-26 11:08:59 - INFO - ==================================================
+2025-03-26 11:08:59 - INFO - MAVLink Controller starting up
+2025-03-26 11:08:59 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
+2025-03-26 11:08:59 - INFO - ==================================================
+2025-03-26 11:08:59 - INFO - Sender initialized to 169.254.54.120:5000
+2025-03-26 11:08:59 - INFO - Receiver initialized on port 5001
+2025-03-26 11:08:59 - INFO - Heartbeat thread started
+2025-03-26 11:08:59 - INFO - Receive thread started
+2025-03-26 11:08:59 - INFO - MAVLink controller initialized successfully
+2025-03-26 11:09:04 - WARNING - Connection lost!
+2025-03-26 11:09:05 - WARNING - Connection lost!
+2025-03-26 11:09:06 - WARNING - Connection lost!
+2025-03-26 11:09:07 - WARNING - Connection lost!
+2025-03-26 11:09:08 - WARNING - Connection lost!
+2025-03-26 11:09:09 - WARNING - Connection lost!
+2025-03-26 11:09:10 - WARNING - Connection lost!
+2025-03-26 11:17:16 - INFO - ==================================================
+2025-03-26 11:17:16 - INFO - MAVLink Controller starting up
+2025-03-26 11:17:16 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
+2025-03-26 11:17:16 - INFO - ==================================================
+2025-03-26 11:17:16 - INFO - Sender initialized to 169.254.54.120:5000
+2025-03-26 11:17:16 - INFO - Receiver initialized on port 5001
+2025-03-26 11:17:16 - INFO - Heartbeat thread started
+2025-03-26 11:17:16 - INFO - Receive thread started
+2025-03-26 11:17:16 - INFO - MAVLink controller initialized successfully
+2025-03-26 11:47:25 - INFO - ==================================================
+2025-03-26 11:47:25 - INFO - MAVLink Controller starting up
+2025-03-26 11:47:25 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
+2025-03-26 11:47:25 - INFO - ==================================================
+2025-03-26 11:47:25 - INFO - Sender initialized to 169.254.54.120:5000
+2025-03-26 11:47:25 - INFO - Receiver initialized on port 5001
+2025-03-26 11:47:25 - INFO - Heartbeat thread started
+2025-03-26 11:47:25 - INFO - Receive thread started
+2025-03-26 11:47:25 - INFO - MAVLink controller initialized successfully
+2025-03-26 11:48:03 - INFO - ==================================================
+2025-03-26 11:48:03 - INFO - MAVLink Controller starting up
+2025-03-26 11:48:03 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
+2025-03-26 11:48:03 - INFO - ==================================================
+2025-03-26 11:48:03 - INFO - Sender initialized to 169.254.54.120:5000
+2025-03-26 11:48:03 - INFO - Receiver initialized on port 5001
+2025-03-26 11:48:03 - INFO - Heartbeat thread started
+2025-03-26 11:48:03 - INFO - Receive thread started
+2025-03-26 11:48:03 - INFO - MAVLink controller initialized successfully
+2025-03-26 11:48:09 - WARNING - Connection lost!
+2025-03-26 11:49:02 - INFO - ==================================================
+2025-03-26 11:49:02 - INFO - MAVLink Controller starting up
+2025-03-26 11:49:02 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
+2025-03-26 11:49:02 - INFO - ==================================================
+2025-03-26 11:49:02 - INFO - Sender initialized to 169.254.54.120:5000
+2025-03-26 11:49:02 - INFO - Receiver initialized on port 5001
+2025-03-26 11:49:02 - INFO - Heartbeat thread started
+2025-03-26 11:49:02 - INFO - Receive thread started
+2025-03-26 11:49:02 - INFO - MAVLink controller initialized successfully
+2025-03-26 11:49:07 - WARNING - Connection lost!
+2025-03-26 11:49:08 - WARNING - Connection lost!
+2025-03-26 11:49:09 - WARNING - Connection lost!
+2025-03-26 11:49:10 - WARNING - Connection lost!
+2025-03-26 11:49:11 - WARNING - Connection lost!
+2025-03-26 11:49:12 - WARNING - Connection lost!
+2025-03-26 11:49:13 - WARNING - Connection lost!
+2025-03-26 11:51:43 - INFO - ==================================================
+2025-03-26 11:51:43 - INFO - MAVLink Controller starting up
+2025-03-26 11:51:43 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
+2025-03-26 11:51:43 - INFO - ==================================================
+2025-03-26 11:51:43 - INFO - Sender initialized to 169.254.54.120:5000
+2025-03-26 11:51:43 - INFO - Receiver initialized on port 5001
+2025-03-26 11:51:43 - INFO - Heartbeat thread started
+2025-03-26 11:51:43 - INFO - Receive thread started
+2025-03-26 11:51:43 - INFO - MAVLink controller initialized successfully
+2025-03-26 11:51:48 - WARNING - Connection lost!
+2025-03-26 11:58:31 - INFO - ==================================================
+2025-03-26 11:58:31 - INFO - MAVLink Controller starting up
+2025-03-26 11:58:31 - INFO - Log file: D:\University\doan\Mailcode\ROV-AQUA\Mission_planner\communication\log.txt
+2025-03-26 11:58:31 - INFO - ==================================================
+2025-03-26 11:58:31 - INFO - Sender initialized to 169.254.54.120:5000
+2025-03-26 11:58:31 - INFO - Receiver initialized on port 5001
+2025-03-26 11:58:31 - INFO - Heartbeat thread started
+2025-03-26 11:58:31 - INFO - Receive thread started
+2025-03-26 11:58:31 - INFO - MAVLink controller initialized successfully
+2025-03-26 11:58:36 - WARNING - Connection lost!
+2025-03-26 11:58:37 - WARNING - Connection lost!
+2025-03-26 11:58:38 - WARNING - Connection lost!
+2025-03-26 11:58:39 - WARNING - Connection lost!
