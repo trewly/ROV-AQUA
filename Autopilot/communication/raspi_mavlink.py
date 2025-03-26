@@ -4,14 +4,17 @@ import sys
 import os
 import signal
 import logging
-from logging.handlers import RotatingFileHandler
+from datetime import datetime
+from logging.handlers import TimedRotatingFileHandler
 from enum import IntEnum
 from typing import Dict, List, Optional, Any, Union
 from pymavlink import mavutil
 
-log_dir = os.path.join(os.path.dirname(__file__), "logs")
+log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../logs"))
 os.makedirs(log_dir, exist_ok=True)
-log_file = os.path.join(log_dir, "mavlink.log")
+
+current_date = datetime.now().strftime("%Y-%m-%d")
+log_file = os.path.join(log_dir, f"mavlink_raspi_{current_date}.log")
 
 logger = logging.getLogger("MAVLink")
 logger.setLevel(logging.INFO)
@@ -23,17 +26,24 @@ if not logger.handlers:
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
 
-    file_handler = RotatingFileHandler(
+    file_handler = TimedRotatingFileHandler(
         log_file, 
-        maxBytes=100*1024*1024,
-        backupCount=5
+        when='midnight',
+        interval=1,
+        backupCount=30
     )
     file_handler.setLevel(logging.INFO)
-    file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levellevel)s - %(message)s')
+    file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     file_handler.setFormatter(file_formatter)
+    file_handler.suffix = "%Y-%m-%d"
     logger.addHandler(file_handler)
 
 logger.propagate = False
+
+logger.info("=" * 50)
+logger.info("MAVLink Controller starting up")
+logger.info(f"Log file: {log_file}")
+logger.info("=" * 50)
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
@@ -88,7 +98,7 @@ class MavlinkController:
         
         self.status_params = [
             "roll", "pitch", "heading", "temp", "depth", 
-            "horizontal_velocity", "vertical_velocity", "battery_voltage"
+            "horizontal_velocity", "vertical_velocity"
         ]
         
         self._lock = threading.RLock()
@@ -175,8 +185,10 @@ class MavlinkController:
         if msg.get_type() == "COMMAND_LONG":
             try:
                 command = MavCommand(msg.command)
+                logger.info(f"Received MAVLink command: {command.name} (ID: {msg.command}), Params: {msg.param1}, {msg.param2}, {msg.param3}, {msg.param4}, {msg.param5}, {msg.param6}, {msg.param7}")
+
                 current_mode = status.read_status(key="mode")
-                
+
                 if current_mode == "manual" and command in {
                     MavCommand.SURFACE, MavCommand.DIVE,
                     MavCommand.LEFT, MavCommand.RIGHT,
@@ -184,11 +196,11 @@ class MavlinkController:
                     MavCommand.STOP
                 }:
                     self._handle_manual_command(command)
-                
+
                 self._handle_mode_commands(msg)
-                
+
                 self._handle_configuration_commands(msg)
-                
+
             except ValueError:
                 logger.warning(f"Received unknown command ID: {msg.command}")
             except Exception as e:

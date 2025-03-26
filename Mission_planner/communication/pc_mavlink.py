@@ -4,17 +4,24 @@ import threading
 import sys
 import os
 import logging
-from logging.handlers import RotatingFileHandler
+from datetime import datetime
+from logging.handlers import TimedRotatingFileHandler
+import atexit
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 from Mission_planner.status import pc_status as status
 
-LOG_DIR = os.path.dirname(os.path.abspath(__file__))
-LOG_FILE = os.path.join(LOG_DIR, "log.txt")
-
+LOG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../logs"))
 os.makedirs(LOG_DIR, exist_ok=True)
 
+current_date = datetime.now().strftime("%Y-%m-%d")
+LOG_FILE = os.path.join(LOG_DIR, f"mavlink_{current_date}.log")
+
 logger = logging.getLogger('MavlinkController')
+
+if logger.handlers:
+    logger.handlers.clear()
+
 logger.setLevel(logging.INFO)
 
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', 
@@ -24,12 +31,14 @@ console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
-file_handler = RotatingFileHandler(
+file_handler = TimedRotatingFileHandler(
     LOG_FILE,
-    maxBytes=1024*1024*100,
-    backupCount=5
+    when='midnight',
+    interval=1,
+    backupCount=30
 )
 file_handler.setFormatter(formatter)
+file_handler.suffix = "%Y-%m-%d"
 logger.addHandler(file_handler)
 
 logger.info("=" * 50)
@@ -157,19 +166,54 @@ class MavlinkController:
         msg_type = msg.get_type()
         
         if msg_type == "HEARTBEAT":
-            pass
+            logger.debug(f"HEARTBEAT: sys_id={msg.get_srcSystem()}, comp_id={msg.get_srcComponent()}, type={msg.type}")
         elif msg_type == "PARAM_VALUE":
-            param_id = msg.param_id.decode('ascii').rstrip('\x00')
-            param_value = msg.param_value
-            status.update_status(param_id, param_value)
-            logger.debug(f"Received parameter: {param_id} = {param_value}")
+            try:
+                if isinstance(msg.param_id, bytes):
+                    param_id = msg.param_id.decode('ascii').rstrip('\x00')
+                else:
+                    param_id = str(msg.param_id).rstrip('\x00')
+                    
+                param_value = msg.param_value
+                status.update_status(param_id, param_value)
+                
+            except Exception as e:
+                logger.error(f"Error processing parameter: {e}")
         elif msg_type == "COMMAND_ACK":
-            logger.info(f"Command acknowledged: {msg.command} (result: {msg.result})")
+            # More detailed command acknowledgment logging
+            result_str = "ACCEPTED" if msg.result == 0 else f"FAILED ({msg.result})"
+            logger.info(f"CMD_ACK: Command {msg.command} {result_str}")
         elif msg_type == "STATUSTEXT":
-            text = msg.text.decode('ascii')
-            logger.info(f"Status from ROV: {text}")
+            try:
+                if isinstance(msg.text, bytes):
+                    text = msg.text.decode('ascii')
+                else:
+                    text = str(msg.text)
+                
+                # Log with severity level
+                severity = msg.severity
+                severity_str = {
+                    0: "EMERGENCY",
+                    1: "ALERT",
+                    2: "CRITICAL",
+                    3: "ERROR",
+                    4: "WARNING",
+                    5: "NOTICE",
+                    6: "INFO",
+                    7: "DEBUG"
+                }.get(severity, str(severity))
+                
+                logger.info(f"STATUS [{severity_str}]: {text}")
+            except Exception as e:
+                logger.error(f"Error processing status text: {e}")
         else:
-            logger.debug(f"Received message of type: {msg_type}")
+            try:
+                msg_dict = msg.to_dict()
+                log_msg = f"{msg_type}: " + ", ".join([f"{k}={v}" for k, v in msg_dict.items() 
+                                                   if k not in ('mavpackettype', 'time_usec')])
+                logger.info(log_msg)
+            except:
+                logger.info(f"Received message of type: {msg_type}")
 
     def send_command(self, command, param1=0, param2=0, param3=0, 
                    param4=0, param5=0, param6=0, param7=0, confirmation=0):
@@ -274,7 +318,17 @@ class MavlinkController:
 MAV = MavlinkController()
 
 def cleanup():
+    """Function to be called at program exit"""
+    logger.info("Program exiting, cleaning up MAVLink controller...")
     MAV.shutdown()
+    
+    # Explicitly flush and close log handlers to ensure all data is written
+    for handler in logger.handlers:
+        handler.flush()
+        handler.close()
+
+# Register cleanup function to be called at exit
+atexit.register(cleanup)
 
 if __name__ == "__main__":
     print("MAVLink controller test")
