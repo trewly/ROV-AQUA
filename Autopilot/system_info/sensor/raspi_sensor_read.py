@@ -1,375 +1,510 @@
 import smbus2 as smbus
 import time
 import math
-import numpy as np
 import threading
+import sys
+import os
+import logging
+from datetime import datetime
+from logging.handlers import TimedRotatingFileHandler
 
 from Autopilot.system_info.status import raspi_status as status
 from Autopilot.controller.utils.raspi_Filter import KalmanFilter, low_pass_filter
 
-G = 9.80665
-
-MPU9250_ADDR = 0x68
-
-PWR_MGMT_1 = 0x6B      
-PWR_MGMT_2 = 0x6C      
-SMPLRT_DIV = 0x19      
-CONFIG = 0x1A          
-GYRO_CONFIG = 0x1B     
-ACCEL_CONFIG = 0x1C    
-ACCEL_CONFIG_2 = 0x1D  
-INT_ENABLE = 0x38      
-
-TEMP_OUT = 0x41
-
-ACCEL_XOUT_H = 0x3B
-ACCEL_YOUT_H = 0x3D
-ACCEL_ZOUT_H = 0x3F
-
-GYRO_XOUT_H = 0x43
-GYRO_YOUT_H = 0x45
-GYRO_ZOUT_H = 0x47
-
-ACCEL_SCALE = 16384.0  
-GYRO_SCALE = 131.0     
-
-GYRO_RANGE_250DPS = 0x00  
-GYRO_RANGE_500DPS = 0x08  
-GYRO_RANGE_1000DPS = 0x10 
-GYRO_RANGE_2000DPS = 0x18 
-
-ACCEL_RANGE_2G = 0x00    
-ACCEL_RANGE_4G = 0x08    
-ACCEL_RANGE_8G = 0x10    
-ACCEL_RANGE_16G = 0x18   
-
-ACCEL_DLPF_41HZ = 0x03   
-GYRO_DLPF_41HZ = 0x03    
-
-current_velocity_x = 0.0
-current_velocity_y = 0.0
-current_velocity_z = 0.0
-velocity_last_update = time.time()
-velocity_reset_counter = 0
-
-VELOCITY_RESET_THRESHOLD = 100  
-
-ACCEL_ALPHA = 0.1  
-VELOCITY_ALPHA = 0.8  
-
-ACCEL_THRESHOLD = 0.05  
-
-bus = smbus.SMBus(1)
-kalman_pitch = KalmanFilter()
-kalman_roll = KalmanFilter()
-prev_time = time.time()
-current_pitch = 0
-current_roll = 0
-
-filtered_accel_x = 0.0
-filtered_accel_y = 0.0
-filtered_accel_z = 0.0
-
-sensor_initialized = False
-
-def init_mpu9250():
-    global sensor_initialized
+def setup_sensor_logger(name="MPU9250", log_subdir="../logs"):
+    log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), log_subdir))
+    os.makedirs(log_dir, exist_ok=True)
     
-    try:
-        bus.write_byte_data(MPU9250_ADDR, PWR_MGMT_1, 0x80)
-        time.sleep(0.1)  
-        
-        bus.write_byte_data(MPU9250_ADDR, PWR_MGMT_1, 0x00)
-        time.sleep(0.1)  
-        
-        bus.write_byte_data(MPU9250_ADDR, PWR_MGMT_1, 0x01)  
-        
-        bus.write_byte_data(MPU9250_ADDR, SMPLRT_DIV, 0x04)  
-        
-        bus.write_byte_data(MPU9250_ADDR, CONFIG, GYRO_DLPF_41HZ)  
-        
-        bus.write_byte_data(MPU9250_ADDR, GYRO_CONFIG, GYRO_RANGE_250DPS)  
-        
-        bus.write_byte_data(MPU9250_ADDR, ACCEL_CONFIG, ACCEL_RANGE_2G)  
-        
-        bus.write_byte_data(MPU9250_ADDR, ACCEL_CONFIG_2, ACCEL_DLPF_41HZ)  
-
-        bus.write_byte_data(MPU9250_ADDR, PWR_MGMT_2, 0x00)
-        
-        
-        who_am_i = bus.read_byte_data(MPU9250_ADDR, 0x75)
-        if who_am_i == 0x71 or who_am_i == 0x73:  
-            print(f"MPU9250/MPU9255 detected (0x{who_am_i:02X})")
-            sensor_initialized = True
-            return True
-        else:
-            print(f"Unknown device ID: 0x{who_am_i:02X}")
-            return False
-        
-    except Exception as e:
-        print(f"Error initializing MPU9250: {e}")
-        return False
-
-def check_sensor_connection():
-    try:
-        who_am_i = bus.read_byte_data(MPU9250_ADDR, 0x75)
-        if who_am_i == 0x71 or who_am_i == 0x73:  
-            return True
-        return False
-    except:
-        return False
-
-def read_word_mpu(register):
-    global sensor_initialized
-
-    try:
-        if not sensor_initialized:
-            if not init_mpu9250():
-                return 0
-                
-        high = bus.read_byte_data(MPU9250_ADDR, register)
-        low = bus.read_byte_data(MPU9250_ADDR, register + 1)
-        value = (high << 8) + low
-        if value >= 0x8000:
-            value -= 0x10000
-        return value
-    except Exception as e:
-        if "I/O" in str(e) and sensor_initialized:
-            print("Sensor disconnected, trying to reinitialize...")
-            sensor_initialized = False
-            init_mpu9250()
-        print(f"Error reading from MPU: {e}")
-        return 0
-
-def read_temp_data():
-    temp = read_word_mpu(TEMP_OUT)
-    temp = (temp / 340) + 36.53
-    status.update_status(key="temp", value=temp)
-    return temp
-
-def read_gyro_data():
-    gyro_x = read_word_mpu(GYRO_XOUT_H) / GYRO_SCALE
-    gyro_y = read_word_mpu(GYRO_YOUT_H) / GYRO_SCALE
-    gyro_z = read_word_mpu(GYRO_ZOUT_H) / GYRO_SCALE
-    return gyro_x, gyro_y, gyro_z
-
-def read_accel_data():
-    accel_x = read_word_mpu(ACCEL_XOUT_H) / ACCEL_SCALE
-    accel_y = read_word_mpu(ACCEL_YOUT_H) / ACCEL_SCALE
-    accel_z = read_word_mpu(ACCEL_ZOUT_H) / ACCEL_SCALE
-    return accel_x, accel_y, accel_z
-
-def read_accel_gyro_data():
-    accel_x, accel_y, accel_z = read_accel_data()
-    gyro_x, gyro_y, gyro_z = read_gyro_data()
-    return accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z
-
-def filter_acceleration(ax, ay, az):
-    global filtered_accel_x, filtered_accel_y, filtered_accel_z
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    log_file = os.path.join(log_dir, f"sensor_{current_date}.log")
     
-    filtered_accel_x = low_pass_filter(filtered_accel_x, ax, ACCEL_ALPHA)
-    filtered_accel_y = low_pass_filter(filtered_accel_y, ay, ACCEL_ALPHA)
-    filtered_accel_z = low_pass_filter(filtered_accel_z, az - 1.0, ACCEL_ALPHA)  
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
     
-    if abs(filtered_accel_x) < ACCEL_THRESHOLD:
-        filtered_accel_x = 0.0
-    if abs(filtered_accel_y) < ACCEL_THRESHOLD:
-        filtered_accel_y = 0.0
-    if abs(filtered_accel_z) < ACCEL_THRESHOLD:
-        filtered_accel_z = 0.0
+    if logger.handlers:
+        logger.handlers.clear()
     
-    return filtered_accel_x, filtered_accel_y, filtered_accel_z
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(console_formatter)
+    logger.addHandler(console_handler)
+    
+    file_handler = TimedRotatingFileHandler(
+        log_file, 
+        when='midnight',
+        interval=1,
+        backupCount=30
+    )
+    file_handler.setLevel(logging.INFO)
+    file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')  # Fixed 'levellevel' to 'levelname'
+    file_handler.setFormatter(file_formatter)
+    file_handler.suffix = "%Y-%m-%d"
+    logger.addHandler(file_handler)
+    
+    logger.propagate = False
+    
+    return logger
 
-def calculate_pitch_roll(ax, ay, az):
-    try:
-        pitch = math.atan2(ay, math.sqrt(ax**2 + az**2)) * (180 / math.pi)
-        roll = math.atan2(-ax, math.sqrt(ay**2 + az**2)) * (180 / math.pi)
-        return pitch, roll
-    except Exception as e:
-        print(f"Error calculating pitch/roll: {e}")
-        return 0, 0
-
-def calculate_velocity():
-    global current_velocity_x, current_velocity_y, current_velocity_z
-    global velocity_last_update, velocity_reset_counter
+class MPU9250:
+    G = 9.80665
     
-    try:
-        ax, ay, az = read_accel_data()
+    MPU9250_ADDR = 0x68
+    PWR_MGMT_1 = 0x6B      
+    PWR_MGMT_2 = 0x6C      
+    SMPLRT_DIV = 0x19      
+    CONFIG = 0x1A          
+    GYRO_CONFIG = 0x1B     
+    ACCEL_CONFIG = 0x1C    
+    ACCEL_CONFIG_2 = 0x1D  
+    INT_ENABLE = 0x38
+    WHO_AM_I = 0x75
+    
+    TEMP_OUT = 0x41
+    
+    ACCEL_XOUT_H = 0x3B
+    ACCEL_YOUT_H = 0x3D
+    ACCEL_ZOUT_H = 0x3F
+    
+    GYRO_XOUT_H = 0x43
+    GYRO_YOUT_H = 0x45
+    GYRO_ZOUT_H = 0x47
+    
+    ACCEL_SCALE = 16384.0  
+    GYRO_SCALE = 131.0     
+    
+    GYRO_RANGE_250DPS = 0x00  
+    GYRO_RANGE_500DPS = 0x08  
+    GYRO_RANGE_1000DPS = 0x10 
+    GYRO_RANGE_2000DPS = 0x18 
+    
+    ACCEL_RANGE_2G = 0x00    
+    ACCEL_RANGE_4G = 0x08    
+    ACCEL_RANGE_8G = 0x10    
+    ACCEL_RANGE_16G = 0x18   
+    
+    ACCEL_DLPF_41HZ = 0x03   
+    GYRO_DLPF_41HZ = 0x03
+    
+    ACCEL_ALPHA = 0.1  
+    VELOCITY_ALPHA = 0.8  
+    ACCEL_THRESHOLD = 0.05
+    VELOCITY_RESET_THRESHOLD = 100
+    
+    def __init__(self, bus_num=1):
+        self.logger = setup_sensor_logger()
+        self.logger.info("=" * 50)
+        self.logger.info("MPU9250 sensor initialization started")
+        self.logger.info("=" * 50)
         
-        filtered_ax, filtered_ay, filtered_az = filter_acceleration(ax, ay, az)
+        self.bus = smbus.SMBus(bus_num)
+        self.is_initialized = False
         
-        current_time = time.time()
-        dt = current_time - velocity_last_update
-        velocity_last_update = current_time
+        self.kalman_pitch = KalmanFilter()
+        self.kalman_roll = KalmanFilter()
+        self.prev_time = time.time()
+        self.current_pitch = 0
+        self.current_roll = 0
         
-        ax_ms2 = filtered_ax * G
-        ay_ms2 = filtered_ay * G
-        az_ms2 = filtered_az * G
+        self.current_velocity_x = 0.0
+        self.current_velocity_y = 0.0
+        self.current_velocity_z = 0.0
+        self.velocity_last_update = time.time()
+        self.velocity_reset_counter = 0
         
-        delta_vx = ax_ms2 * dt
-        delta_vy = ay_ms2 * dt
-        delta_vz = az_ms2 * dt
+        self.filtered_accel_x = 0.0
+        self.filtered_accel_y = 0.0
+        self.filtered_accel_z = 0.0
         
-        current_velocity_x = low_pass_filter(current_velocity_x, current_velocity_x + delta_vx, VELOCITY_ALPHA)
-        current_velocity_y = low_pass_filter(current_velocity_y, current_velocity_y + delta_vy, VELOCITY_ALPHA)
-        current_velocity_z = low_pass_filter(current_velocity_z, current_velocity_z + delta_vz, VELOCITY_ALPHA)
+        self.update_thread = None
+        self.running = False
         
-        velocity_reset_counter += 1
-        
-        if velocity_reset_counter >= VELOCITY_RESET_THRESHOLD:
-            velocity_reset_counter = 0
+    def initialize(self):
+        try:
+            self.logger.info("Initializing MPU9250 sensor...")
             
-            current_velocity_x *= 0.5
-            current_velocity_y *= 0.5
-            current_velocity_z *= 0.5
+            self.bus.write_byte_data(self.MPU9250_ADDR, self.PWR_MGMT_1, 0x80)
+            time.sleep(0.1)
+            
+            self.bus.write_byte_data(self.MPU9250_ADDR, self.PWR_MGMT_1, 0x00)
+            time.sleep(0.1)
+            
+            self.bus.write_byte_data(self.MPU9250_ADDR, self.PWR_MGMT_1, 0x01)
+            
+            self.bus.write_byte_data(self.MPU9250_ADDR, self.SMPLRT_DIV, 0x04)
+            
+            self.bus.write_byte_data(self.MPU9250_ADDR, self.CONFIG, self.GYRO_DLPF_41HZ)
+            self.bus.write_byte_data(self.MPU9250_ADDR, self.GYRO_CONFIG, self.GYRO_RANGE_250DPS)
+            
+            self.bus.write_byte_data(self.MPU9250_ADDR, self.ACCEL_CONFIG, self.ACCEL_RANGE_2G)
+            self.bus.write_byte_data(self.MPU9250_ADDR, self.ACCEL_CONFIG_2, self.ACCEL_DLPF_41HZ)
+            
+            self.bus.write_byte_data(self.MPU9250_ADDR, self.PWR_MGMT_2, 0x00)
+            
+            who_am_i = self.bus.read_byte_data(self.MPU9250_ADDR, self.WHO_AM_I)
+            if who_am_i == 0x71 or who_am_i == 0x73:  
+                self.logger.info(f"MPU9250/MPU9255 detected (0x{who_am_i:02X})")
+                
+                ax, ay, az = self.read_accel_data()
+                pitch, roll = self.calculate_pitch_roll(ax, ay, az)
+                
+                self.kalman_pitch.angle = pitch
+                self.kalman_roll.angle = roll
+                
+                self.current_pitch = pitch
+                self.current_roll = roll
+                
+                self.filtered_accel_x = 0.0
+                self.filtered_accel_y = 0.0
+                self.filtered_accel_z = 0.0
+                
+                temp = self.read_temp_data()
+                
+                self.logger.info(f"Sensors initialized. Initial values: Pitch={pitch:.2f}°, Roll={roll:.2f}°, Temp={temp:.1f}°C")
+                self.is_initialized = True
+                return True
+            else:
+                self.logger.error(f"Unknown device ID: 0x{who_am_i:02X}")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"Error initializing MPU9250: {e}")
+            self.is_initialized = False
+            return False
+            
+    def check_connection(self):
+        try:
+            who_am_i = self.bus.read_byte_data(self.MPU9250_ADDR, self.WHO_AM_I)
+            if who_am_i == 0x71 or who_am_i == 0x73:
+                return True
+            return False
+        except Exception as e:
+            self.logger.warning(f"Connection check failed: {e}")
+            return False
+            
+    def read_word(self, register):
+        try:
+            if not self.is_initialized:
+                if not self.initialize():
+                    return 0
+                    
+            high = self.bus.read_byte_data(self.MPU9250_ADDR, register)
+            low = self.bus.read_byte_data(self.MPU9250_ADDR, register + 1)
+            value = (high << 8) + low
+            
+            if value >= 0x8000:
+                value -= 0x10000
+                
+            return value
+        except Exception as e:
+            if "I/O" in str(e) and self.is_initialized:
+                self.logger.error("Sensor disconnected, trying to reinitialize...")
+                self.is_initialized = False
+                try:
+                    self.initialize()
+                except:
+                    self.logger.error("Failed to reinitialize sensor")
+            self.logger.error(f"Error reading from MPU: {e}")
+            return 0
+            
+    def read_temp_data(self):
+        try:
+            temp = self.read_word(self.TEMP_OUT)
+            temp = (temp / 340) + 36.53
+            status.update_status(key="temp", value=temp)
+            return temp
+        except Exception as e:
+            self.logger.error(f"Error reading temperature: {e}")
+            last_temp = status.read_status(key="temp", default=25.0)
+            return last_temp
         
-        status.update_status(key="velocity_x", value=current_velocity_x)
-        status.update_status(key="velocity_y", value=current_velocity_y)
-        status.update_status(key="velocity_z", value=current_velocity_z)
+    def read_gyro_data(self):
+        try:
+            gyro_x = self.read_word(self.GYRO_XOUT_H) / self.GYRO_SCALE
+            gyro_y = self.read_word(self.GYRO_YOUT_H) / self.GYRO_SCALE
+            gyro_z = self.read_word(self.GYRO_ZOUT_H) / self.GYRO_SCALE
+            return gyro_x, gyro_y, gyro_z
+        except Exception as e:
+            self.logger.error(f"Error reading gyro data: {e}")
+            return 0.0, 0.0, 0.0
         
-        horizontal_velocity = math.sqrt(current_velocity_x**2 + current_velocity_y**2)
-        status.update_status(key="horizontal_velocity", value=horizontal_velocity)
+    def read_accel_data(self):
+        try:
+            accel_x = self.read_word(self.ACCEL_XOUT_H) / self.ACCEL_SCALE
+            accel_y = self.read_word(self.ACCEL_YOUT_H) / self.ACCEL_SCALE
+            accel_z = self.read_word(self.ACCEL_ZOUT_H) / self.ACCEL_SCALE
+            return accel_x, accel_y, accel_z
+        except Exception as e:
+            self.logger.error(f"Error reading accelerometer data: {e}")
+            return 0.0, 0.0, 1.0
         
-        status.update_status(key="vertical_velocity", value=current_velocity_z)
+    def read_accel_gyro_data(self):
+        accel_x, accel_y, accel_z = self.read_accel_data()
+        gyro_x, gyro_y, gyro_z = self.read_gyro_data()
+        return accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z
         
-        return current_velocity_x, current_velocity_y, current_velocity_z
+    def filter_acceleration(self, ax, ay, az):
+        self.filtered_accel_x = low_pass_filter(self.filtered_accel_x, ax, self.ACCEL_ALPHA)
+        self.filtered_accel_y = low_pass_filter(self.filtered_accel_y, ay, self.ACCEL_ALPHA)
+        self.filtered_accel_z = low_pass_filter(self.filtered_accel_z, az - 1.0, self.ACCEL_ALPHA)
+        
+        if abs(self.filtered_accel_x) < self.ACCEL_THRESHOLD:
+            self.filtered_accel_x = 0.0
+        if abs(self.filtered_accel_y) < self.ACCEL_THRESHOLD:
+            self.filtered_accel_y = 0.0
+        if abs(self.filtered_accel_z) < self.ACCEL_THRESHOLD:
+            self.filtered_accel_z = 0.0
+            
+        return self.filtered_accel_x, self.filtered_accel_y, self.filtered_accel_z
+        
+    def calculate_pitch_roll(self, ax, ay, az):
+        try:
+            pitch = math.atan2(ay, math.sqrt(ax**2 + az**2)) * (180 / math.pi)
+            roll = math.atan2(-ax, math.sqrt(ay**2 + az**2)) * (180 / math.pi)
+            return pitch, roll
+        except Exception as e:
+            self.logger.error(f"Error calculating pitch/roll: {e}")
+            return 0, 0
+            
+    def calculate_velocity(self):
+        try:
+            ax, ay, az = self.read_accel_data()
+            
+            filtered_ax, filtered_ay, filtered_az = self.filter_acceleration(ax, ay, az)
+            
+            current_time = time.time()
+            dt = current_time - self.velocity_last_update
+            self.velocity_last_update = current_time
+            
+            ax_ms2 = filtered_ax * self.G
+            ay_ms2 = filtered_ay * self.G
+            az_ms2 = filtered_az * self.G
+            
+            delta_vx = ax_ms2 * dt
+            delta_vy = ay_ms2 * dt
+            delta_vz = az_ms2 * dt
+            
+            self.current_velocity_x = low_pass_filter(
+                self.current_velocity_x, 
+                self.current_velocity_x + delta_vx, 
+                self.VELOCITY_ALPHA
+            )
+            self.current_velocity_y = low_pass_filter(
+                self.current_velocity_y, 
+                self.current_velocity_y + delta_vy, 
+                self.VELOCITY_ALPHA
+            )
+            self.current_velocity_z = low_pass_filter(
+                self.current_velocity_z, 
+                self.current_velocity_z + delta_vz, 
+                self.VELOCITY_ALPHA
+            )
+            
+            self.velocity_reset_counter += 1
+            
+            if self.velocity_reset_counter >= self.VELOCITY_RESET_THRESHOLD:
+                self.velocity_reset_counter = 0
+                self.current_velocity_x *= 0.5
+                self.current_velocity_y *= 0.5
+                self.current_velocity_z *= 0.5
+                self.logger.debug("Velocity reset applied to reduce drift")
+            
+            status.update_status(key="velocity_x", value=self.current_velocity_x)
+            status.update_status(key="velocity_y", value=self.current_velocity_y)
+            status.update_status(key="velocity_z", value=self.current_velocity_z)
+            
+            horizontal_velocity = math.sqrt(self.current_velocity_x**2 + self.current_velocity_y**2)
+            status.update_status(key="horizontal_velocity", value=horizontal_velocity)
+            status.update_status(key="vertical_velocity", value=self.current_velocity_z)
+            
+            return self.current_velocity_x, self.current_velocity_y, self.current_velocity_z
+        
+        except Exception as e:
+            self.logger.error(f"Error calculating velocity: {e}")
+            return self.current_velocity_x, self.current_velocity_y, self.current_velocity_z
+            
+    def get_velocity(self):
+        return self.current_velocity_x, self.current_velocity_y, self.current_velocity_z
+        
+    def get_orientation(self):
+        try:
+            ax, ay, az, gx, gy, gz = self.read_accel_gyro_data()
+            
+            current_time = time.time()
+            dt = current_time - self.prev_time
+            self.prev_time = current_time
+            
+            pitch_accel, roll_accel = self.calculate_pitch_roll(ax, ay, az)
+            
+            self.current_pitch = self.kalman_pitch.update(pitch_accel, gy, dt)
+            self.current_roll = self.kalman_roll.update(roll_accel, gx, dt)
     
-    except Exception as e:
-        print(f"Error calculating velocity: {e}")
-        return current_velocity_x, current_velocity_y, current_velocity_z
-
-def get_velocity():
-    return current_velocity_x, current_velocity_y, current_velocity_z
-
-def get_orientation():
-    global prev_time, current_pitch, current_roll
+            status.update_status(key="pitch", value=self.current_pitch)
+            status.update_status(key="roll", value=self.current_roll)
+            
+            return self.current_pitch, self.current_roll
+            
+        except Exception as e:
+            self.logger.error(f"Error in get_orientation: {e}")
+            return self.current_pitch, self.current_roll
+            
+    def read_all_sensors(self):
+        try:
+            if not self.is_initialized:
+                if not self.initialize():
+                    self.logger.error("Could not initialize sensors, using fallback values")
+                    default_data = {
+                        "pitch": 0.0,
+                        "roll": 0.0,
+                        "velocity_x": 0.0,
+                        "velocity_y": 0.0,
+                        "velocity_z": 0.0,
+                        "horizontal_velocity": 0.0,
+                        "vertical_velocity": 0.0,
+                        "temp": 25.0
+                    }
+                    
+                    for key, value in default_data.items():
+                        status.update_status(key=key, value=value)
+                        
+                    return default_data
+            
+            try:
+                pitch, roll = self.get_orientation()
+            except Exception as e:
+                self.logger.error(f"Failed to get orientation: {e}")
+                pitch = status.read_status(key="pitch", default=0.0)
+                roll = status.read_status(key="roll", default=0.0)
+            
+            try:
+                vx, vy, vz = self.calculate_velocity()
+                horizontal_velocity = math.sqrt(vx**2 + vy**2)
+            except Exception as e:
+                self.logger.error(f"Failed to calculate velocity: {e}")
+                vx = status.read_status(key="velocity_x", default=0.0)
+                vy = status.read_status(key="velocity_y", default=0.0)
+                vz = status.read_status(key="velocity_z", default=0.0)
+                horizontal_velocity = status.read_status(key="horizontal_velocity", default=0.0)
+            
+            try:
+                temp = self.read_temp_data()
+            except Exception as e:
+                self.logger.error(f"Failed to read temperature: {e}")
+                temp = status.read_status(key="temp", default=25.0)
+            
+            sensor_data = {
+                "pitch": pitch,
+                "roll": roll,
+                "velocity_x": vx,
+                "velocity_y": vy,
+                "velocity_z": vz,
+                "horizontal_velocity": horizontal_velocity,
+                "vertical_velocity": vz,
+                "temp": temp
+            }
+            
+            for key, value in sensor_data.items():
+                status.update_status(key=key, value=value)
+            
+            return sensor_data
+            
+        except Exception as e:
+            self.logger.error(f"Critical error in read_all_sensors: {e}")
+            default_data = {
+                "pitch": status.read_status(key="pitch", default=0.0),
+                "roll": status.read_status(key="roll", default=0.0),
+                "velocity_x": status.read_status(key="velocity_x", default=0.0),
+                "velocity_y": status.read_status(key="velocity_y", default=0.0),
+                "velocity_z": status.read_status(key="velocity_z", default=0.0),
+                "horizontal_velocity": status.read_status(key="horizontal_velocity", default=0.0),
+                "vertical_velocity": status.read_status(key="velocity_z", default=0.0),
+                "temp": status.read_status(key="temp", default=25.0)
+            }
+            return default_data
     
-    try:
-        ax, ay, az, gx, gy, gz = read_accel_gyro_data()
+    def update_loop(self, update_interval=0.01):
+        self.logger.info("Sensor update thread started")
+        self.running = True
+        failure_count = 0
         
-        current_time = time.time()
-        dt = current_time - prev_time
-        prev_time = current_time
+        while self.running:
+            try:
+                self.read_all_sensors()
+                failure_count = 0
+                time.sleep(update_interval)
+            except Exception as e:
+                failure_count += 1
+                self.logger.error(f"Error in sensor update loop: {e}")
+                
+                backoff_time = min(30, 0.1 * (2 ** min(failure_count, 8)))
+                self.logger.warning(f"Backing off for {backoff_time:.2f} seconds before retry")
+                time.sleep(backoff_time)
+                
+                if failure_count % 10 == 0:
+                    self.logger.info("Attempting sensor recovery")
+                    try:
+                        self.initialize()
+                    except Exception as recovery_e:
+                        self.logger.error(f"Recovery failed: {recovery_e}")
+                        
+        self.logger.info("Sensor update thread terminated")
+            
+    def start_update(self):
+        if not self.is_initialized:
+            if not self.initialize():
+                self.logger.error("Failed to initialize sensors, update thread not started")
+                return False
         
-        pitch_accel, roll_accel = calculate_pitch_roll(ax, ay, az)
+        if self.update_thread is None or not self.update_thread.is_alive():
+            self.update_thread = threading.Thread(target=self.update_loop, daemon=True)
+            self.update_thread.start()
+            self.logger.info("Sensor update thread started")
+            return True
+        return False
         
-        current_pitch = kalman_pitch.update(pitch_accel, gy, dt)
-        current_roll = kalman_roll.update(roll_accel, gx, dt)
+    def stop_update(self):
+        self.running = False
+        self.logger.info("Stopping sensor update thread...")
+        
+        if self.update_thread and self.update_thread.is_alive():
+            self.update_thread.join(timeout=1.0)
+            success = not self.update_thread.is_alive()
+            if success:
+                self.logger.info("Sensor update thread stopped successfully")
+            else:
+                self.logger.warning("Sensor update thread did not terminate within timeout")
+            return success
+        return True
+        
+    def run_test(self, duration=10):
+        self.logger.info(f"Starting sensor test for {duration} seconds...")
+        
+        if not self.is_initialized:
+            self.initialize()
+            
+        start_time = time.time()
+        
+        while time.time() - start_time < duration:
+            data = self.read_all_sensors()
+            
+            if data:
+                self.logger.info(f"Pitch: {data['pitch']:.2f}°, Roll: {data['roll']:.2f}°, Temp: {data['temp']:.1f}°C")
+                self.logger.info(f"Velocity: X={data['velocity_x']:.2f} m/s, Y={data['velocity_y']:.2f} m/s, Z={data['velocity_z']:.2f} m/s")
+                self.logger.info(f"Horizontal Velocity: {data['horizontal_velocity']:.2f} m/s")
+            
+            time.sleep(0.1)
+        
+        self.logger.info("Sensor test completed.")
 
-        status.update_status(key="pitch", value=current_pitch)
-        status.update_status(key="roll", value=current_roll)
-        
-        return current_pitch, current_roll
-    except Exception as e:
-        print(f"Error in get_orientation: {e}")
-        return current_pitch, current_roll
+mpu = MPU9250()
 
 def initialize_sensors():
-    global current_pitch, current_roll, filtered_accel_x, filtered_accel_y, filtered_accel_z
-    global sensor_initialized
-    
-    try:
-        
-        if not init_mpu9250():
-            print("Failed to initialize MPU9250")
-            return False
-        
-        ax, ay, az = read_accel_data()
-        pitch, roll = calculate_pitch_roll(ax, ay, az)
+    mpu.initialize()
+    mpu.start_update()
 
-        kalman_pitch.angle = pitch
-        kalman_roll.angle = roll
+def stop_sensors():
+    mpu.stop_update()
 
-        current_pitch = pitch
-        current_roll = roll
-        
-        filtered_accel_x = 0.0
-        filtered_accel_y = 0.0
-        filtered_accel_z = 0.0
-        
-        temp = read_temp_data()
-        
-        print(f"Sensors initialized. Initial values: Pitch={pitch:.2f}°, Roll={roll:.2f}°, Temp={temp:.1f}°C")
-        sensor_initialized = True
-        return True
-    except Exception as e:
-        print(f"Error initializing sensors: {e}")
-        sensor_initialized = False
-        return False
 
-def read_all_sensors_and_update_status():
-
-    if not sensor_initialized:
-        if not initialize_sensors():
-            print("Could not initialize sensors")
-            return {}
-    
-    try:
-        pitch, roll = get_orientation()
-        
-        vx, vy, vz = calculate_velocity()
-        horizontal_velocity = math.sqrt(vx**2 + vy**2)
-        
-        temp = read_temp_data()
-        
-        sensor_data = {
-            "pitch": pitch,
-            "roll": roll,
-            "velocity_x": vx,
-            "velocity_y": vy,
-            "velocity_z": vz,
-            "horizontal_velocity": horizontal_velocity,
-            "vertical_velocity": vz,
-            "temp": temp
-        }
-        
-        for key, value in sensor_data.items():
-            status.update_status(key=key, value=value)
-        
-        return sensor_data
-        
-    except Exception as e:
-        print(f"Error in read_all_sensors_and_update_status: {e}")
-        return {}
-
-def update_loop(update_interval=0.01):
-    print("Sensor update thread started")
-    try:
-        while True:
-            read_all_sensors_and_update_status()
-            time.sleep(update_interval)
-    except Exception as e:
-        print(f"Sensor update thread error: {e}")
-        print("Sensor update thread terminated")
-
-def start_update():
-    
-    if not sensor_initialized:
-        if not initialize_sensors():
-            print("Failed to initialize sensors, update thread not started")
-            return None
-    
-    update_thread = threading.Thread(target=update_loop, daemon=True)
-    update_thread.start()
-    return update_thread
-
-def run_test(duration=10):
-    print("Starting sensor test...")
-    
-    if not sensor_initialized:
-        initialize_sensors()
-        
-    start_time = time.time()
-    
-    while time.time() - start_time < duration:
-        data = read_all_sensors_and_update_status()
-        
-        if data:
-            print(f"Pitch: {data['pitch']:.2f}°, Roll: {data['roll']:.2f}°, Temp: {data['temp']:.1f}°C")
-            print(f"Velocity: X={data['velocity_x']:.2f} m/s, Y={data['velocity_y']:.2f} m/s, Z={data['velocity_z']:.2f} m/s")
-            print(f"Horizontal Velocity: {data['horizontal_velocity']:.2f} m/s")
-            print("-" * 50)
-        
-        time.sleep(0.1)
-    
-    print("Sensor test completed.")
+if __name__ == "__main__":
+    mpu.run_test()
