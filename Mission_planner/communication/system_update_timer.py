@@ -65,7 +65,7 @@ class SystemStatusManager(QObject):
                 print("Error read temp,depth")
 
     def get_roll_pitch_yaw_info(self):
-        if self.disconnected:
+        if False:
             #self.got_temp_depth_info.emit(0,0,0)
             return
         else:
@@ -73,6 +73,7 @@ class SystemStatusManager(QObject):
                 self.pitch=status.read_status("pitch")
                 self.roll=status.read_status("roll")
                 self.yaw=status.read_status("heading")
-                self.got_temp_depth_info.emit(self.roll,self.pitch,self.yaw)
+                print(status.read_status("heading"))
+                self.got_roll_pitch_yaw_info.emit(self.roll,self.pitch,self.yaw)
             except:
                 print("Error read roll,pitch,yaw")

@@ -1,0 +1,9 @@
+numpy
+pymavlink
+PyQt5
+pyqtgraph
+numpy-stl
+opencv-python
+PyOpenGL
+PyOpenGL_accelerate
+scipy
