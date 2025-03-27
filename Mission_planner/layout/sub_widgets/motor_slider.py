@@ -6,8 +6,7 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
-import Mission_planner.communication.pc_mavlink as mavlink
-import time
+from Mission_planner.communication.pc_mavlink import MAV
 
 from Mission_planner.layout.resources import style as st
 
@@ -93,13 +92,14 @@ class MotorSlider(QWidget):
         z_layout.addWidget(motorz_slider)
 
     def update_label1(self):
-        #mavlink.MAV.set_max_speed_forward(self.motorxy.value())
-        # mavlink.MAV.set_max_speed_backward(self.motor1.value())
+        MAV.set_max_speed_forward(self.motorxy_forward.value())
+        MAV.set_max_speed_backward(self.motorxy_backward.value())
         print(f"Motor xy: {self.motorxy_forward.value()}/{self.motorxy_backward.value()}")
         self.label1.setText(f"Motor xy: {self.motorxy_forward.value()}/{self.motorxy_backward.value()}")
     
     def update_label2(self):
-        #mavlink.MAV.set_max_speed_z(self.motorz_forward.value(), self.motorz_backward.value())
+        MAV.set_max_speed_surface(self.motorz_forward.value())
+        MAV.set_max_speed_dive(self.motorz_backward.value())
         print(f"Motor z: {self.motorz_forward.value()}/{self.motorz_backward.value()}")
         self.label2.setText(f"Motor z: {self.motorz_forward.value()}/{self.motorz_backward.value()}")
     
