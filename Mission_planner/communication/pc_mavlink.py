@@ -261,7 +261,7 @@ class MavlinkController:
         return self.send_command(self.SET_SPEED_BACKWARD, param1=max_speed)
 
     def set_max_speed_dive(self, max_speed):
-        max_speed = max(1, min(100, max_speed))
+        max_speed = max(-100, min(-1, max_speed))
         logger.info(f"Setting max dive speed: {max_speed}")
         return self.send_command(self.SET_SPEED_DIVE, param1=max_speed)
     
