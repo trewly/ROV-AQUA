@@ -1,8 +1,15 @@
 from PyQt5.QtWidgets import (QDialog, QRadioButton, QButtonGroup, 
                             QLabel, QSpinBox, QPushButton, QMessageBox)
 from PyQt5.QtCore import QRect
-
+from PyQt5.QtGui import QFont, QPalette, QColor
 from Mission_planner.communication.pc_mavlink import MAV
+
+import os
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
+from Mission_planner.layout.resources import style as st
 
 class ModeChangeDialog(QDialog):
     current_mode = "Manual"
@@ -17,19 +24,31 @@ class ModeChangeDialog(QDialog):
         self._setup_ui()
         self._setup_connections()
         self.load_current_mode()
+        
+        palette = self.palette()
+        palette.setColor(QPalette.Window, QColor("#F3F3E0")) 
+        self.setPalette(palette)
     
     def _setup_ui(self):
-        self.label = QLabel("Select Mode:", self)
-        self.label.setGeometry(QRect(20, 20, 100, 30))
+        self.label = QLabel("Select Mode", self)
+        self.label.setGeometry(QRect(20, 20, 200, 30))
+        self.label.setFont(QFont("Roboto", 18, QFont.Bold))
+        self.label.setStyleSheet("color: #395B64;")
         
         self.manual_mode = QRadioButton("Manual", self)
-        self.manual_mode.setGeometry(QRect(20, 60, 100, 30))
-        
+        self.manual_mode.setGeometry(QRect(20, 70, 100, 30))
+        self.manual_mode.setFont(QFont("Roboto", 11))
+        self.manual_mode.setStyleSheet("color: #2C3333;")
+
         self.auto_heading_mode = QRadioButton("Auto Heading", self)
-        self.auto_heading_mode.setGeometry(QRect(20, 100, 100, 30))
+        self.auto_heading_mode.setGeometry(QRect(20, 110, 200, 30))
+        self.auto_heading_mode.setFont(QFont("Roboto", 11))
+        self.auto_heading_mode.setStyleSheet("color: #2C3333;")
         
         self.auto_depth_mode = QRadioButton("Auto Depth", self)
-        self.auto_depth_mode.setGeometry(QRect(20, 140, 100, 30))
+        self.auto_depth_mode.setGeometry(QRect(20, 150, 200, 30))
+        self.auto_depth_mode.setFont(QFont("Roboto", 11))
+        self.auto_depth_mode.setStyleSheet("color: #2C3333;")
         
         self.button_group = QButtonGroup(self)
         self.button_group.addButton(self.manual_mode)
@@ -39,25 +58,26 @@ class ModeChangeDialog(QDialog):
         self.heading_input = QSpinBox(self)
         self.heading_input.setRange(0, 360)
         self.heading_input.setPrefix("Heading: ")
-        self.heading_input.setGeometry(QRect(150, 100, 100, 30))
+        self.heading_input.setGeometry(QRect(170, 90, 100, 30))
         self.heading_input.hide()
         
         self.heading_range_label = QLabel("Valid range: 0-360°", self)
-        self.heading_range_label.setGeometry(QRect(150, 130, 120, 30))
+        self.heading_range_label.setGeometry(QRect(170, 120, 120, 30))
         self.heading_range_label.hide()
         
         self.depth_input = QSpinBox(self)
         self.depth_input.setRange(0, 10)
         self.depth_input.setPrefix("Depth: ")
-        self.depth_input.setGeometry(QRect(150, 140, 100, 30))
+        self.depth_input.setGeometry(QRect(170, 140, 100, 30))
         self.depth_input.hide()
         
         self.depth_range_label = QLabel("Valid range: 0-10m", self)
-        self.depth_range_label.setGeometry(QRect(150, 170, 120, 30))
+        self.depth_range_label.setGeometry(QRect(170, 170, 120, 30))
         self.depth_range_label.hide()
         
         self.change_button = QPushButton("Change", self)
-        self.change_button.setGeometry(QRect(100, 210, 100, 30))
+        self.change_button.setGeometry(QRect(100, 210, 100, 33))
+        self.change_button.setStyleSheet(st.control_button_style)
     
     def _setup_connections(self):
         self.auto_heading_mode.toggled.connect(self.toggle_heading_input)

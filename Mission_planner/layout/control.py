@@ -18,7 +18,7 @@ from Mission_planner.controller.video_controller import VideoReceiver
 class ControlButton(QPushButton):
     def __init__(self, text, parent=None):
         super().__init__(text, parent)
-        self.setMinimumSize(100, 30)
+        self.setMinimumSize(100, 35)
         self.setStyleSheet(st.control_button_style)
         self.setCursor(Qt.PointingHandCursor)
 
