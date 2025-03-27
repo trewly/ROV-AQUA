@@ -1,5 +1,4 @@
-from PyQt5.QtWidgets import (QDialog, QRadioButton, QButtonGroup, 
-                            QLabel, QSpinBox, QPushButton, QMessageBox)
+from PyQt5.QtWidgets import QDialog, QRadioButton, QButtonGroup, QLabel, QSpinBox, QPushButton, QMessageBox
 from PyQt5.QtCore import QRect
 
 from Mission_planner.communication.pc_mavlink import MAV
