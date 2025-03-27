@@ -21,7 +21,7 @@ control_button_style="""
                 color: #F0EED4;  /* Màu chữ kem */
                 font-size: 12px;
                 font-weight: bold;
-                padding: 10px 10px;
+                padding: 8px 8px;
                 border: 1px solid black;
             }
             QPushButton:hover {
