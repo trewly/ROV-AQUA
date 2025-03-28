@@ -24,9 +24,15 @@
     "right_speed": 100,
     "left_depth_speed": 100,
     "right_depth_speed": 100,
-    "Kp": 0,
-    "Ki": 0,
-    "Kd": 0,
+    "Kp_depth": 0,
+    "Ki_depth": 0,
+    "Kd_depth": 0,
+    "Kp_autoheading": 0,
+    "Ki_autoheading": 0,
+    "Kd_autoheading": 0,
+    "Kp_yaw": 0,
+    "Ki_yaw": 0,
+    "Kd_yaw": 0,
     "mode": "manual",
     "disconnect": false
 }
