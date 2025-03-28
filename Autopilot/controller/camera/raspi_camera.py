@@ -105,7 +105,14 @@ def record_and_send(server_ip=DEFAULT_SERVER_IP, server_port=DEFAULT_SERVER_PORT
         return send_file(server_ip, server_port, file_path)
     return False
 
-command = ("libcamera-vid -t 0 --width 1920 --height 1080 --framerate 30 --codec h264 --inline --bitrate 3000000 -o - | gst-launch-1.0 fdsrc ! h264parse config-interval = 1000 ! mpegtsmux ! udpsink qos=true host=169.254.54.121 port=5000 sync=false async=false")
+command = ("libcamera-vid -t 0 --width 960 --height 540 --framerate 24 --libav-format h264 --profile baseline --inline --bitrate 1500000 -o - | gst-launch-1.0 fdsrc ! h264parse config-interval = 1 ! mpegtsmux ! udpsink host=169.254.54.121 port=5000 sync=False async=False")
+
+def is_network_reachable(host=DEFAULT_SERVER_IP):
+    try:
+        result = subprocess.run(["ping", "-c", "1", host], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=2)
+        return result.returncode == 0
+    except:
+        return False
 
 def _run_streaming(command):
     global stream_process, is_streaming
@@ -142,6 +149,10 @@ def start_stream(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT,
                 resolution=DEFAULT_RESOLUTION, framerate=DEFAULT_FRAMERATE, 
                 bitrate=DEFAULT_BITRATE):
     global stream_thread, is_streaming
+    while True:
+        if is_network_reachable(host):
+            break
+        time.sleep(0.1)
     
     with stream_lock:
         if is_streaming:

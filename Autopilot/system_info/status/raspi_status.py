@@ -5,6 +5,7 @@ import threading
 
 STATUS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "status.json")
 
+from Mission_planner.communication.pc_mavlink import logger
 _status_cache = {}
 _last_update_time = 0
 _cache_valid_time = 0.1
@@ -31,22 +32,26 @@ def init_status():
         "target_depth": 0,
         "max_speed_forward": 100.0,
         "max_speed_backward": -100.0,
-        "max_speed_dive": -100.0,
-        "max_speed_surface": -100.0,
+        "max_speed_dive": 100.0,
+        "max_speed_surface": 100.0,
         "left_speed": 100,
         "right_speed": 100,
         "left_depth_speed": 100,
         "right_depth_speed": 100,
-        "Kp": 0,
-        "Ki": 0,
-        "Kd": 0,
+        "Kp_depth": 0,
+        "Ki_depth": 0,
+        "Kd_depth": 0,
+        "Kp_autoheading": 0,
+        "Ki_autoheading": 0,
+        "Kd_autoheading": 0,
+        "Kp_yaw": 0,
+        "Ki_yaw": 0,
+        "Kd_yaw": 0,
         "mode": "manual",
-        "disconnect": False,
+        "disconnect": True,
         "light": 0,
         "camera": 0,
-        "velocity_x": 0,
-        "velocity_y": 0,
-        "velocity_z": 0
+        "calibrated": 0
     }
 
     try:
@@ -62,7 +67,7 @@ def init_status():
             
         return data
     except Exception as e:
-        print(f"Error initializing status: {e}")
+        logger.error(f"Error initializing status file: {e}")
         return data
 
 def update_status(key, value):
@@ -75,7 +80,6 @@ def update_status(key, value):
             if _status_cache:
                 _status_cache[key] = value
         
-        # Sau đó cập nhật file
         with open(STATUS_PATH, "r") as file:
             data = json.load(file)
         
@@ -87,7 +91,7 @@ def update_status(key, value):
         _last_update_time = time.time()
         return True
     except Exception as e:
-        print(f"Error updating status: {e}")
+        logger.error(f"Error updating status key '{key}': {e}")
         return False
 
 def update_multiple(update_dict):
@@ -116,7 +120,7 @@ def update_multiple(update_dict):
         _last_update_time = time.time()
         return True
     except Exception as e:
-        print(f"Error updating multiple status values: {e}")
+        logger.error(f"Error updating multiple status keys: {e}")
         return False
 
 def read_all_status():
@@ -139,7 +143,7 @@ def read_all_status():
             
         return data
     except Exception as e:
-        print(f"Error reading status: {e}")
+        logger.error(f"Error reading status file: {e}")
         return init_status()
 
 def read_status(key, default=None):
@@ -153,9 +157,24 @@ def read_status(key, default=None):
         data = read_all_status()
         return data.get(key, default)
     except Exception as e:
-        print(f"Error reading status key '{key}': {e}")
+        logger.error(f"Error reading status key '{key}': {e}")
         return default
 
+def read_multiple_status(keys):
+    with _cache_lock:
+        global _status_cache, _last_update_time
+        current_time = time.time()
+        if _status_cache and (current_time - _last_update_time) < _cache_valid_time:
+            return {key: _status_cache.get(key) for key in keys}
+        
+    try:
+        for key in keys:
+            data = read_all_status()
+            return {key: data.get(key) for key in keys}
+    except Exception as e:
+        logger.error(f"Error reading multiple status keys: {e}")
+        return {key: None for key in keys}
+    
 def force_refresh():
     with _cache_lock:
         global _status_cache, _last_update_time

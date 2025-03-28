@@ -1,11 +1,11 @@
 {
-    "depth": 110,
+    "depth": 0,
     "horizontal_velocity": 0,
     "vertical_velocity": 0,
-    "temp": 20,
-    "pitch": 20,
-    "roll": 120,
-    "heading": 100,
+    "temp": 0,
+    "pitch": 0,
+    "roll": 0,
+    "heading": 0,
     "mag_calib_x": 0,
     "mag_calib_y": 0,
     "mag_calib_z": 0,
@@ -17,7 +17,7 @@
     "auto_depth": false,
     "target_depth": 0,
     "max_speed_forward": 100.0,
-    "max_speed_backward": -1.0,
+    "max_speed_backward": -100.0,
     "max_speed_dive": 100.0,
     "max_speed_surface": 100.0,
     "left_speed": 100,
@@ -36,5 +36,6 @@
     "mode": "manual",
     "disconnect": true,
     "light": 0,
-    "camera": 0
+    "camera": 0,
+    "calibrated": 0
 }

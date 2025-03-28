@@ -72,24 +72,24 @@ class MavCommand(IntEnum):
     SET_MANUAL = 1100
     SET_AUTO_HEADING = 1101
     SET_AUTO_DEPTH = 1102
-    SET_PID = 1103
+    SET_PID_YAW = 1103
+    SET_PID_DEPTH = 1104
+    SET_PID_AUTOHEADING = 1105
     
-    SET_SPEED_FORWARD = 1104
-    SET_SPEED_BACKWARD = 1105
-    SET_SPEED_DIVE = 1107
-    SET_SPEED_SURFACE = 1108
+    SET_SPEED_FORWARD = 1106
+    SET_SPEED_BACKWARD = 1107
+    SET_SPEED_DIVE = 1108
+    SET_SPEED_SURFACE = 1109
 
-    SET_LIGHT = 1106
-    SET_CAMERA = 1107
+    SET_LIGHT = 1110
+    SET_CAMERA = 1111
 
     START_MAG_CALIBRATION = 1200
 
 
 class MavlinkController:
 
-    def __init__(self, receive_port: int = 5000, 
-                 send_ip: str = "169.254.54.121", 
-                 send_port: int = 5001):
+    def __init__(self, receive_port=5000, send_ip="169.254.54.121", send_port=5001):
         global logger
         
         if logger is None:
@@ -165,12 +165,6 @@ class MavlinkController:
                 "mode": "auto_depth"
             })
             
-        elif command == MavCommand.SET_PID:
-            status.update_multiple({
-                "Kp": msg.param1,
-                "Ki": msg.param2,
-                "Kd": msg.param3
-            })
     
     def _handle_configuration_commands(self, msg) -> None:
         command = msg.command
@@ -186,15 +180,48 @@ class MavlinkController:
             
         elif command == MavCommand.SET_SPEED_SURFACE:
             status.update_status(key="max_speed_surface", value=msg.param1)
+
+        elif command == MavCommand.SET_PID_YAW:
+            status.update_multiple({
+                "Kp_yaw": msg.param1,
+                "Ki_yaw": msg.param2,
+                "Kd_yaw": msg.param3
+            })
+        
+        elif command == MavCommand.SET_PID_DEPTH:
+            status.update_multiple({
+                "Kp_depth": msg.param1,
+                "Ki_depth": msg.param2,
+                "Kd_depth": msg.param3
+            })
+        
+        elif command == MavCommand.SET_PID_AUTOHEADING:
+            status.update_multiple({
+                "Kp_autoheading": msg.param1,
+                "Ki_autoheading": msg.param2,
+                "Kd_autoheading": msg.param3
+            })
         
         elif command == MavCommand.SET_LIGHT:
             status.update_status(key="light", value=msg.param1)
-            
+           
         elif command == MavCommand.SET_CAMERA:
             status.update_status(key="camera", value=msg.param1)
         
         elif command == MavCommand.START_MAG_CALIBRATION:
             calibrate.calibrate_mag()
+            status.update_status(key="calibrated", value=True)
+            try:
+                self.transmitter.mav.param_value_send(
+                    "calibrated".encode("ascii"),
+                    1.0,
+                    mavutil.mavlink.MAV_PARAM_TYPE_UINT8,
+                    0,
+                    1
+                )
+            except Exception as e:
+                logger.error(f"Failed to send calibration status: {e}")
+
     
     def handle_received_msg(self, msg) -> None:
         if msg is None:
@@ -208,7 +235,9 @@ class MavlinkController:
                     MavCommand.SET_MANUAL, 
                     MavCommand.SET_AUTO_HEADING,
                     MavCommand.SET_AUTO_DEPTH,
-                    MavCommand.SET_PID,
+                    MavCommand.SET_PID_YAW,
+                    MavCommand.SET_PID_DEPTH,
+                    MavCommand.SET_PID_AUTOHEADING,
                     MavCommand.SET_SPEED_FORWARD,
                     MavCommand.SET_SPEED_BACKWARD,
                     MavCommand.SET_SPEED_DIVE,
