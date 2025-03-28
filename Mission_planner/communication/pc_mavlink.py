@@ -64,16 +64,18 @@ class MavCommands:
     SET_MANUAL = 1100
     SET_AUTO_HEADING = 1101
     SET_AUTO_DEPTH = 1102
-    SET_PID = 1103
+    SET_PID_YAW = 1103
+    SET_PID_DEPTH = 1104
+    SET_PID_AUTOHEADING = 1105
     
-    SET_SPEED_FORWARD = 1104
-    SET_SPEED_BACKWARD = 1105
-    SET_SPEED_DIVE = 1106
-    SET_SPEED_SURFACE = 1107
-    
-    SET_LIGHT = 1108
-    SET_CAMERA = 1109
-    
+    SET_SPEED_FORWARD = 1106
+    SET_SPEED_BACKWARD = 1107
+    SET_SPEED_DIVE = 1108
+    SET_SPEED_SURFACE = 1109
+
+    SET_LIGHT = 1110
+    SET_CAMERA = 1111
+
     START_MAG_CALIBRATION = 1200
 
 class MavlinkController:
@@ -276,55 +278,63 @@ class MavlinkController:
 
     def set_manual_mode(self):
         logger.info("Setting manual mode")
-        return self.send_command(self.SET_MANUAL)
+        return self.send_command(MavCommands.SET_MANUAL)
 
     def set_auto_heading(self, heading):
         heading = max(0, min(360, heading))
         logger.info(f"Setting auto heading: {heading}°")
-        return self.send_command(self.SET_AUTO_HEADING, param1=heading)
+        return self.send_command(MavCommands.SET_AUTO_HEADING, param1=heading)
 
     def set_auto_depth(self, depth):
         depth = max(0, min(10, depth))
         logger.info(f"Setting auto depth: {depth}m")
-        return self.send_command(self.SET_AUTO_DEPTH, param1=depth)
+        return self.send_command(MavCommands.SET_AUTO_DEPTH, param1=depth)
 
     def set_max_speed_forward(self, max_speed):
         max_speed = max(1, min(100, max_speed))
         logger.info(f"Setting max forward speed: {max_speed}")
-        return self.send_command(self.SET_SPEED_FORWARD, param1=max_speed)
+        return self.send_command(MavCommands.SET_SPEED_FORWARD, param1=max_speed)
 
     def set_max_speed_backward(self, max_speed):
         max_speed = max(-100, min(-1, max_speed))
         logger.info(f"Setting max backward speed: {max_speed}")
-        return self.send_command(self.SET_SPEED_BACKWARD, param1=max_speed)
+        return self.send_command(MavCommands.SET_SPEED_BACKWARD, param1=max_speed)
 
     def set_max_speed_dive(self, max_speed):
         max_speed = max(-100, min(-1, max_speed))
         logger.info(f"Setting max dive speed: {max_speed}")
-        return self.send_command(self.SET_SPEED_DIVE, param1=max_speed)
+        return self.send_command(MavCommands.SET_SPEED_DIVE, param1=max_speed)
     
     def set_max_speed_surface(self, max_speed):
         max_speed = max(1, min(100, max_speed))
         logger.info(f"Setting max surface speed: {max_speed}")
-        return self.send_command(self.SET_SPEED_SURFACE, param1=max_speed)
+        return self.send_command(MavCommands.SET_SPEED_SURFACE, param1=max_speed)
         
-    def set_pid(self, Kp, Ki, Kd):
-        logger.info(f"Setting PID: Kp={Kp}, Ki={Ki}, Kd={Kd}")
-        return self.send_command(self.SET_PID, param1=Kp, param2=Ki, param3=Kd)
+    def set_pid_yaw(self, Kp, Ki, Kd):
+        logger.info(f"Setting PID_YAW: Kp={Kp}, Ki={Ki}, Kd={Kd}")
+        return self.send_command(MavCommands.SET_PID_YAW, param1=Kp, param2=Ki, param3=Kd)
+    
+    def set_pid_autoheading(self, Kp, Ki, Kd):
+        logger.info(f"Setting PID_AUTOHEADING: Kp={Kp}, Ki={Ki}, Kd={Kd}")
+        return self.send_command(MavCommands.SET_PID_AUTOHEADING, param1=Kp, param2=Ki, param3=Kd)
+    
+    def set_pid_depth(self, Kp, Ki, Kd):
+        logger.info(f"Setting PID_DEPTH: Kp={Kp}, Ki={Ki}, Kd={Kd}")
+        return self.send_command(MavCommands.SET_PID_DEPTH, param1=Kp, param2=Ki, param3=Kd)
 
     def set_light(self, enable):
         state = "ON" if enable else "OFF"
         logger.info(f"Setting light: {state}")
-        return self.send_command(self.SET_LIGHT, param1=enable)
+        return self.send_command(MavCommands.SET_LIGHT, param1=enable)
 
     def set_camera(self, enable):
         state = "ON" if enable else "OFF"
         logger.info(f"Setting camera: {state}")
-        return self.send_command(self.SET_CAMERA, param1=enable)
+        return self.send_command(MavCommands.SET_CAMERA, param1=enable)
 
     def start_mag_calibration(self):
         logger.info("Starting magnetometer calibration")
-        return self.send_command(self.START_MAG_CALIBRATION)
+        return self.send_command(MavCommands.START_MAG_CALIBRATION)
 
     def get_status(self, status_id):
         try:
