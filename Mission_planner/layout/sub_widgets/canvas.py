@@ -11,6 +11,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from resources.style import canvas_button_style
 from Mission_planner.status import pc_status as status
 from Mission_planner.communication.system_update_timer import SystemStatusManager
+from Mission_planner.status.log_viewer import LogViewer
+from Mission_planner.status.state_graph import AttitudePlotter
 
 #test gia lap
 class ROVSimulationThread(QThread):
@@ -121,11 +123,11 @@ class CanvasWidget(QWidget):
 
     def state_button_init(self):
         #khoi tao mode button
-        self.mode_button = QPushButton("MODE", self)
+        self.mode_button = QPushButton("LOG", self)
         self.mode_button.setStyleSheet(canvas_button_style)
         self.mode_button.setFixedSize(160, 50)
         self.mode_button.move(534, 508) 
-        self.mode_button.clicked.connect(self.show_mode)
+        self.mode_button.clicked.connect(self.show_log_viewer)
         #khoi tao state button -> bieu do he thogn cac gov raw, pitch, roll
         self.state_button = QPushButton("STATE", self)
         self.state_button.setStyleSheet(canvas_button_style)
@@ -134,10 +136,12 @@ class CanvasWidget(QWidget):
         self.state_button.clicked.connect(self.show_state)
 
     def show_state(self):
-        pass
+        self.state_viewer = AttitudePlotter()  # Gán vào self để không bị thu hồi bộ nhớ
+        self.state_viewer.show()
 
-    def show_mode(self):
-        pass
+    def show_log_viewer(self):
+        self.log_viewer = LogViewer()  # Gán vào self để không bị thu hồi bộ nhớ
+        self.log_viewer.show()
 
     def button_init(self):
         self.wbutton = QPushButton("WAYPOINT", self)

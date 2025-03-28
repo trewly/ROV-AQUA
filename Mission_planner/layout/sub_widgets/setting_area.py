@@ -18,10 +18,10 @@ class settingWidget(QWidget):
 
     def button_init(self):
         self.button_1 = QPushButton("Calibration")
-        self.button_2 = QPushButton("Start")
-        self.button_3 = QPushButton("Stop")
-        self.button_4 = QPushButton("Reset")
-        self.button_5 = QPushButton("Exit")
+        self.button_2 = QPushButton("PID Tuning")
+        self.button_3 = QPushButton("System check")
+        self.button_4 = QPushButton("Failsafe mechanism")
+        self.button_5 = QPushButton("Advanced setting")
 
         buttons = [self.button_1, self.button_2, self.button_3, self.button_4, self.button_5]
         
