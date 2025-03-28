@@ -52,7 +52,6 @@ class ROVSimulationThread(QThread):
         self.quit()
         self.wait()
 
-
 class CanvasWidget(QWidget):
     def __init__(self,status_manager: SystemStatusManager):
         super().__init__()
@@ -104,6 +103,7 @@ class CanvasWidget(QWidget):
         # Đọc trạng thái ban đầu
         self.update_vehicle_status(0)
 
+    #khoi tao canvas voi grid
     def draw_grid(self, grid_size):
         pen = QPen(QColor(200, 200, 200))  
         pen.setWidth(1)
@@ -121,6 +121,7 @@ class CanvasWidget(QWidget):
         self.canvas.setStyleSheet("background-color: #F3F3E0;") 
         self.draw_grid(50)  
 
+    #cac nut theo doi trang thai he thong - log viewer, pitch roll yaw
     def state_button_init(self):
         #khoi tao mode button
         self.mode_button = QPushButton("LOG", self)
@@ -143,6 +144,40 @@ class CanvasWidget(QWidget):
         self.log_viewer = LogViewer()  # Gán vào self để không bị thu hồi bộ nhớ
         self.log_viewer.show()
 
+    #thong tin thiet bi: trang thai ket noi, nhiet do va do sau
+    def vehicle_status_init(self):
+        # status text
+        self.statusLabel = QLabel("Vehicle unconnected", self)
+        self.statusLabel.setFont(self.font)
+        self.statusLabel.setStyleSheet("color: #395B64;")
+        self.statusLabel.move(690,18)  
+        
+        # status dot
+        self.statusDot = QLabel(self)
+        self.statusDot.setFixedSize(20, 20)
+        self.statusDot.setStyleSheet("border-radius: 10px; background-color: gray; border: 1px solid black;")
+        self.statusDot.move(665,15)  
+
+    def update_vehicle_status(self,disconnected: bool):
+        if disconnected:
+            self.statusLabel.setText("Vehicle unconnected")
+        else:
+            self.statusLabel.setText("Vehicle connected")
+        #print("update connected info")
+
+    def system_info_init(self):
+        self.infoLabel = QLabel(f"Depth: {self.depth_info}   Temp: {self.temp_info}" , self)
+        self.infoLabel.setFont(self.font)
+        self.infoLabel.setStyleSheet("color: #395B64; font-size: 22px;")
+        self.infoLabel.move(15, 530)
+
+    def update_temp_depth_info(self,temp,depth):
+        self.temp_info=temp
+        self.depth_info=depth
+        self.infoLabel.setText(f"Depth: {self.depth_info}   Temp: {self.temp_info}")
+        #print("update tempdepth info")
+
+    #phim chuc nang tren canvas
     def button_init(self):
         self.wbutton = QPushButton("WAYPOINT", self)
         self.wbutton.setStyleSheet(canvas_button_style)
@@ -197,38 +232,7 @@ class CanvasWidget(QWidget):
         self.button_uploadmission.clicked.connect(self.upload_waypoints)
         self.button_uploadmission.setVisible(False)  
 
-    def vehicle_status_init(self):
-        # status text
-        self.statusLabel = QLabel("Vehicle unconnected", self)
-        self.statusLabel.setFont(self.font)
-        self.statusLabel.setStyleSheet("color: #395B64;")
-        self.statusLabel.move(690,18)  
-        
-        # status dot
-        self.statusDot = QLabel(self)
-        self.statusDot.setFixedSize(20, 20)
-        self.statusDot.setStyleSheet("border-radius: 10px; background-color: gray; border: 1px solid black;")
-        self.statusDot.move(665,15)  
-    
-    def update_vehicle_status(self,disconnected: bool):
-        if disconnected:
-            self.statusLabel.setText("Vehicle unconnected")
-        else:
-            self.statusLabel.setText("Vehicle connected")
-        #print("update connected info")
-
-    def system_info_init(self):
-        self.infoLabel = QLabel(f"Depth: {self.depth_info}   Temp: {self.temp_info}" , self)
-        self.infoLabel.setFont(self.font)
-        self.infoLabel.setStyleSheet("color: #395B64; font-size: 22px;")
-        self.infoLabel.move(15, 530)
-
-    def update_temp_depth_info(self,temp,depth):
-        self.temp_info=temp
-        self.depth_info=depth
-        self.infoLabel.setText(f"Depth: {self.depth_info}   Temp: {self.temp_info}")
-        #print("update tempdepth info")
-
+    #waypoint
     def show_waypoint_menu(self):
         button_pos = self.wbutton.mapToGlobal(self.wbutton.rect().bottomLeft())
         self.waypoint_menu.exec_(button_pos)

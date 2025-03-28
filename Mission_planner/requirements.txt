@@ -7,3 +7,4 @@ opencv-python
 PyOpenGL
 PyOpenGL_accelerate
 scipy
+pywin32

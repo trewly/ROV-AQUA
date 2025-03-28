@@ -158,8 +158,8 @@ class ControlPanel(QWidget):
         self.video_receiver.closeEvent(event)
         event.accept()
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = ControlPanel()
-    window.show()
-    sys.exit(app.exec_())
+# if __name__ == "__main__":
+#     app = QApplication(sys.argv)
+#     window = ControlPanel()
+#     window.show()
+#     sys.exit(app.exec_())

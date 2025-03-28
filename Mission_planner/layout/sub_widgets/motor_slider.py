@@ -7,7 +7,6 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
 from Mission_planner.communication.pc_mavlink import MAV
-
 from Mission_planner.layout.resources import style as st
 
 class MotorSlider(QWidget):
@@ -20,6 +19,7 @@ class MotorSlider(QWidget):
         self.setStyleSheet("background-color: #395B64;")
         layout = QVBoxLayout()
 
+        #khoi tao cac truc slider set speed dong co
         self.z_speed_set()
         self.xy_speed_set()
 
@@ -28,7 +28,8 @@ class MotorSlider(QWidget):
         layout.addWidget(self.set_z_speed)
 
         self.setLayout(layout)
-
+    
+    #slider dong co
     def xy_speed_set(self):
         self.set_xy_speed = QWidget()
         xy_layout = QHBoxLayout()
@@ -90,6 +91,7 @@ class MotorSlider(QWidget):
         z_layout.addWidget(self.label2)
         z_layout.addWidget(motorz_slider)
 
+    #update thong tin
     def update_label1(self):
         sender=self.sender()
         if sender == self.motorxy_forward:
