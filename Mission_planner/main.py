@@ -12,7 +12,6 @@ from layout import new_setting
 from layout.test_widget.just_widget import testLayout
 from communication.system_update_timer import SystemStatusManager
 
-# Định nghĩa đường dẫn tới STL
 STL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
                        "layout", "resources", "shell_assem.STL")
 

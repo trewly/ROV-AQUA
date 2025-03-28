@@ -37,6 +37,22 @@ class ButtonController:
         if button_type in ('surface', 'dive', 'roll_right', 'roll_left'):
             MAV.send_control_cmd(MAV.STOP)
     
+    def on_calib_button_clicked(self):
+        MAV.send_control_cmd(MAV.CALIBRATE)
+        print("Calibrate button clicked")
+
+    def on_start_button_clicked(self):
+        MAV._initialize_connections()
+        print("Start button clicked")
+
+    def on_stop_button_clicked(self):
+        MAV.shutdown()
+        print("Stop button clicked")
+
+    def on_exit_button_clicked(self):
+        MAV.shutdown()
+        print("Exit button clicked")
+        
     def on_surface_button_clicked(self):
         self.on_button_clicked('surface')
         print("Surface button clicked")
