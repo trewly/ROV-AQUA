@@ -1,4 +1,3 @@
-from pymavlink import mavutil
 import time
 import threading
 import sys
@@ -10,41 +9,46 @@ import atexit
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 from Mission_planner.status import pc_status as status
+from pymavlink import mavutil
 
-LOG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../logs"))
-os.makedirs(LOG_DIR, exist_ok=True)
+def setup_logger(logger_name='MavlinkController', log_subdir="../logs"):
+    log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), log_subdir))
+    os.makedirs(log_dir, exist_ok=True)
+    
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    log_file = os.path.join(log_dir, f"mavlink_{current_date}.log")
+    
+    logger = logging.getLogger(logger_name)
+    
+    if logger.handlers:
+        logger.handlers.clear()
+    
+    logger.setLevel(logging.INFO)
+    
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', 
+                                datefmt='%Y-%m-%d %H:%M:%S')
+    
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+    
+    file_handler = TimedRotatingFileHandler(
+        log_file,
+        when='midnight',
+        interval=1,
+        backupCount=30
+    )
+    file_handler.setFormatter(formatter)
+    file_handler.suffix = "%Y-%m-%d"
+    logger.addHandler(file_handler)
+    
+    logger.info("=" * 50)
+    logger.info(f"Log file: {log_file}")
+    logger.info("=" * 50)
+    
+    return logger
 
-current_date = datetime.now().strftime("%Y-%m-%d")
-LOG_FILE = os.path.join(LOG_DIR, f"mavlink_{current_date}.log")
-
-logger = logging.getLogger('MavlinkController')
-
-if logger.handlers:
-    logger.handlers.clear()
-
-logger.setLevel(logging.INFO)
-
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', 
-                             datefmt='%Y-%m-%d %H:%M:%S')
-
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
-
-file_handler = TimedRotatingFileHandler(
-    LOG_FILE,
-    when='midnight',
-    interval=1,
-    backupCount=30
-)
-file_handler.setFormatter(formatter)
-file_handler.suffix = "%Y-%m-%d"
-logger.addHandler(file_handler)
-
-logger.info("=" * 50)
-logger.info("MAVLink Controller starting up")
-logger.info(f"Log file: {LOG_FILE}")
-logger.info("=" * 50)
+logger = setup_logger()
 
 class MavCommands:
     SURFACE = 1000
@@ -82,18 +86,35 @@ class MavlinkController:
         self.connection_timeout = connection_timeout
         
         self.last_message_time = time.time()
-        self.is_connected = False
-        self.running = True
+        self._is_connected = False
+        self.running = False
         self.command_counter = 0
+        self.connection_initialized = False
         
+        self.heartbeat_thread = None
+        self.receive_thread = None
+        
+        self._initialize_connections()
         self.send_lock = threading.Lock()
         
         for attr in dir(MavCommands):
             if not attr.startswith('__'):
                 setattr(self, attr, getattr(MavCommands, attr))
+    
+    def initialize(self, ip_address=None, port=None):
+        if ip_address:
+            self.raspi_ip = ip_address
+        if port:
+            self.send_port = port
         
-        self._initialize_connections()
+        if self.running:
+            logger.warning("MAVLink controller is already running")
+            return True
         
+        self.running = True
+        success = self._initialize_connections()
+        return success
+                
     def _initialize_connections(self):
         try:
             self.master_send = mavutil.mavlink_connection(f"udpout:{self.raspi_ip}:{self.send_port}")
@@ -116,9 +137,11 @@ class MavlinkController:
             )
             self.receive_thread.start()
             
+            self.connection_initialized = True
             logger.info("MAVLink controller initialized successfully")
             return True
         except Exception as e:
+            self.running = False
             logger.error(f"Failed to initialize MAVLink: {e}")
             return False
 
@@ -132,7 +155,7 @@ class MavlinkController:
                         mavutil.mavlink.MAV_AUTOPILOT_GENERIC,
                         0, 0, 0
                     )
-                self.is_connected = True
+                self._is_connected = True
                 time.sleep(self.heartbeat_interval)
             except Exception as e:
                 logger.error(f"Error sending heartbeat: {e}")
@@ -146,9 +169,9 @@ class MavlinkController:
                 current_time = time.time()
                 
                 if msg is not None:
-                    if not self.is_connected:
+                    if not self._is_connected:
                         logger.info("Connection established")
-                        self.is_connected = True
+                        self._is_connected = True
                     
                     status.update_status("disconnect", False)
                     self.last_message_time = current_time
@@ -156,10 +179,10 @@ class MavlinkController:
                     self._process_message(msg)
                 else:
                     if current_time - self.last_message_time > self.connection_timeout:
-                        if self.is_connected:
+                        if self._is_connected:
                             logger.warning("Connection lost!")
                             status.update_status("disconnect", True)
-                            self.is_connected = False
+                            self._is_connected = False
             except Exception as e:
                 logger.error(f"Error receiving message: {e}")
                 time.sleep(1)
@@ -214,10 +237,25 @@ class MavlinkController:
                 logger.info(log_msg)
             except:
                 logger.info(f"Received message of type: {msg_type}")
+    
+    def is_connected(self):
+        return self._is_connected
+    
+    def close(self):
+        if not self.running:
+            logger.info("MAVLink controller is already stopped")
+            return True
+            
+        self.shutdown()
+        return True
 
     def send_command(self, command, param1=0, param2=0, param3=0, 
                    param4=0, param5=0, param6=0, param7=0, confirmation=0):
         try:
+            if not self.running or not self._is_connected:
+                logger.error(f"Cannot send command {command}: Not connected")
+                return False
+                
             with self.send_lock:
                 self.master_send.mav.command_long_send(
                     self.master_send.target_system,
@@ -290,6 +328,10 @@ class MavlinkController:
 
     def get_status(self, status_id):
         try:
+            if not self.running or not self._is_connected:
+                logger.error(f"Cannot request status {status_id}: Not connected")
+                return False
+                
             with self.send_lock:
                 self.master_send.mav.param_request_read_send(
                     self.master_send.target_system,
@@ -304,30 +346,26 @@ class MavlinkController:
             return False
     
     def shutdown(self):
-        logger.info("Shutting down MAVLink controller")
-        self.running = False
-        
-        if hasattr(self, 'heartbeat_thread') and self.heartbeat_thread.is_alive():
-            self.heartbeat_thread.join(timeout=2)
-        if hasattr(self, 'receive_thread') and self.receive_thread.is_alive():
-            self.receive_thread.join(timeout=2)
+        if self._is_connected:
+            logger.info("Shutting down MAVLink controller")
+            self.running = False
             
-        logger.info("MAVLink controller shutdown complete")
-        logger.info("=" * 50)
+            if hasattr(self, 'heartbeat_thread') and self.heartbeat_thread and self.heartbeat_thread.is_alive():
+                self.heartbeat_thread.join(timeout=2)
+            if hasattr(self, 'receive_thread') and self.receive_thread and self.receive_thread.is_alive():
+                self.receive_thread.join(timeout=2)
+                
+            logger.info("MAVLink controller shutdown complete")
+            logger.info("=" * 50)
 
 MAV = MavlinkController()
 
 def cleanup():
-    """Function to be called at program exit"""
-    logger.info("Program exiting, cleaning up MAVLink controller...")
     MAV.shutdown()
-    
-    # Explicitly flush and close log handlers to ensure all data is written
     for handler in logger.handlers:
         handler.flush()
         handler.close()
 
-# Register cleanup function to be called at exit
 atexit.register(cleanup)
 
 if __name__ == "__main__":
@@ -335,6 +373,7 @@ if __name__ == "__main__":
     print("Press Ctrl+C to exit")
     
     try:
+        MAV.initialize()
         MAV.set_manual_mode()
         time.sleep(1)
         MAV.set_max_speed_forward(80)
