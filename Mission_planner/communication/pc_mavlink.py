@@ -14,7 +14,7 @@ from Mission_planner.status import pc_status as status
 LOG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../logs"))
 os.makedirs(LOG_DIR, exist_ok=True)
 
-current_date = datetime.now().strftime("%Y-%m-%d")
+current_date = datetime.now().strftime("%Y-%m-%d_%H%M%S")
 LOG_FILE = os.path.join(LOG_DIR, f"mavlink_{current_date}.log")
 
 logger = logging.getLogger('MavlinkController')
