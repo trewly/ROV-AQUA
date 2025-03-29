@@ -7,7 +7,6 @@ class ButtonController:
     KEY_MAPPINGS = {
         Qt.Key_Shift: 'surface',
         Qt.Key_Control: 'dive',
-        Qt.Key_L: 'light',
         Qt.Key_R: 'roll_right',
         Qt.Key_F: 'roll_left',
     }
@@ -89,21 +88,7 @@ class ButtonController:
         dialog = ModeChangeDialog()
         dialog.exec_()
 
-    def on_light_button_clicked(self, main_window):
-        main_window.light_on = not main_window.light_on
-        if main_window.light_on:
-            main_window.light_button.setText("LIGHT ON")
-            MAV.set_light(1)
-            print("Light is ON")
-        else:
-            main_window.light_button.setText("LIGHT OFF")
-            MAV.set_light(0)
-            print("Light is OFF")
-            
-    def on_light_button_released(self):
-        pass
-
-    def handle_key_press(self, parent_widget, event):
+    def handle_key_press(self, event):
         if event.isAutoRepeat():
             return False
 
@@ -119,9 +104,6 @@ class ButtonController:
             return True
         elif key == Qt.Key_F:
             self.on_roll_left_button_clicked()
-            return True
-        elif key == Qt.Key_L:
-            parent_widget.light_button.click()
             return True
         return False
 
@@ -142,9 +124,6 @@ class ButtonController:
         elif key == Qt.Key_F:
             self.on_roll_left_button_released()
             return True
-        elif key == Qt.Key_L:
-            return True
-        
         return False
 
 controller = ButtonController()

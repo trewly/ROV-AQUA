@@ -1,8 +1,7 @@
-import sys
 from PyQt5.QtWidgets import QApplication, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem
 from PyQt5.QtCore import Qt, QPointF, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor
-from Mission_planner.communication.pc_mavlink import MAV
+from communication.pc_mavlink import MAV
 
 class VirtualJoystick(QGraphicsView):
     joystickMoved = pyqtSignal(float, float)
@@ -28,7 +27,7 @@ class VirtualJoystick(QGraphicsView):
         BACKWARD: (MAV.BACKWARD, "BACKWARD")
     }
 
-    def __init__(self, parent=None, size=150, knob_size=40, max_distance=50):
+    def __init__(self, parent=None, size=180, knob_size=50, max_distance=60):
         super().__init__(parent)
         self.size = size
         self.knob_size = knob_size
@@ -45,10 +44,13 @@ class VirtualJoystick(QGraphicsView):
         self.setStyleSheet("background: transparent;")
         self.setFrameShape(QGraphicsView.NoFrame)
 
-        self.base = QGraphicsEllipseItem(0, 0, self.size - 25, self.size - 25)
+        base_size = self.size - 10
+        base_position = 5
+        
+        self.base = QGraphicsEllipseItem(0, 0, base_size, base_size)
         self.base.setBrush(QBrush(QColor(0, 0, 0, 0)))
         self.base.setPen(QColor("#F3F3E0"))
-        self.base.setPos(12.5, 12.5)
+        self.base.setPos(base_position, base_position)
         self.scene.addItem(self.base)
 
         self.knob = QGraphicsEllipseItem(0, 0, self.knob_size, self.knob_size)

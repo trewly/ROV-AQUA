@@ -136,7 +136,7 @@ class VideoReceiver(QWidget):
         
         self.status_label.setText("Looking for GStreamer window...")
         
-        hwnds = find_window_by_pid(self.gst_process.pid)
+        hwnds = threading.Thread(target=find_window_by_pid, args=(self.gst_process.pid,), daemon=True).start()
         
         if not hwnds:
             error = "Không tìm thấy cửa sổ GStreamer"

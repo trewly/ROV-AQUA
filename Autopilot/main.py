@@ -8,11 +8,11 @@ import logging
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 
-from Autopilot.communication import raspi_mavlink as mav
-from Autopilot.controller.motor import raspi_motor_control as rov
-from Autopilot.system_info.status import raspi_status as status
-from Autopilot.controller.camera import raspi_camera as camera
-from Autopilot.system_info.sensor import raspi_sensor_read as sensor
+from communication import raspi_mavlink as mav
+from controller.motor import raspi_motor_control as rov
+from system_info.status import raspi_status as status
+from controller.camera import raspi_camera as camera
+from system_info.sensor import raspi_sensor_read as sensor
 
 def setup_system_logger(name="System", log_subdir="logs"):
     log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), log_subdir))
