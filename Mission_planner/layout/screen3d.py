@@ -64,7 +64,7 @@ class STLLoaderThread(QThread):
 class STLViewerWidget(QWidget):
     def __init__(self, stl_file,status_manager: SystemStatusManager):
         super().__init__()
-        self.setFixedSize(950, 395)
+        self.setFixedSize(860, 398)
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         
@@ -75,7 +75,7 @@ class STLViewerWidget(QWidget):
         layout.addWidget(self.view)
         self.view.setCameraPosition(distance=80)
         self.view.setBackgroundColor("#F3F3E0")
-        self.view.setFixedSize(730, 395)
+        self.view.setFixedSize(640, 398)
         self.mesh_item = None
         self.stl_loader = STLLoaderThread(stl_file)
         self.stl_loader.finished.connect(self.on_stl_loaded)
@@ -103,7 +103,7 @@ class STLViewerWidget(QWidget):
         instrument_widget=QWidget()
         
         instrument_layout= QVBoxLayout(instrument_widget)
-        instrument_widget.setFixedSize(220, 395)
+        instrument_widget.setFixedSize(220, 398)
 
         instrument_widget.setStyleSheet("background-color: #395B64;")
         #them instrument vao layout chinh

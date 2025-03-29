@@ -7,7 +7,7 @@ import os
 import math
 import time
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
 from resources.style import canvas_button_style
 from Mission_planner.status import pc_status as status
 from Mission_planner.communication.system_update_timer import SystemStatusManager
@@ -55,7 +55,7 @@ class ROVSimulationThread(QThread):
 class CanvasWidget(QWidget):
     def __init__(self,status_manager: SystemStatusManager):
         super().__init__()
-        self.setFixedSize(881, 566)
+        self.setFixedSize(860, 545)
 
         #some info
         self.depth_info = 0
@@ -126,14 +126,14 @@ class CanvasWidget(QWidget):
         #khoi tao mode button
         self.mode_button = QPushButton("LOG", self)
         self.mode_button.setStyleSheet(canvas_button_style)
-        self.mode_button.setFixedSize(160, 50)
-        self.mode_button.move(534, 508) 
+        self.mode_button.setFixedSize(110, 40)
+        self.mode_button.move(630, 500) 
         self.mode_button.clicked.connect(self.show_log_viewer)
         #khoi tao state button -> bieu do he thogn cac gov raw, pitch, roll
         self.state_button = QPushButton("STATE", self)
         self.state_button.setStyleSheet(canvas_button_style)
-        self.state_button.setFixedSize(160, 50)
-        self.state_button.move(704, 508) 
+        self.state_button.setFixedSize(110, 40)
+        self.state_button.move(745, 500) 
         self.state_button.clicked.connect(self.show_state)
 
     def show_state(self):
@@ -150,13 +150,13 @@ class CanvasWidget(QWidget):
         self.statusLabel = QLabel("Vehicle unconnected", self)
         self.statusLabel.setFont(self.font)
         self.statusLabel.setStyleSheet("color: #395B64;")
-        self.statusLabel.move(690,18)  
+        self.statusLabel.move(625,18)  
         
         # status dot
         self.statusDot = QLabel(self)
         self.statusDot.setFixedSize(20, 20)
         self.statusDot.setStyleSheet("border-radius: 10px; background-color: gray; border: 1px solid black;")
-        self.statusDot.move(665,15)  
+        self.statusDot.move(600,15)  
 
     def update_vehicle_status(self,disconnected: bool):
         if disconnected:
@@ -169,7 +169,7 @@ class CanvasWidget(QWidget):
         self.infoLabel = QLabel(f"Depth: {self.depth_info}   Temp: {self.temp_info}" , self)
         self.infoLabel.setFont(self.font)
         self.infoLabel.setStyleSheet("color: #395B64; font-size: 22px;")
-        self.infoLabel.move(15, 530)
+        self.infoLabel.move(15, 510)
 
     def update_temp_depth_info(self,temp,depth):
         self.temp_info=temp
@@ -312,3 +312,5 @@ class CanvasWidget(QWidget):
     def update_motion_canvas(self,x,y,yaw):
         self.vehicle_dot.setPos(x, y)
         self.vehicle_dot.setTransform(QTransform().rotate(yaw))
+
+        

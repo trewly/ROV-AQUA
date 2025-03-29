@@ -1,4 +1,7 @@
-from PyQt5.QtWidgets import QHBoxLayout, QApplication, QWidget, QVBoxLayout, QSlider, QLabel
+from PyQt5.QtWidgets import (
+    QApplication, QWidget, QLabel, QSlider,
+    QGridLayout, QSizePolicy, QVBoxLayout
+)
 from PyQt5.QtCore import Qt
 
 import os
@@ -9,104 +12,94 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 from Mission_planner.communication.pc_mavlink import MAV
 from Mission_planner.layout.resources import style as st
 
+
 class MotorSlider(QWidget):
     def __init__(self):
-
         super().__init__()
-        self.setWindowTitle("Motror speed testing")
-        self.setGeometry(100, 100, 565, 250)
-        self.setFixedSize(580, 250)
+        self.setWindowTitle("Motor speed testing")
+        self.setFixedSize(700, 180)
         self.setStyleSheet("background-color: #395B64;")
-        layout = QVBoxLayout()
 
-        #khoi tao cac truc slider set speed dong co
-        self.z_speed_set()
+        # Layout chính
+        main_layout = QVBoxLayout()
+        main_layout.setSpacing(20)
+
+        # Tạo layout con cho xy và z
+        self.xy_speed_widget = QWidget()
+        self.z_speed_widget = QWidget()
+
+        self.xy_layout = QGridLayout()
+        self.z_layout = QGridLayout()
+
+        self.xy_speed_widget.setLayout(self.xy_layout)
+        self.z_speed_widget.setLayout(self.z_layout)
+
         self.xy_speed_set()
+        self.z_speed_set()
 
-        # add layout
-        layout.addWidget(self.set_xy_speed)
-        layout.addWidget(self.set_z_speed)
+        main_layout.addWidget(self.xy_speed_widget)
+        main_layout.addWidget(self.z_speed_widget)
+        self.setLayout(main_layout)
 
-        self.setLayout(layout)
-    
-    #slider dong co
     def xy_speed_set(self):
-        self.set_xy_speed = QWidget()
-        xy_layout = QHBoxLayout()
-        self.set_xy_speed.setLayout(xy_layout)
-
-        motorxy_slider = QWidget()
-        motorxy_layout = QVBoxLayout()
-        motorxy_slider.setFixedWidth(300)
-        motorxy_slider.setLayout(motorxy_layout)
-
-        self.motorxy_forward = QSlider(Qt.Horizontal)
-        self.motorxy_forward.setMinimum(0)
-        self.motorxy_forward.setMaximum(100)
-        self.motorxy_forward.setValue(50)
-        self.motorxy_forward.sliderReleased.connect(self.update_label1)
-
-        self.motorxy_backward = QSlider(Qt.Horizontal)
-        self.motorxy_backward.setMinimum(0)
-        self.motorxy_backward.setMaximum(100)
-        self.motorxy_backward.setValue(50)
-        self.motorxy_backward.sliderReleased.connect(self.update_label1)
-
-        motorxy_layout.addWidget(self.motorxy_forward)
-        motorxy_layout.addWidget(self.motorxy_backward)
-
+        # Label
         self.label1 = QLabel("Motor xy: 50/50")
         self.label1.setStyleSheet(st.normal_text_info_style)
-        xy_layout.addWidget(self.label1)
-        xy_layout.addWidget(motorxy_slider)
+
+        # Sliders
+        self.motorxy_forward = QSlider(Qt.Horizontal)
+        self.motorxy_backward = QSlider(Qt.Horizontal)
+        self.setup_slider(self.motorxy_forward, self.update_label1)
+        self.setup_slider(self.motorxy_backward, self.update_label1)
+
+        # Add to layout
+        self.xy_layout.addWidget(self.label1, 0, 0)
+        self.xy_layout.addWidget(self.motorxy_forward, 0, 1)
+        self.xy_layout.addWidget(self.motorxy_backward, 1, 1)
 
     def z_speed_set(self):
-        # Tạo Slider 2
-        self.set_z_speed = QWidget()
-        z_layout = QHBoxLayout()
-        self.set_z_speed.setLayout(z_layout)
-
-        motorz_slider = QWidget()
-        motorz_slider.setFixedWidth(300)
-        motorz_layout = QVBoxLayout()
-        motorz_slider.setLayout(motorz_layout)
-
-        self.motorz_forward = QSlider(Qt.Horizontal)
-        self.motorz_forward.setMinimum(0)
-        self.motorz_forward.setMaximum(100)
-        self.motorz_forward.setValue(50)
-        self.motorz_forward.sliderReleased.connect(self.update_label2)
-
-        self.motorz_backward = QSlider(Qt.Horizontal)
-        self.motorz_backward.setMinimum(0)
-        self.motorz_backward.setMaximum(100)
-        self.motorz_backward.setValue(50)
-        self.motorz_backward.sliderReleased.connect(self.update_label2)
-
-        motorz_layout.addWidget(self.motorz_forward)
-        motorz_layout.addWidget(self.motorz_backward)
-
+        # Label
         self.label2 = QLabel("Motor z: 50/50")
         self.label2.setStyleSheet(st.normal_text_info_style)
-        z_layout.addWidget(self.label2)
-        z_layout.addWidget(motorz_slider)
 
-    #update thong tin
+        # Sliders
+        self.motorz_forward = QSlider(Qt.Horizontal)
+        self.motorz_backward = QSlider(Qt.Horizontal)
+        self.setup_slider(self.motorz_forward, self.update_label2)
+        self.setup_slider(self.motorz_backward, self.update_label2)
+
+        # Add to layout
+        self.z_layout.addWidget(self.label2, 0, 0)
+        self.z_layout.addWidget(self.motorz_forward, 0, 1)
+        self.z_layout.addWidget(self.motorz_backward, 1, 1)
+
+    def setup_slider(self, slider, slot):
+        slider.setMinimum(0)
+        slider.setMaximum(100)
+        slider.setValue(50)
+        slider.setFixedWidth(450)
+        slider.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        slider.sliderReleased.connect(slot)
+
     def update_label1(self):
-        sender=self.sender()
+        sender = self.sender()
         if sender == self.motorxy_forward:
-            MAV.set_max_speed_forward(self.motorxy_forward.value()) 
+            MAV.set_max_speed_forward(self.motorxy_forward.value())
         elif sender == self.motorxy_backward:
-            MAV.set_max_speed_backward(self.motorxy_backward.value()*(-1))
-        print(f"Motor xy: {self.motorxy_forward.value()}/{self.motorxy_backward.value()}")
+            MAV.set_max_speed_backward(self.motorxy_backward.value() * (-1))
         self.label1.setText(f"Motor xy: {self.motorxy_forward.value()}/{self.motorxy_backward.value()}")
-    
+
     def update_label2(self):
-        sender=self.sender()
+        sender = self.sender()
         if sender == self.motorz_forward:
-            MAV.set_max_speed_surface(self.motorz_forward.value()) 
+            MAV.set_max_speed_surface(self.motorz_forward.value())
         elif sender == self.motorz_backward:
-            MAV.set_max_speed_dive(self.motorz_backward.value()*(-1))
-        print(f"Motor z: {self.motorz_forward.value()}/{self.motorz_backward.value()}")
+            MAV.set_max_speed_dive(self.motorz_backward.value() * (-1))
         self.label2.setText(f"Motor z: {self.motorz_forward.value()}/{self.motorz_backward.value()}")
-    
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = MotorSlider()
+    window.show()
+    sys.exit(app.exec_())
