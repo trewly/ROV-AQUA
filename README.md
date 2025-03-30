@@ -94,4 +94,4 @@ The ground station provides a user interface for ROV control, visualization, and
 ### Installation
 
 1. Clone the repository
-2. Install required packages:
+2. Install required packages
