@@ -85,7 +85,7 @@ class PIDTuner(QWidget):
         #Kp_autoheading
         
     def initial_read_value(self):
-        pid = ['Kp', 'Kd', 'Ki']
+        pid = ['Kp', 'Ki', 'Kd']
         for param, values in self.pid_params.items():
             for index, k in enumerate(pid):
                 self.pid_params[param][index] = status.read_status(f"{k}_{param}")
@@ -97,9 +97,23 @@ class PIDTuner(QWidget):
         label.setText(f"{param}: {self.updated_params[pid_name][index]:.3f}")
     
     def confirm_update(self, pid_name):
+    # Cập nhật các tham số PID
         self.pid_params[pid_name] = self.updated_params[pid_name].copy()
         print(f"PID parameters for {pid_name} updated:", self.pid_params[pid_name])
-    
+        # update and transmit
+        if pid_name in ["autoheading", "depth", "yaw"]:  # Kiểm tra nếu pid_name hợp lệ
+            # write json
+            status.update_status(f"Kp_{pid_name}", self.pid_params[pid_name][0])
+            status.update_status(f"Ki_{pid_name}", self.pid_params[pid_name][1])
+            status.update_status(f"Kd_{pid_name}", self.pid_params[pid_name][2])
+            # transmit
+            if pid_name == "autoheading":
+                MAV.set_pid_autoheading(self.pid_params[pid_name][0], self.pid_params[pid_name][1], self.pid_params[pid_name][2])
+            elif pid_name == "depth":
+                MAV.set_pid_depth(self.pid_params[pid_name][0], self.pid_params[pid_name][1], self.pid_params[pid_name][2])
+            elif pid_name == "yaw":
+                MAV.set_pid_yaw(self.pid_params[pid_name][0], self.pid_params[pid_name][1], self.pid_params[pid_name][2])
+
     def reset_values(self):
         self.updated_params = {k: v.copy() for k, v in self.pid_params.items()}
         for pid_name, params in self.updated_params.items():
@@ -108,8 +122,8 @@ class PIDTuner(QWidget):
                 self.sliders[pid_name][param].setValue(int(params[i] * (1/step)))
         self.update()
 
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    window = PIDTuner()
-    window.show()
-    sys.exit(app.exec_())
+# if __name__ == '__main__':
+#     app = QApplication(sys.argv)
+#     window = PIDTuner()
+#     window.show()
+#     sys.exit(app.exec_())

@@ -54,3 +54,27 @@ setting_button_style="""
         color: #E7F6F2;  
     }
 """
+
+warning_label_style = """
+    QLabel {
+        color: #FFA500;  /* Màu cam cảnh báo */
+        font-size: 17px;
+        font-weight: bold;
+        background-color: rgba(255, 165, 0, 0.1); /* Nền cam nhạt */
+        border-left: 4px solid #FFA500;
+        padding: 5px;
+        border-radius: 3px;
+    }
+"""
+
+success_label_style = """
+    QLabel {
+        color: #4CAF50;  /* Màu xanh lá thành công */
+        font-size: 17px;
+        font-weight: bold;
+        background-color: rgba(76, 175, 80, 0.1); /* Nền xanh nhạt */
+        border-left: 4px solid #4CAF50;
+        padding: 5px;
+        border-radius: 3px;
+    }
+"""
