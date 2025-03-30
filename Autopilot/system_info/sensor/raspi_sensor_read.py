@@ -80,7 +80,7 @@ class HMC5883L:
         self.current_heading = 0.0
         self.declination = 0.0
         self.current_gain = self.GAIN_HIGH
-        
+        self.current_sample_rate = self.DEFAULT_SAMPLE_RATE
         self.update_thread = None
         self.running = False
         
@@ -104,7 +104,7 @@ class HMC5883L:
             self.is_initialized = False
             return False
     
-    def read_status(self):
+    def read_mag_status(self):
         try:
             self.bus.write_byte(self.HMC5883L_ADDR, self.STATUS_REG)
             return self.bus.read_byte(self.HMC5883L_ADDR)
@@ -134,7 +134,7 @@ class HMC5883L:
             
             config_a_value = sample_rate | measurement_mode
             self.bus.write_byte_data(self.HMC5883L_ADDR, self.CONFIG_A, config_a_value)
-            
+            self.current_sample_rate = sample_rate
             return True
             
         except Exception:
@@ -170,20 +170,20 @@ class HMC5883L:
             if not self.is_initialized:
                 if not self.initialize():
                     return np.array([0.0, 0.0, 0.0])
-            
-            self.bus.write_byte(self.HMC5883L_ADDR, self.DATA_OUT_X_MSB)
-            
-            data = []
-            for _ in range(6):
-                data.append(self.bus.read_byte(self.HMC5883L_ADDR))
-            
-            x = (data[0] << 8) | data[1]
-            z = (data[2] << 8) | data[3]
-            y = (data[4] << 8) | data[5]
-            
-            x = x - 65536 if x > 32767 else x
-            y = y - 65536 if y > 32767 else y
-            z = z - 65536 if z > 32767 else z
+            if self.read_mag_status() & self.STATUS_RDY:
+                self.bus.write_byte(self.HMC5883L_ADDR, self.DATA_OUT_X_MSB)
+                
+                data = []
+                for _ in range(6):
+                    data.append(self.bus.read_byte(self.HMC5883L_ADDR))
+                
+                x = (data[0] << 8) | data[1]
+                z = (data[2] << 8) | data[3]
+                y = (data[4] << 8) | data[5]
+                
+                x = x - 65536 if x > 32767 else x
+                y = y - 65536 if y > 32767 else y
+                z = z - 65536 if z > 32767 else z
             
             return np.array([x, y, z], dtype=float)
 
@@ -344,6 +344,23 @@ class MPU9250:
     VELOCITY_ALPHA = 0.8  
     ACCEL_THRESHOLD = 0.05
     VELOCITY_RESET_THRESHOLD = 100
+
+    GYRO_DLPF_250HZ = 0x00
+    GYRO_DLPF_184HZ = 0x01
+    GYRO_DLPF_92HZ = 0x02
+    GYRO_DLPF_41HZ = 0x03
+    GYRO_DLPF_20HZ = 0x04
+    GYRO_DLPF_10HZ = 0x05
+    GYRO_DLPF_5HZ = 0x06
+    GYRO_DLPF_OFF = 0x07
+    
+    ACCEL_DLPF_218HZ = 0x00
+    ACCEL_DLPF_99HZ = 0x02
+    ACCEL_DLPF_45HZ = 0x03
+    ACCEL_DLPF_21HZ = 0x04
+    ACCEL_DLPF_10HZ = 0x05
+    ACCEL_DLPF_5HZ = 0x06
+    ACCEL_DLPF_OFF = 0x08
     
     def __init__(self, bus_num=1):
         self.bus = smbus.SMBus(bus_num)
@@ -424,7 +441,7 @@ class MPU9250:
         except Exception:
             return False
             
-    def read_word(self, register):
+    def read_data(self, register):
         try:
             if not self.is_initialized:
                 if not self.initialize():
@@ -434,8 +451,8 @@ class MPU9250:
             low = self.bus.read_byte_data(self.MPU9250_ADDR, register + 1)
             value = (high << 8) + low
             
-            if value >= 0x8000:
-                value -= 0x10000
+            if value >= 32767:
+                value -= 65536
                 
             return value
         except Exception:
@@ -449,7 +466,7 @@ class MPU9250:
             
     def read_temp_data(self):
         try:
-            temp = self.read_word(self.TEMP_OUT)
+            temp = self.bus.read_byte_data(self.MPU9250_ADDR, self.TEMP_OUT)
             temp = (temp / 340) + 36.53
             status.update_status(key="temp", value=temp)
             return temp
@@ -459,18 +476,18 @@ class MPU9250:
         
     def read_gyro_data(self):
         try:
-            gyro_x = self.read_word(self.GYRO_XOUT_H) / self.GYRO_SCALE
-            gyro_y = self.read_word(self.GYRO_YOUT_H) / self.GYRO_SCALE
-            gyro_z = self.read_word(self.GYRO_ZOUT_H) / self.GYRO_SCALE
+            gyro_x = self.read_data(self.GYRO_XOUT_H) / self.GYRO_SCALE
+            gyro_y = self.read_data(self.GYRO_YOUT_H) / self.GYRO_SCALE
+            gyro_z = self.read_data(self.GYRO_ZOUT_H) / self.GYRO_SCALE
             return gyro_x, gyro_y, gyro_z
         except Exception:
             return 0.0, 0.0, 0.0
         
     def read_accel_data(self):
         try:
-            accel_x = self.read_word(self.ACCEL_XOUT_H) / self.ACCEL_SCALE
-            accel_y = self.read_word(self.ACCEL_YOUT_H) / self.ACCEL_SCALE
-            accel_z = self.read_word(self.ACCEL_ZOUT_H) / self.ACCEL_SCALE
+            accel_x = self.read_data(self.ACCEL_XOUT_H) / self.ACCEL_SCALE
+            accel_y = self.read_data(self.ACCEL_YOUT_H) / self.ACCEL_SCALE
+            accel_z = self.read_data(self.ACCEL_ZOUT_H) / self.ACCEL_SCALE
             return accel_x, accel_y, accel_z
         except Exception:
             return 0.0, 0.0, 1.0
@@ -480,20 +497,6 @@ class MPU9250:
         gyro_x, gyro_y, gyro_z = self.read_gyro_data()
         return accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z
         
-    def filter_acceleration(self, ax, ay, az):
-        self.filtered_accel_x = low_pass_filter(self.filtered_accel_x, ax, self.ACCEL_ALPHA)
-        self.filtered_accel_y = low_pass_filter(self.filtered_accel_y, ay, self.ACCEL_ALPHA)
-        self.filtered_accel_z = low_pass_filter(self.filtered_accel_z, az - 1.0, self.ACCEL_ALPHA)
-        
-        if abs(self.filtered_accel_x) < self.ACCEL_THRESHOLD:
-            self.filtered_accel_x = 0.0
-        if abs(self.filtered_accel_y) < self.ACCEL_THRESHOLD:
-            self.filtered_accel_y = 0.0
-        if abs(self.filtered_accel_z) < self.ACCEL_THRESHOLD:
-            self.filtered_accel_z = 0.0
-            
-        return self.filtered_accel_x, self.filtered_accel_y, self.filtered_accel_z
-        
     def calculate_pitch_roll(self, ax, ay, az):
         try:
             pitch = math.atan2(ay, math.sqrt(ax**2 + az**2)) * (180 / math.pi)
@@ -502,64 +505,56 @@ class MPU9250:
         except Exception:
             return 0, 0
             
-    def calculate_velocity(self):
-        try:
-            ax, ay, az = self.read_accel_data()
-            
-            filtered_ax, filtered_ay, filtered_az = self.filter_acceleration(ax, ay, az)
-            
-            current_time = time.time()
-            dt = current_time - self.velocity_last_update
-            self.velocity_last_update = current_time
-            
-            ax_ms2 = filtered_ax * self.G
-            ay_ms2 = filtered_ay * self.G
-            az_ms2 = filtered_az * self.G
-            
-            delta_vx = ax_ms2 * dt
-            delta_vy = ay_ms2 * dt
-            delta_vz = az_ms2 * dt
-            
-            self.current_velocity_x = low_pass_filter(
-                self.current_velocity_x, 
-                self.current_velocity_x + delta_vx, 
-                self.VELOCITY_ALPHA
-            )
-            self.current_velocity_y = low_pass_filter(
-                self.current_velocity_y, 
-                self.current_velocity_y + delta_vy, 
-                self.VELOCITY_ALPHA
-            )
-            self.current_velocity_z = low_pass_filter(
-                self.current_velocity_z, 
-                self.current_velocity_z + delta_vz, 
-                self.VELOCITY_ALPHA
-            )
-            
-            self.velocity_reset_counter += 1
-            
-            if self.velocity_reset_counter >= self.VELOCITY_RESET_THRESHOLD:
-                self.velocity_reset_counter = 0
-                self.current_velocity_x *= 0.5
-                self.current_velocity_y *= 0.5
-                self.current_velocity_z *= 0.5
-            
-            status.update_status(key="velocity_x", value=self.current_velocity_x)
-            status.update_status(key="velocity_y", value=self.current_velocity_y)
-            status.update_status(key="velocity_z", value=self.current_velocity_z)
-            
-            horizontal_velocity = math.sqrt(self.current_velocity_x**2 + self.current_velocity_y**2)
-            status.update_status(key="horizontal_velocity", value=horizontal_velocity)
-            status.update_status(key="vertical_velocity", value=self.current_velocity_z)
-            
-            return self.current_velocity_x, self.current_velocity_y, self.current_velocity_z
-        
-        except Exception:
-            return self.current_velocity_x, self.current_velocity_y, self.current_velocity_z
-            
     def get_velocity(self):
-        return self.current_velocity_x, self.current_velocity_y, self.current_velocity_z
+        ax, ay, az = self.read_accel_data()
+                
+        current_time = time.time()
+        dt = current_time - self.velocity_last_update
+        self.velocity_last_update = current_time
         
+        ax_ms2 = ax * self.G
+        ay_ms2 = ay * self.G
+        az_ms2 = (az - 1.0) * self.G
+        
+        delta_vx = ax_ms2 * dt
+        delta_vy = ay_ms2 * dt
+        delta_vz = az_ms2 * dt
+        
+        self.current_velocity_x = low_pass_filter(
+            self.current_velocity_x, 
+            self.current_velocity_x + delta_vx, 
+            self.VELOCITY_ALPHA
+        )
+        self.current_velocity_y = low_pass_filter(
+            self.current_velocity_y, 
+            self.current_velocity_y + delta_vy, 
+            self.VELOCITY_ALPHA
+        )
+        self.current_velocity_z = low_pass_filter(
+            self.current_velocity_z, 
+            self.current_velocity_z + delta_vz, 
+            self.VELOCITY_ALPHA
+        )
+        
+        self.velocity_reset_counter += 1
+        
+        if self.velocity_reset_counter >= self.VELOCITY_RESET_THRESHOLD:
+            self.velocity_reset_counter = 0
+            self.current_velocity_x *= 0.5
+            self.current_velocity_y *= 0.5
+            self.current_velocity_z *= 0.5
+        
+        status.update_status(key="velocity_x", value=self.current_velocity_x)
+        status.update_status(key="velocity_y", value=self.current_velocity_y)
+        status.update_status(key="velocity_z", value=self.current_velocity_z)
+        
+        horizontal_velocity = math.sqrt(self.current_velocity_x**2 + self.current_velocity_y**2)
+        status.update_status(key="horizontal_velocity", value=horizontal_velocity)
+        status.update_status(key="vertical_velocity", value=self.current_velocity_z)
+        
+        return self.current_velocity_x, self.current_velocity_y, self.current_velocity_z
+            
+            
     def get_orientation(self):
         try:
             ax, ay, az, gx, gy, gz = self.read_accel_gyro_data()
@@ -593,7 +588,7 @@ class MPU9250:
                         "velocity_z": 0.0,
                         "horizontal_velocity": 0.0,
                         "vertical_velocity": 0.0,
-                        "temp": 25.0
+                        "temp": 0.0
                     }
                     
                     for key, value in default_data.items():
@@ -608,7 +603,7 @@ class MPU9250:
                 roll = status.read_status(key="roll", default=0.0)
             
             try:
-                vx, vy, vz = self.calculate_velocity()
+                vx, vy, vz = self.get_velocity()
                 horizontal_velocity = math.sqrt(vx**2 + vy**2)
             except Exception:
                 vx = status.read_status(key="velocity_x", default=0.0)
@@ -631,10 +626,7 @@ class MPU9250:
                 "vertical_velocity": vz,
                 "temp": temp
             }
-            
-            for key, value in sensor_data.items():
-                status.update_status(key=key, value=value)
-            
+            status.update_multiple(sensor_data)
             return sensor_data
             
         except Exception:
@@ -646,7 +638,7 @@ class MPU9250:
                 "velocity_z": status.read_status(key="velocity_z", default=0.0),
                 "horizontal_velocity": status.read_status(key="horizontal_velocity", default=0.0),
                 "vertical_velocity": status.read_status(key="velocity_z", default=0.0),
-                "temp": status.read_status(key="temp", default=25.0)
+                "temp": status.read_status(key="temp", default=0.0)
             }
             return default_data
     
@@ -691,6 +683,118 @@ class MPU9250:
             return success
         return True
 
+    def set_gyro_range(self, gyro_range):
+        try:
+            if gyro_range not in [self.GYRO_RANGE_250DPS, self.GYRO_RANGE_500DPS, 
+                                 self.GYRO_RANGE_1000DPS, self.GYRO_RANGE_2000DPS]:
+                return False
+                
+            self.bus.write_byte_data(self.MPU9250_ADDR, self.GYRO_CONFIG, gyro_range)
+            
+            if gyro_range == self.GYRO_RANGE_250DPS:
+                self.GYRO_SCALE = 131.0
+            elif gyro_range == self.GYRO_RANGE_500DPS:
+                self.GYRO_SCALE = 65.5
+            elif gyro_range == self.GYRO_RANGE_1000DPS:
+                self.GYRO_SCALE = 32.8
+            elif gyro_range == self.GYRO_RANGE_2000DPS:
+                self.GYRO_SCALE = 16.4
+                
+            time.sleep(0.01)
+            return True
+            
+        except Exception:
+            print(f"Error setting gyro range: {gyro_range}")
+            return False
+    
+    def set_accel_range(self, accel_range):
+        try:
+            if accel_range not in [self.ACCEL_RANGE_2G, self.ACCEL_RANGE_4G, 
+                                  self.ACCEL_RANGE_8G, self.ACCEL_RANGE_16G]:
+                return False
+                
+            self.bus.write_byte_data(self.MPU9250_ADDR, self.ACCEL_CONFIG, accel_range)
+            
+            if accel_range == self.ACCEL_RANGE_2G:
+                self.ACCEL_SCALE = 16384.0
+            elif accel_range == self.ACCEL_RANGE_4G:
+                self.ACCEL_SCALE = 8192.0
+            elif accel_range == self.ACCEL_RANGE_8G:
+                self.ACCEL_SCALE = 4096.0
+            elif accel_range == self.ACCEL_RANGE_16G:
+                self.ACCEL_SCALE = 2048.0
+                
+            time.sleep(0.01)
+            return True
+            
+        except Exception:
+            print(f"Error setting accel range: {accel_range}")
+            return False
+    
+    def set_sample_rate(self, rate_divider):
+        try:
+            if not 0 <= rate_divider <= 255:
+                return False
+                
+            self.bus.write_byte_data(self.MPU9250_ADDR, self.SMPLRT_DIV, rate_divider)
+            time.sleep(0.01)
+            return True
+            
+        except Exception:
+            print(f"Error setting sample rate divider: {rate_divider}")
+            return False
+    
+    def set_filter_bandwidth(self, bandwidth):
+        try:
+            if not 0 <= bandwidth <= 7:
+                return False
+                
+            self.bus.write_byte_data(self.MPU9250_ADDR, self.CONFIG, bandwidth)
+            self.bus.write_byte_data(self.MPU9250_ADDR, self.ACCEL_CONFIG_2, bandwidth)
+            time.sleep(0.01)
+            return True
+            
+        except Exception:
+            print(f"Error setting filter bandwidth: {bandwidth}")
+            return False
+
+    def set_filter_bandwidth_gyro(self, bandwidth):
+        try:
+            if not 0 <= bandwidth <= 7:
+                return False
+                
+            self.bus.write_byte_data(self.MPU9250_ADDR, self.CONFIG, bandwidth)
+            time.sleep(0.01)
+            return True
+            
+        except Exception:
+            print(f"Error setting gyro filter bandwidth: {bandwidth}")
+            return False
+            
+    def set_filter_bandwidth_accel(self, bandwidth):
+        try:
+            if not (0 <= bandwidth <= 6 or bandwidth == 8):
+                return False
+                
+            self.bus.write_byte_data(self.MPU9250_ADDR, self.ACCEL_CONFIG_2, bandwidth)
+            time.sleep(0.01)
+            return True
+            
+        except Exception:
+            print(f"Error setting accel filter bandwidth: {bandwidth}")
+            return False
+
+    def set_power_mode(self, mode):
+        try:
+            current_mode = self.bus.read_byte_data(self.MPU9250_ADDR, self.PWR_MGMT_1) & 0xF8
+            new_mode = current_mode | (mode & 0x07)
+            self.bus.write_byte_data(self.MPU9250_ADDR, self.PWR_MGMT_1, new_mode)
+            time.sleep(0.01)
+            return True
+            
+        except Exception:
+            print(f"Error setting power mode: {mode}")
+            return False
 
 class SensorFusion:
     def __init__(self, mpu_instance, compass_instance):
@@ -698,9 +802,8 @@ class SensorFusion:
         self.compass = compass_instance
         self.update_thread = None
         self.running = False
-        self.update_interval = 0.01
+        self.update_interval = 0.013
         self.compass_update_counter = 0
-        self.compass_update_divisor = 5
     
     def update_loop(self):
         self.running = True
@@ -709,14 +812,8 @@ class SensorFusion:
         while self.running:
             try:
                 self.mpu.read_all_sensors()
-                
-                self.compass_update_counter += 1
-                if self.compass_update_counter >= self.compass_update_divisor:
-                    self.compass_update_counter = 0
-                    heading = self.compass.get_heading()                
-                failure_count = 0
+                self.compass.get_heading()                
                 time.sleep(self.update_interval)
-                
             except Exception:
                 failure_count += 1
                 

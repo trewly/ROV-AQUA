@@ -105,7 +105,7 @@ def record_and_send(server_ip=DEFAULT_SERVER_IP, server_port=DEFAULT_SERVER_PORT
         return send_file(server_ip, server_port, file_path)
     return False
 
-command = ("libcamera-vid -t 0 --width 960 --height 540 --framerate 24 --libav-format h264 --profile baseline --inline --bitrate 1500000 -o - | gst-launch-1.0 fdsrc ! h264parse config-interval = 1 ! mpegtsmux ! udpsink host=169.254.54.121 port=5000 sync=False async=False")
+command = ("libcamera-vid -t 0 --width 960 --height 540 --framerate 30 --libav-format h264 --profile baseline --inline --bitrate 3000000 -o - | gst-launch-1.0 fdsrc ! h264parse config-interval = 1 ! mpegtsmux ! udpsink host=169.254.54.121 port=5000 sync=False async=False")
 
 def is_network_reachable(host=DEFAULT_SERVER_IP):
     try:

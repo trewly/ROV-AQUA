@@ -20,11 +20,9 @@ class MotorSlider(QWidget):
         self.setFixedSize(700, 180)
         self.setStyleSheet("background-color: #395B64;")
 
-        # Layout chính
         main_layout = QVBoxLayout()
         main_layout.setSpacing(20)
 
-        # Tạo layout con cho xy và z
         self.xy_speed_widget = QWidget()
         self.z_speed_widget = QWidget()
 
@@ -42,33 +40,27 @@ class MotorSlider(QWidget):
         self.setLayout(main_layout)
 
     def xy_speed_set(self):
-        # Label
         self.label1 = QLabel("Motor xy: 50/50")
         self.label1.setStyleSheet(st.normal_text_info_style)
 
-        # Sliders
         self.motorxy_forward = QSlider(Qt.Horizontal)
         self.motorxy_backward = QSlider(Qt.Horizontal)
         self.setup_slider(self.motorxy_forward, self.update_label1)
         self.setup_slider(self.motorxy_backward, self.update_label1)
 
-        # Add to layout
         self.xy_layout.addWidget(self.label1, 0, 0)
         self.xy_layout.addWidget(self.motorxy_forward, 0, 1)
         self.xy_layout.addWidget(self.motorxy_backward, 1, 1)
 
     def z_speed_set(self):
-        # Label
-        self.label2 = QLabel("Motor z: 50/50")
+        self.label2 = QLabel("Motor z: 50/100")
         self.label2.setStyleSheet(st.normal_text_info_style)
 
-        # Sliders
         self.motorz_forward = QSlider(Qt.Horizontal)
         self.motorz_backward = QSlider(Qt.Horizontal)
         self.setup_slider(self.motorz_forward, self.update_label2)
         self.setup_slider(self.motorz_backward, self.update_label2)
 
-        # Add to layout
         self.z_layout.addWidget(self.label2, 0, 0)
         self.z_layout.addWidget(self.motorz_forward, 0, 1)
         self.z_layout.addWidget(self.motorz_backward, 1, 1)
