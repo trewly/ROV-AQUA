@@ -17,7 +17,7 @@ def setup_logger(logger_name='MavlinkController', log_subdir="../logs"):
     log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), log_subdir))
     os.makedirs(log_dir, exist_ok=True)
     
-    current_date = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    current_date = datetime.now().strftime("%Y-%m-%d-%H")
     log_file = os.path.join(log_dir, f"mavlink_{current_date}.log")
     
     global LOG_FILE
@@ -26,7 +26,7 @@ def setup_logger(logger_name='MavlinkController', log_subdir="../logs"):
     logger = logging.getLogger(logger_name)
     
     if logger.handlers:
-        logger.handlers.clear()
+        return logger
     
     logger.setLevel(logging.INFO)
     
@@ -82,6 +82,8 @@ class MavCommands:
     SET_CAMERA = 1111
 
     START_MAG_CALIBRATION = 1200
+    START_CAMERA_STREAM = 1201
+
 
 class MavlinkController:
     def __init__(self, raspi_ip="169.254.54.120", send_port=5000, receive_port=5001, 
@@ -340,6 +342,10 @@ class MavlinkController:
     def start_mag_calibration(self):
         logger.info("Starting magnetometer calibration")
         return self.send_command(MavCommands.START_MAG_CALIBRATION)
+    
+    def start_camera_stream(self):
+        logger.info("Starting camera")
+        return self.send_command(MavCommands.START_CAMERA_STREAM)
 
     def get_status(self, status_id):
         try:

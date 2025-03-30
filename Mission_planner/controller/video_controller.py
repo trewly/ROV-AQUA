@@ -9,6 +9,8 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QMe
 from PyQt5.QtGui import QWindow
 from PyQt5.QtCore import QTimer, Qt, pyqtSignal, QObject
 
+from Mission_planner.communication.pc_mavlink import MAV
+
 class ProcessMonitor(QObject):
     error_signal = pyqtSignal(str)
     
@@ -111,7 +113,7 @@ class VideoReceiver(QWidget):
             
             print(f"GStreamer process started with PID: {self.gst_process.pid}")
             self.status_label.setText(f"GStreamer started with PID: {self.gst_process.pid}")
-            
+            MAV.start_camera_stream()
             self.process_monitor = ProcessMonitor(self.gst_process)
             self.process_monitor.error_signal.connect(self.handle_gstreamer_error)
             

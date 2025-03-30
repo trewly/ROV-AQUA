@@ -1,9 +1,9 @@
 import sys
 import os
+
 from PyQt5.QtWidgets import QApplication, QWidget, QSplashScreen, QDialog
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtGui import QFont, QPalette, QColor
-import time
 from PyQt5.QtCore import QTimer
 
 from layout import screen3d_layout
@@ -37,7 +37,7 @@ class MainWindow(QWidget):
         self.right_up_screen_init()
 
     def left_up_screen_init(self):
-        self.lup_screen = screen3d_layout.STLViewerWidget(STL_PATH,self.status_manager)
+        self.lup_screen = screen3d_layout.STLViewerWidget(STL_PATH, self.status_manager)
         self.lup_screen.setParent(self)
         self.lup_screen.setGeometry(12, 15,860,398)  
 

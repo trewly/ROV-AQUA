@@ -62,7 +62,7 @@ threads_status = {
 
 def monitor_threads():
     global threads_status
-    
+
     while running:
         try:
             if threads_status["sensors"] and hasattr(sensor.mpu, "update_thread") and sensor.mpu.update_thread:

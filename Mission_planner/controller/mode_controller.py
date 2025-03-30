@@ -1,7 +1,6 @@
 from PyQt5.QtWidgets import QDialog, QRadioButton, QButtonGroup, QLabel, QSpinBox, QPushButton, QMessageBox
 from PyQt5.QtCore import QRect
 from PyQt5.QtGui import QFont, QPalette, QColor
-from Mission_planner.communication.pc_mavlink import MAV
 
 import os
 import sys
@@ -9,6 +8,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from Mission_planner.layout.resources import style as st
+from Mission_planner.communication.pc_mavlink import MAV
 
 class ModeChangeDialog(QDialog):
     current_mode = "Manual"
@@ -21,7 +21,6 @@ class ModeChangeDialog(QDialog):
         self.setFixedSize(300, 250)
         
         self._setup_ui()
-        self._setup_connections()
         self.load_current_mode()
         
         palette = self.palette()
@@ -78,7 +77,7 @@ class ModeChangeDialog(QDialog):
         self.change_button.setGeometry(QRect(100, 210, 100, 33))
         self.change_button.setStyleSheet(st.control_button_style)
     
-    def _setup_connections(self):
+
         self.auto_heading_mode.toggled.connect(self.toggle_heading_input)
         self.auto_depth_mode.toggled.connect(self.toggle_depth_input)
         self.change_button.clicked.connect(self.confirm_change)
