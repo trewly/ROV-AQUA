@@ -15,19 +15,20 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 from Autopilot.system_info.status import raspi_status as status
 from Autopilot.system_info.sensor import raspi_sensor_calibrate as calibrate
 from Autopilot.controller.motor import raspi_motor_control as rov
+from Autopilot.controller.camera import raspi_camera as camera
 
 def setup_logger(name="MAVLink", log_subdir="../logs"):
     log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), log_subdir))
     os.makedirs(log_dir, exist_ok=True)
     
-    current_date = datetime.now().strftime("%Y-%m-%d")
+    current_date = datetime.now().strftime("%Y-%m-%d-%H")
     log_file = os.path.join(log_dir, f"mavlink_raspi_{current_date}.log")
     
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
     
     if logger.handlers:
-        logger.handlers.clear()
+        return
     
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
@@ -85,10 +86,9 @@ class MavCommand(IntEnum):
     SET_CAMERA = 1111
 
     START_MAG_CALIBRATION = 1200
-
+    START_CAMERA_STREAM = 1201
 
 class MavlinkController:
-
     def __init__(self, receive_port=5000, send_ip="169.254.54.121", send_port=5001):
         global logger
         
@@ -173,10 +173,10 @@ class MavlinkController:
             status.update_status(key="max_speed_forward", value=msg.param1)
             
         elif command == MavCommand.SET_SPEED_BACKWARD:
-            status.update_status(key="max_speed_backward", value=msg.param1)
+            status.update_status(key="max_speed_backward", value=-msg.param1)
             
         elif command == MavCommand.SET_SPEED_DIVE:
-            status.update_status(key="max_speed_dive", value=msg.param1)
+            status.update_status(key="max_speed_dive", value=-msg.param1)
             
         elif command == MavCommand.SET_SPEED_SURFACE:
             status.update_status(key="max_speed_surface", value=msg.param1)
@@ -222,7 +222,9 @@ class MavlinkController:
             except Exception as e:
                 logger.error(f"Failed to send calibration status: {e}")
 
-    
+        elif command == MavCommand.START_CAMERA_STREAM:
+            camera.start_stream()
+
     def handle_received_msg(self, msg) -> None:
         if msg is None:
             return
