@@ -6,11 +6,11 @@ import sys
 import os
 import time
 
-# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
 from Mission_planner.layout.resources.style import control_button_style
 
-from Mission_planner.layout.sub_widgets import motor_slider
+from Mission_planner.layout.contents.motor_slider import MotorSlider
 from Mission_planner.controller.video_controller import VideoReceiver
 from Mission_planner.controller.mode_controller import ModeChangeDialog
 from Mission_planner.controller.joystick_controller import VirtualJoystick
@@ -92,7 +92,7 @@ class ControlWidget(QWidget):
         buttons_layout.addWidget(self.roll_left_button)
         buttons_layout.addWidget(self.mode_change_button)
 
-        self.motoSlider = motor_slider.MotorSlider()
+        self.motoSlider = MotorSlider()
         self.motoSlider.setParent(self)
         self.motoSlider.setGeometry(280, 600, 755, 180)
         

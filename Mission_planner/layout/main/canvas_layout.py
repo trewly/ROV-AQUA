@@ -1,4 +1,5 @@
 import os
+import sys
 import math
 import time
 
@@ -6,13 +7,15 @@ from PyQt5.QtWidgets import QLabel,QApplication, QWidget, QVBoxLayout, QGraphics
 from PyQt5.QtGui import QPen, QColor, QFont, QFontDatabase, QPixmap, QTransform
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))) 
+
 from Mission_planner.layout.resources.style import canvas_button_style
 from Mission_planner.status import pc_status as status
-from Mission_planner.communication.system_update_timer import SystemStatusManager
+from Mission_planner.connection.system_update_timer import SystemStatusManager
 from Mission_planner.status.log_viewer import LogViewer
 from Mission_planner.status.state_graph import AttitudePlotter
 
-FONT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+FONT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                     "resources", "Orbitron", "static", "Orbitron-Regular.ttf")
 
 class ROVSimulationThread(QThread):
