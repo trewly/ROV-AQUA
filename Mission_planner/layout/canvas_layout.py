@@ -1,25 +1,22 @@
-from PyQt5.QtWidgets import QLabel,QApplication, QWidget, QVBoxLayout, QGraphicsView, QGraphicsScene, QPushButton, QMenu, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsPixmapItem
-from PyQt5.QtGui import QPen, QColor, QFont, QFontDatabase, QPixmap, QTransform
-from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
-
-import sys
 import os
 import math
 import time
 
-FONT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                       "layout", "resources", "Orbitron", "static", "Orbitron-Regular.ttf")
+from PyQt5.QtWidgets import QLabel,QApplication, QWidget, QVBoxLayout, QGraphicsView, QGraphicsScene, QPushButton, QMenu, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsPixmapItem
+from PyQt5.QtGui import QPen, QColor, QFont, QFontDatabase, QPixmap, QTransform
+from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
-from resources.style import canvas_button_style
+from Mission_planner.layout.resources.style import canvas_button_style
 from Mission_planner.status import pc_status as status
 from Mission_planner.communication.system_update_timer import SystemStatusManager
 from Mission_planner.status.log_viewer import LogViewer
 from Mission_planner.status.state_graph import AttitudePlotter
 
-#test gia lap
+FONT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                    "resources", "Orbitron", "static", "Orbitron-Regular.ttf")
+
 class ROVSimulationThread(QThread):
-    update_position = pyqtSignal(float, float, float)  # Tín hiệu gửi tọa độ mới và góc yaw
+    update_position = pyqtSignal(float, float, float)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -63,12 +60,12 @@ class CanvasWidget(QWidget):
         #some info
         self.depth_info = 0
         self.temp_info = 0
-
+        self.myfont = None
         #font setup
-        font_id = QFontDatabase.addApplicationFont("./layout/resources/Orbitron/static/Orbitron-Regular.ttf")
-        if font_id != -1:  # Kiểm tra nếu thêm thành công
+        font_id = QFontDatabase.addApplicationFont(FONT_PATH)
+        if font_id != -1:
             font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
-            self.font = QFont(font_family, 10, QFont.Bold)
+            self.myfont = QFont(font_family, 10, QFont.Bold)
         else:
             print("Không thể tải font!")
 
@@ -150,7 +147,7 @@ class CanvasWidget(QWidget):
     def vehicle_status_init(self):
         # status text
         self.statusLabel = QLabel("Vehicle unconnected", self)
-        self.statusLabel.setFont(self.font)
+        self.statusLabel.setFont(self.myfont)
         self.statusLabel.setStyleSheet("color: #395B64;")
         self.statusLabel.move(625,18)  
         
@@ -169,7 +166,7 @@ class CanvasWidget(QWidget):
 
     def system_info_init(self):
         self.infoLabel = QLabel(f"Depth: {self.depth_info}   Temp: {self.temp_info}" , self)
-        self.infoLabel.setFont(self.font)
+        self.infoLabel.setFont(self.myfont)
         self.infoLabel.setStyleSheet("color: #395B64; font-size: 22px;")
         self.infoLabel.move(15, 510)
 
