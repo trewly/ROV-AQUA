@@ -5,17 +5,16 @@ from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 import sys
 import os
 import time
-from functools import partial
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from resources.style import control_button_style
+from Mission_planner.layout.resources.style import control_button_style
 
-from layout.sub_widgets import motor_slider
-from controller.video_controller import VideoReceiver
-from controller.mode_controller import ModeChangeDialog
-from controller.joystick_controller import VirtualJoystick
-from controller.button_controller import ButtonController
+from Mission_planner.layout.sub_widgets import motor_slider
+from Mission_planner.controller.video_controller import VideoReceiver
+from Mission_planner.controller.mode_controller import ModeChangeDialog
+from Mission_planner.controller.joystick_controller import VirtualJoystick
+from Mission_planner.controller.button_controller import ButtonController
 
 class ControlButton(QPushButton):
     def __init__(self, text, parent=None):
