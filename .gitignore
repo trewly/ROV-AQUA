@@ -8,3 +8,4 @@ venv/
 build/
 venv/
 *.mp4
+test_widget
