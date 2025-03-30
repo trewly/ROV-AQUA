@@ -4,47 +4,301 @@ import math
 import threading
 import sys
 import os
-import logging
+import numpy as np
 from datetime import datetime
-from logging.handlers import TimedRotatingFileHandler
 
 from Autopilot.system_info.status import raspi_status as status
 from Autopilot.controller.utils.raspi_Filter import KalmanFilter, low_pass_filter
 
-def setup_sensor_logger(name="MPU9250", log_subdir="../logs"):
-    log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), log_subdir))
-    os.makedirs(log_dir, exist_ok=True)
+class HMC5883L:
+    HMC5883L_ADDR = 0x1E
     
-    current_date = datetime.now().strftime("%Y-%m-%d")
-    log_file = os.path.join(log_dir, f"sensor_{current_date}.log")
+    CONFIG_A = 0x00
+    CONFIG_B = 0x01
+    MODE = 0x02
+    DATA_OUT_X_MSB = 0x03
+    DATA_OUT_X_LSB = 0x04
+    DATA_OUT_Z_MSB = 0x05
+    DATA_OUT_Z_LSB = 0x06
+    DATA_OUT_Y_MSB = 0x07
+    DATA_OUT_Y_LSB = 0x08
+    STATUS_REG = 0x09
+    ID_REG_A = 0x0A
+    ID_REG_B = 0x0B
+    ID_REG_C = 0x0C
     
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    SAMPLE_RATE_0_75HZ = 0x00
+    SAMPLE_RATE_1_5HZ = 0x04
+    SAMPLE_RATE_3HZ = 0x08
+    SAMPLE_RATE_7_5HZ = 0x0C
+    SAMPLE_RATE_15HZ = 0x10
+    SAMPLE_RATE_30HZ = 0x14
+    SAMPLE_RATE_75HZ = 0x18
     
-    if logger.handlers:
-        logger.handlers.clear()
+    MEASUREMENT_NORMAL = 0x00
+    MEASUREMENT_POS_BIAS = 0x01
+    MEASUREMENT_NEG_BIAS = 0x02
     
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    console_handler.setFormatter(console_formatter)
-    logger.addHandler(console_handler)
+    GAIN_1370 = 0x00
+    GAIN_1090 = 0x20
+    GAIN_820 = 0x40
+    GAIN_660 = 0x60
+    GAIN_440 = 0x80
+    GAIN_390 = 0xA0
+    GAIN_330 = 0xC0
+    GAIN_230 = 0xE0
     
-    file_handler = TimedRotatingFileHandler(
-        log_file, 
-        when='midnight',
-        interval=1,
-        backupCount=30
-    )
-    file_handler.setLevel(logging.INFO)
-    file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')  # Fixed 'levellevel' to 'levelname'
-    file_handler.setFormatter(file_formatter)
-    file_handler.suffix = "%Y-%m-%d"
-    logger.addHandler(file_handler)
+    MODE_CONTINUOUS = 0x00
+    MODE_SINGLE = 0x01
+    MODE_IDLE = 0x02
+    MODE_SLEEP = 0x03
     
-    logger.propagate = False
+    STATUS_RDY = 0x01
+    STATUS_LOCK = 0x02
     
-    return logger
+    GAIN_SCALE = {
+        GAIN_1370: 0.73,
+        GAIN_1090: 0.92,
+        GAIN_820: 1.22,
+        GAIN_660: 1.52,
+        GAIN_440: 2.27,
+        GAIN_390: 2.56,
+        GAIN_330: 3.03,
+        GAIN_230: 4.35
+    }
+    
+    DEFAULT_SAMPLE_RATE = SAMPLE_RATE_75HZ
+    DEFAULT_MEASUREMENT_MODE = MEASUREMENT_NORMAL
+    GAIN_HIGH = GAIN_1370
+    DEFAULT_MODE = MODE_CONTINUOUS
+    
+    def __init__(self, bus_num=1):
+        self.bus = smbus.SMBus(bus_num)
+        self.is_initialized = False
+        self.m_bias = np.array([0.0, 0.0, 0.0], dtype=float)
+        self.m_scale = np.array([1.0, 1.0, 1.0], dtype=float)
+        self.current_heading = 0.0
+        self.declination = 0.0
+        self.current_gain = self.GAIN_HIGH
+        
+        self.update_thread = None
+        self.running = False
+        
+    def initialize(self):
+        try:
+            config_a_value = self.DEFAULT_SAMPLE_RATE | self.DEFAULT_MEASUREMENT_MODE
+            self.bus.write_byte_data(self.HMC5883L_ADDR, self.CONFIG_A, config_a_value)
+            
+            self.bus.write_byte_data(self.HMC5883L_ADDR, self.CONFIG_B, self.GAIN_HIGH)
+            self.current_gain = self.GAIN_HIGH
+            
+            self.bus.write_byte_data(self.HMC5883L_ADDR, self.MODE, self.DEFAULT_MODE)
+            
+            time.sleep(0.1)
+            
+            self.is_initialized = True
+            return True
+
+        except Exception:
+            print("Error initializing HMC5883L")
+            self.is_initialized = False
+            return False
+    
+    def read_status(self):
+        try:
+            self.bus.write_byte(self.HMC5883L_ADDR, self.STATUS_REG)
+            return self.bus.read_byte(self.HMC5883L_ADDR)
+        except Exception:
+            print("Error reading status register")
+            return 0    
+        
+    def set_gain(self, gain_setting):
+        try:
+            if gain_setting not in self.GAIN_SCALE:
+                return False
+                
+            self.bus.write_byte_data(self.HMC5883L_ADDR, self.CONFIG_B, gain_setting)
+            self.current_gain = gain_setting
+            time.sleep(0.01)
+            
+            return True
+            
+        except Exception:
+            print(f"Error setting gain: {gain_setting}")
+            return False
+    
+    def set_sample_rate(self, sample_rate):
+        try:
+            current_config = self.bus.read_byte_data(self.HMC5883L_ADDR, self.CONFIG_A)
+            measurement_mode = current_config & 0x03
+            
+            config_a_value = sample_rate | measurement_mode
+            self.bus.write_byte_data(self.HMC5883L_ADDR, self.CONFIG_A, config_a_value)
+            
+            return True
+            
+        except Exception:
+            print(f"Error setting sample rate: {sample_rate}")
+            return False
+    
+    def set_measurement_mode(self, mode):
+        try:
+            current_config = self.bus.read_byte_data(self.HMC5883L_ADDR, self.CONFIG_A)
+            sample_rate = current_config & 0x1C
+            
+            config_a_value = sample_rate | mode
+            self.bus.write_byte_data(self.HMC5883L_ADDR, self.CONFIG_A, config_a_value)
+            
+            return True
+            
+        except Exception:
+            print(f"Error setting measurement mode: {mode}")
+            return False
+    
+    def set_operating_mode(self, mode):
+        try:
+            self.bus.write_byte_data(self.HMC5883L_ADDR, self.MODE, mode)
+            
+            return True
+            
+        except Exception:
+            print(f"Error setting operating mode: {mode}")
+            return False
+    
+    def read_mag_data(self):
+        try:
+            if not self.is_initialized:
+                if not self.initialize():
+                    return np.array([0.0, 0.0, 0.0])
+            
+            self.bus.write_byte(self.HMC5883L_ADDR, self.DATA_OUT_X_MSB)
+            
+            data = []
+            for _ in range(6):
+                data.append(self.bus.read_byte(self.HMC5883L_ADDR))
+            
+            x = (data[0] << 8) | data[1]
+            z = (data[2] << 8) | data[3]
+            y = (data[4] << 8) | data[5]
+            
+            x = x - 65536 if x > 32767 else x
+            y = y - 65536 if y > 32767 else y
+            z = z - 65536 if z > 32767 else z
+            
+            return np.array([x, y, z], dtype=float)
+
+        except Exception:
+            print("Error reading magnetometer data")
+            if self.is_initialized:
+                self.is_initialized = False
+                try:
+                    self.initialize()
+                except:
+                    pass
+                    
+            return np.array([0.0, 0.0, 0.0])
+    
+    def get_heading(self):
+        mag = self.read_mag_data()
+        if np.all(mag == 0):
+            return self.current_heading
+                
+        mag_corrected = (mag - self.m_bias) * self.m_scale
+            
+        heading = math.atan2(mag_corrected[1], mag_corrected[0])
+            
+        heading += math.radians(self.declination)
+            
+        if heading < 0:
+            heading += 2 * math.pi
+        if heading > 2 * math.pi:
+            heading -= 2 * math.pi
+            
+        heading_degrees = math.degrees(heading)
+            
+        self.current_heading = heading_degrees
+        status.update_status(key="heading", value=heading_degrees)
+            
+        return heading_degrees
+            
+    def calibrate(self, sample_count=1500):
+        print("Calibrating HMC5883L...")
+        mag_min = np.array([999999, 999999, 999999], dtype=float)
+        mag_max = np.array([-999999, -999999, -999999], dtype=float)
+        
+        start_time = time.time()
+        samples_collected = 0
+        
+        while samples_collected < sample_count:
+            try:
+                mag = self.read_mag_data()
+                if not np.all(mag == 0):
+                    mag_min = np.minimum(mag_min, mag)
+                    mag_max = np.maximum(mag_max, mag)
+                    samples_collected += 1
+                time.sleep(0.01)
+                
+            except Exception:
+                time.sleep(0.1)
+                
+            if time.time() - start_time > 60:
+                break
+        
+        print(f"Calibration completed with {samples_collected} samples.")
+        if samples_collected > 0:
+            self.m_bias = (mag_max + mag_min) / 2
+            scale_factors = (mag_max - mag_min) / 2
+            avg_radius = np.mean(scale_factors)
+            self.m_scale = avg_radius / scale_factors
+            
+            self.m_scale = np.nan_to_num(self.m_scale, nan=1.0)
+            
+            return True
+        else:
+            return False
+    
+    def update_loop(self, update_interval=0.05):
+        self.running = True
+        failure_count = 0
+        
+        while self.running:
+            try:
+                heading = self.get_heading()
+                status.update_status(key="heading", value=heading)
+                failure_count = 0
+                time.sleep(update_interval)
+            except Exception:
+                failure_count += 1
+                
+                backoff_time = min(5, 0.1 * (2 ** min(failure_count, 5)))
+                time.sleep(backoff_time)
+                
+                if failure_count % 10 == 0:
+                    try:
+                        self.initialize()
+                    except:
+                        pass
+                        
+    def start_update(self):
+        if not self.is_initialized:
+            if not self.initialize():
+                return False
+        
+        if self.update_thread is None or not self.update_thread.is_alive():
+            self.update_thread = threading.Thread(target=self.update_loop, daemon=True)
+            self.update_thread.start()
+            return True
+        return False
+    
+    def stop_update(self):
+        self.running = False
+        
+        if self.update_thread and self.update_thread.is_alive():
+            self.update_thread.join(timeout=1.0)
+            success = not self.update_thread.is_alive()
+            return success
+        return True
+    
 
 class MPU9250:
     G = 9.80665
@@ -92,11 +346,6 @@ class MPU9250:
     VELOCITY_RESET_THRESHOLD = 100
     
     def __init__(self, bus_num=1):
-        self.logger = setup_sensor_logger()
-        self.logger.info("=" * 50)
-        self.logger.info("MPU9250 sensor initialization started")
-        self.logger.info("=" * 50)
-        
         self.bus = smbus.SMBus(bus_num)
         self.is_initialized = False
         
@@ -120,9 +369,7 @@ class MPU9250:
         self.running = False
         
     def initialize(self):
-        try:
-            self.logger.info("Initializing MPU9250 sensor...")
-            
+        try:            
             self.bus.write_byte_data(self.MPU9250_ADDR, self.PWR_MGMT_1, 0x80)
             time.sleep(0.1)
             
@@ -143,7 +390,6 @@ class MPU9250:
             
             who_am_i = self.bus.read_byte_data(self.MPU9250_ADDR, self.WHO_AM_I)
             if who_am_i == 0x71 or who_am_i == 0x73:  
-                self.logger.info(f"MPU9250/MPU9255 detected (0x{who_am_i:02X})")
                 
                 ax, ay, az = self.read_accel_data()
                 pitch, roll = self.calculate_pitch_roll(ax, ay, az)
@@ -160,15 +406,12 @@ class MPU9250:
                 
                 temp = self.read_temp_data()
                 
-                self.logger.info(f"Sensors initialized. Initial values: Pitch={pitch:.2f}°, Roll={roll:.2f}°, Temp={temp:.1f}°C")
                 self.is_initialized = True
                 return True
             else:
-                self.logger.error(f"Unknown device ID: 0x{who_am_i:02X}")
                 return False
                 
-        except Exception as e:
-            self.logger.error(f"Error initializing MPU9250: {e}")
+        except Exception:
             self.is_initialized = False
             return False
             
@@ -178,8 +421,7 @@ class MPU9250:
             if who_am_i == 0x71 or who_am_i == 0x73:
                 return True
             return False
-        except Exception as e:
-            self.logger.warning(f"Connection check failed: {e}")
+        except Exception:
             return False
             
     def read_word(self, register):
@@ -196,15 +438,13 @@ class MPU9250:
                 value -= 0x10000
                 
             return value
-        except Exception as e:
-            if "I/O" in str(e) and self.is_initialized:
-                self.logger.error("Sensor disconnected, trying to reinitialize...")
+        except Exception:
+            if self.is_initialized:
                 self.is_initialized = False
                 try:
                     self.initialize()
                 except:
-                    self.logger.error("Failed to reinitialize sensor")
-            self.logger.error(f"Error reading from MPU: {e}")
+                    pass
             return 0
             
     def read_temp_data(self):
@@ -213,8 +453,7 @@ class MPU9250:
             temp = (temp / 340) + 36.53
             status.update_status(key="temp", value=temp)
             return temp
-        except Exception as e:
-            self.logger.error(f"Error reading temperature: {e}")
+        except Exception:
             last_temp = status.read_status(key="temp", default=25.0)
             return last_temp
         
@@ -224,8 +463,7 @@ class MPU9250:
             gyro_y = self.read_word(self.GYRO_YOUT_H) / self.GYRO_SCALE
             gyro_z = self.read_word(self.GYRO_ZOUT_H) / self.GYRO_SCALE
             return gyro_x, gyro_y, gyro_z
-        except Exception as e:
-            self.logger.error(f"Error reading gyro data: {e}")
+        except Exception:
             return 0.0, 0.0, 0.0
         
     def read_accel_data(self):
@@ -234,8 +472,7 @@ class MPU9250:
             accel_y = self.read_word(self.ACCEL_YOUT_H) / self.ACCEL_SCALE
             accel_z = self.read_word(self.ACCEL_ZOUT_H) / self.ACCEL_SCALE
             return accel_x, accel_y, accel_z
-        except Exception as e:
-            self.logger.error(f"Error reading accelerometer data: {e}")
+        except Exception:
             return 0.0, 0.0, 1.0
         
     def read_accel_gyro_data(self):
@@ -262,8 +499,7 @@ class MPU9250:
             pitch = math.atan2(ay, math.sqrt(ax**2 + az**2)) * (180 / math.pi)
             roll = math.atan2(-ax, math.sqrt(ay**2 + az**2)) * (180 / math.pi)
             return pitch, roll
-        except Exception as e:
-            self.logger.error(f"Error calculating pitch/roll: {e}")
+        except Exception:
             return 0, 0
             
     def calculate_velocity(self):
@@ -307,7 +543,6 @@ class MPU9250:
                 self.current_velocity_x *= 0.5
                 self.current_velocity_y *= 0.5
                 self.current_velocity_z *= 0.5
-                self.logger.debug("Velocity reset applied to reduce drift")
             
             status.update_status(key="velocity_x", value=self.current_velocity_x)
             status.update_status(key="velocity_y", value=self.current_velocity_y)
@@ -319,8 +554,7 @@ class MPU9250:
             
             return self.current_velocity_x, self.current_velocity_y, self.current_velocity_z
         
-        except Exception as e:
-            self.logger.error(f"Error calculating velocity: {e}")
+        except Exception:
             return self.current_velocity_x, self.current_velocity_y, self.current_velocity_z
             
     def get_velocity(self):
@@ -344,15 +578,13 @@ class MPU9250:
             
             return self.current_pitch, self.current_roll
             
-        except Exception as e:
-            self.logger.error(f"Error in get_orientation: {e}")
+        except Exception:
             return self.current_pitch, self.current_roll
             
     def read_all_sensors(self):
         try:
             if not self.is_initialized:
                 if not self.initialize():
-                    self.logger.error("Could not initialize sensors, using fallback values")
                     default_data = {
                         "pitch": 0.0,
                         "roll": 0.0,
@@ -371,16 +603,14 @@ class MPU9250:
             
             try:
                 pitch, roll = self.get_orientation()
-            except Exception as e:
-                self.logger.error(f"Failed to get orientation: {e}")
+            except Exception:
                 pitch = status.read_status(key="pitch", default=0.0)
                 roll = status.read_status(key="roll", default=0.0)
             
             try:
                 vx, vy, vz = self.calculate_velocity()
                 horizontal_velocity = math.sqrt(vx**2 + vy**2)
-            except Exception as e:
-                self.logger.error(f"Failed to calculate velocity: {e}")
+            except Exception:
                 vx = status.read_status(key="velocity_x", default=0.0)
                 vy = status.read_status(key="velocity_y", default=0.0)
                 vz = status.read_status(key="velocity_z", default=0.0)
@@ -388,8 +618,7 @@ class MPU9250:
             
             try:
                 temp = self.read_temp_data()
-            except Exception as e:
-                self.logger.error(f"Failed to read temperature: {e}")
+            except Exception:
                 temp = status.read_status(key="temp", default=25.0)
             
             sensor_data = {
@@ -408,8 +637,7 @@ class MPU9250:
             
             return sensor_data
             
-        except Exception as e:
-            self.logger.error(f"Critical error in read_all_sensors: {e}")
+        except Exception:
             default_data = {
                 "pitch": status.read_status(key="pitch", default=0.0),
                 "roll": status.read_status(key="roll", default=0.0),
@@ -423,7 +651,6 @@ class MPU9250:
             return default_data
     
     def update_loop(self, update_interval=0.01):
-        self.logger.info("Sensor update thread started")
         self.running = True
         failure_count = 0
         
@@ -432,79 +659,134 @@ class MPU9250:
                 self.read_all_sensors()
                 failure_count = 0
                 time.sleep(update_interval)
-            except Exception as e:
+            except Exception:
                 failure_count += 1
-                self.logger.error(f"Error in sensor update loop: {e}")
                 
                 backoff_time = min(30, 0.1 * (2 ** min(failure_count, 8)))
-                self.logger.warning(f"Backing off for {backoff_time:.2f} seconds before retry")
                 time.sleep(backoff_time)
                 
                 if failure_count % 10 == 0:
-                    self.logger.info("Attempting sensor recovery")
                     try:
                         self.initialize()
-                    except Exception as recovery_e:
-                        self.logger.error(f"Recovery failed: {recovery_e}")
-                        
-        self.logger.info("Sensor update thread terminated")
-            
+                    except:
+                        pass
+                                    
     def start_update(self):
         if not self.is_initialized:
             if not self.initialize():
-                self.logger.error("Failed to initialize sensors, update thread not started")
                 return False
         
         if self.update_thread is None or not self.update_thread.is_alive():
             self.update_thread = threading.Thread(target=self.update_loop, daemon=True)
             self.update_thread.start()
-            self.logger.info("Sensor update thread started")
             return True
         return False
         
     def stop_update(self):
         self.running = False
-        self.logger.info("Stopping sensor update thread...")
         
         if self.update_thread and self.update_thread.is_alive():
             self.update_thread.join(timeout=1.0)
             success = not self.update_thread.is_alive()
-            if success:
-                self.logger.info("Sensor update thread stopped successfully")
-            else:
-                self.logger.warning("Sensor update thread did not terminate within timeout")
             return success
         return True
+
+
+class SensorFusion:
+    def __init__(self, mpu_instance, compass_instance):
+        self.mpu = mpu_instance
+        self.compass = compass_instance
+        self.update_thread = None
+        self.running = False
+        self.update_interval = 0.01
+        self.compass_update_counter = 0
+        self.compass_update_divisor = 5
+    
+    def update_loop(self):
+        self.running = True
+        failure_count = 0
         
-    def run_test(self, duration=10):
-        self.logger.info(f"Starting sensor test for {duration} seconds...")
+        while self.running:
+            try:
+                self.mpu.read_all_sensors()
+                
+                self.compass_update_counter += 1
+                if self.compass_update_counter >= self.compass_update_divisor:
+                    self.compass_update_counter = 0
+                    heading = self.compass.get_heading()                
+                failure_count = 0
+                time.sleep(self.update_interval)
+                
+            except Exception:
+                failure_count += 1
+                
+                backoff_time = min(5, 0.1 * (2 ** min(failure_count, 5)))
+                time.sleep(backoff_time)
+                
+                if failure_count % 10 == 0:
+                    try:
+                        self.mpu.initialize()
+                        self.compass.initialize()
+                    except:
+                        pass
+    
+    def start_update(self):
+        mpu_init_success = self.mpu.initialize()
+        compass_init_success = self.compass.initialize()
         
-        if not self.is_initialized:
-            self.initialize()
+        if not (mpu_init_success or compass_init_success):
+            return False
             
-        start_time = time.time()
+        if self.update_thread is None or not self.update_thread.is_alive():
+            self.update_thread = threading.Thread(target=self.update_loop, daemon=True)
+            self.update_thread.start()
+            return True
+        return False
+    
+    def stop_update(self):
+        self.running = False
         
-        while time.time() - start_time < duration:
-            data = self.read_all_sensors()
-            
-            if data:
-                self.logger.info(f"Pitch: {data['pitch']:.2f}°, Roll: {data['roll']:.2f}°, Temp: {data['temp']:.1f}°C")
-                self.logger.info(f"Velocity: X={data['velocity_x']:.2f} m/s, Y={data['velocity_y']:.2f} m/s, Z={data['velocity_z']:.2f} m/s")
-                self.logger.info(f"Horizontal Velocity: {data['horizontal_velocity']:.2f} m/s")
-            
-            time.sleep(0.1)
-        
-        self.logger.info("Sensor test completed.")
+        if self.update_thread and self.update_thread.is_alive():
+            self.update_thread.join(timeout=1.0)
+            return not self.update_thread.is_alive()
+        return True
 
 mpu = MPU9250()
+compass = HMC5883L()
+
+sensor_fusion = SensorFusion(mpu, compass)
 
 def initialize_sensors():
-    mpu.initialize()
-    mpu.start_update()
+    return sensor_fusion.start_update()
 
 def stop_sensors():
-    mpu.stop_update()
+    return sensor_fusion.stop_update()
 
+def read_all_sensors_with_heading():
+    sensor_data = mpu.read_all_sensors()
+    sensor_data["heading"] = compass.current_heading
+    return sensor_data
 
 if __name__ == "__main__":
-    mpu.run_test()
+    initialize_sensors()
+    
+    try:
+        compass.calibrate()
+    except KeyboardInterrupt:
+        print("Calibration interrupted")
+    
+    print("Starting sensor reading loop. Press CTRL+C to exit.")
+    try:
+        for _ in range(100):
+            sensor_data = read_all_sensors_with_heading()
+            
+            print(f"Pitch: {sensor_data['pitch']:.1f}°, Roll: {sensor_data['roll']:.1f}°")
+            print(f"Heading: {sensor_data['heading']:.1f}°")
+            print(f"Temp: {sensor_data['temp']:.1f}°C")
+            print("-" * 30)
+            
+            time.sleep(0.1)
+    except KeyboardInterrupt:
+        print("Test interrupted")
+    finally:
+        stop_sensors()
