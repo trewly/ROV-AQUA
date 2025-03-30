@@ -72,7 +72,7 @@ class ControlWidget(QWidget):
         joystick_layout.addWidget(self.joystick)
         
         self.buttons_container = QFrame(self)
-        self.buttons_container.setGeometry(220, 570, 755, 50)
+        self.buttons_container.setGeometry(220, 550, 755, 50)
         self.buttons_container.setFrameShape(QFrame.StyledPanel)
         self.buttons_container.setStyleSheet("background-color: #395B64; border-radius: 10px;")
         
@@ -95,7 +95,7 @@ class ControlWidget(QWidget):
 
         self.motoSlider = motor_slider.MotorSlider()
         self.motoSlider.setParent(self)
-        self.motoSlider.setGeometry(280, 615, 755, 180)
+        self.motoSlider.setGeometry(280, 600, 755, 180)
         
     def connect_signals(self):
         self.surface_button.pressed.connect(self.wrap_activity_tracking(
