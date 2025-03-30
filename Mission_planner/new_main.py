@@ -6,12 +6,12 @@ from PyQt5.QtGui import QPixmap
 from PyQt5.QtGui import QFont, QPalette, QColor
 from PyQt5.QtCore import QTimer
 
-from layout import screen3d_layout
-from layout import canvas_layout
-from layout import setting_layout
-from layout.control_layout import ControlWidget
+from Mission_planner.layout.main import screen3d_layout
+from Mission_planner.layout.main import canvas_layout
+from Mission_planner.layout.main import setting_layout
+from Mission_planner.layout.main.control_layout import ControlWidget
 
-from communication.system_update_timer import SystemStatusManager
+from Mission_planner.connection.system_update_timer import SystemStatusManager
 
 STL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
                        "layout", "resources", "shell_assem.STL")

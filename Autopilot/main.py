@@ -8,7 +8,7 @@ import logging
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 
-from communication import raspi_mavlink as mav
+from connection import raspi_mavlink as mav
 from controller.motor import raspi_motor_control as rov
 from system_info.status import raspi_status as status
 from controller.camera import raspi_camera as camera

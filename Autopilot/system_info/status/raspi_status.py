@@ -5,7 +5,6 @@ import threading
 
 STATUS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "status.json")
 
-from Mission_planner.communication.pc_mavlink import logger
 _status_cache = {}
 _last_update_time = 0
 _cache_valid_time = 0.1
@@ -61,7 +60,6 @@ def init_status():
             
         return data
     except Exception as e:
-        logger.error(f"Error initializing status file: {e}")
         return data
 
 def update_status(key, value):
@@ -85,7 +83,6 @@ def update_status(key, value):
         _last_update_time = time.time()
         return True
     except Exception as e:
-        logger.error(f"Error updating status key '{key}': {e}")
         return False
 
 def update_multiple(update_dict):
@@ -114,7 +111,6 @@ def update_multiple(update_dict):
         _last_update_time = time.time()
         return True
     except Exception as e:
-        logger.error(f"Error updating multiple status keys: {e}")
         return False
 
 def read_all_status():
@@ -137,7 +133,6 @@ def read_all_status():
             
         return data
     except Exception as e:
-        logger.error(f"Error reading status file: {e}")
         return init_status()
 
 def read_status(key, default=None):
@@ -151,7 +146,6 @@ def read_status(key, default=None):
         data = read_all_status()
         return data.get(key, default)
     except Exception as e:
-        logger.error(f"Error reading status key '{key}': {e}")
         return default
 
 def read_multiple_status(keys):
@@ -166,7 +160,6 @@ def read_multiple_status(keys):
             data = read_all_status()
             return {key: data.get(key) for key in keys}
     except Exception as e:
-        logger.error(f"Error reading multiple status keys: {e}")
         return {key: None for key in keys}
     
 def force_refresh():
