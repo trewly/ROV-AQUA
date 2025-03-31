@@ -5,7 +5,7 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-from Mission_planner.connection.pc_mavlink import LOG_FILE
+from Mission_planner.utils.pc_logger import LOG_FILE
 
 log_file = os.path.join("./logs", LOG_FILE)
 

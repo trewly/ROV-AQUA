@@ -9,6 +9,7 @@ from datetime import datetime
 
 from Autopilot.system_info.status import raspi_status as status
 from Autopilot.controller.utils.raspi_Filter import KalmanFilter, low_pass_filter
+from Autopilot.controller.utils.raspi_logger import LOG
 
 class HMC5883L:
     HMC5883L_ADDR = 0x1E
@@ -100,7 +101,7 @@ class HMC5883L:
             return True
 
         except Exception:
-            print("Error initializing HMC5883L")
+            LOG.error("Error initializing HMC5883L")
             self.is_initialized = False
             return False
     
@@ -109,7 +110,7 @@ class HMC5883L:
             self.bus.write_byte(self.HMC5883L_ADDR, self.STATUS_REG)
             return self.bus.read_byte(self.HMC5883L_ADDR)
         except Exception:
-            print("Error reading status register")
+            LOG.error("Error reading magnetometer status")
             return 0    
         
     def set_gain(self, gain_setting):
@@ -124,7 +125,7 @@ class HMC5883L:
             return True
             
         except Exception:
-            print(f"Error setting gain: {gain_setting}")
+            LOG.error(f"Error setting gain: {gain_setting}")
             return False
     
     def set_sample_rate(self, sample_rate):
@@ -138,7 +139,7 @@ class HMC5883L:
             return True
             
         except Exception:
-            print(f"Error setting sample rate: {sample_rate}")
+            LOG.error(f"Error setting sample rate: {sample_rate}")
             return False
     
     def set_measurement_mode(self, mode):
@@ -152,7 +153,7 @@ class HMC5883L:
             return True
             
         except Exception:
-            print(f"Error setting measurement mode: {mode}")
+            LOG.error(f"Error setting measurement mode: {mode}")
             return False
     
     def set_operating_mode(self, mode):
@@ -162,7 +163,7 @@ class HMC5883L:
             return True
             
         except Exception:
-            print(f"Error setting operating mode: {mode}")
+            LOG.error(f"Error setting operating mode: {mode}")
             return False
     
     def read_mag_data(self):
@@ -188,7 +189,7 @@ class HMC5883L:
             return np.array([x, y, z], dtype=float)
 
         except Exception:
-            print("Error reading magnetometer data")
+            LOG.error("Error reading magnetometer data")
             if self.is_initialized:
                 self.is_initialized = False
                 try:
@@ -222,7 +223,7 @@ class HMC5883L:
         return heading_degrees
             
     def calibrate(self, sample_count=1500):
-        print("Calibrating HMC5883L...")
+        LOG.info("Starting calibration...")
         mag_min = np.array([999999, 999999, 999999], dtype=float)
         mag_max = np.array([-999999, -999999, -999999], dtype=float)
         
@@ -244,7 +245,7 @@ class HMC5883L:
             if time.time() - start_time > 60:
                 break
         
-        print(f"Calibration completed with {samples_collected} samples.")
+        LOG.info(f"Calibration completed")
         if samples_collected > 0:
             self.m_bias = (mag_max + mag_min) / 2
             scale_factors = (mag_max - mag_min) / 2
@@ -371,7 +372,9 @@ class MPU9250:
         self.prev_time = time.time()
         self.current_pitch = 0
         self.current_roll = 0
-        
+
+        self.current_temp = 0.0
+
         self.current_velocity_x = 0.0
         self.current_velocity_y = 0.0
         self.current_velocity_z = 0.0
@@ -407,7 +410,6 @@ class MPU9250:
             
             who_am_i = self.bus.read_byte_data(self.MPU9250_ADDR, self.WHO_AM_I)
             if who_am_i == 0x71 or who_am_i == 0x73:  
-                
                 ax, ay, az = self.read_accel_data()
                 pitch, roll = self.calculate_pitch_roll(ax, ay, az)
                 
@@ -421,14 +423,14 @@ class MPU9250:
                 self.filtered_accel_y = 0.0
                 self.filtered_accel_z = 0.0
                 
-                temp = self.read_temp_data()
-                
                 self.is_initialized = True
                 return True
             else:
+                LOG.error("MPU9250 not detected")
+                self.is_initialized = False   
                 return False
-                
         except Exception:
+            LOG.error("Error initializing MPU9250")
             self.is_initialized = False
             return False
             
@@ -436,14 +438,18 @@ class MPU9250:
         try:
             who_am_i = self.bus.read_byte_data(self.MPU9250_ADDR, self.WHO_AM_I)
             if who_am_i == 0x71 or who_am_i == 0x73:
+                self.is_initialized = True
                 return True
+            LOG.info("MPU9250 not detected")
             return False
         except Exception:
+            LOG.error("Error checking connection")
             return False
             
     def read_data(self, register):
         try:
             if not self.is_initialized:
+                LOG.error("MPU9250 not initialized, trying to initialize")
                 if not self.initialize():
                     return 0
                     
@@ -704,7 +710,7 @@ class MPU9250:
             return True
             
         except Exception:
-            print(f"Error setting gyro range: {gyro_range}")
+            LOG.error(f"Error setting gyro range: {gyro_range}")
             return False
     
     def set_accel_range(self, accel_range):
@@ -728,7 +734,7 @@ class MPU9250:
             return True
             
         except Exception:
-            print(f"Error setting accel range: {accel_range}")
+            LOG.error(f"Error setting accel range: {accel_range}")
             return False
     
     def set_sample_rate(self, rate_divider):
@@ -741,7 +747,7 @@ class MPU9250:
             return True
             
         except Exception:
-            print(f"Error setting sample rate divider: {rate_divider}")
+            LOG.error(f"Error setting sample rate: {rate_divider}")
             return False
     
     def set_filter_bandwidth(self, bandwidth):
@@ -755,7 +761,7 @@ class MPU9250:
             return True
             
         except Exception:
-            print(f"Error setting filter bandwidth: {bandwidth}")
+            LOG.error(f"Error setting filter bandwidth: {bandwidth}")
             return False
 
     def set_filter_bandwidth_gyro(self, bandwidth):
@@ -768,7 +774,7 @@ class MPU9250:
             return True
             
         except Exception:
-            print(f"Error setting gyro filter bandwidth: {bandwidth}")
+            LOG.error(f"Error setting gyro filter bandwidth: {bandwidth}")
             return False
             
     def set_filter_bandwidth_accel(self, bandwidth):
@@ -781,7 +787,7 @@ class MPU9250:
             return True
             
         except Exception:
-            print(f"Error setting accel filter bandwidth: {bandwidth}")
+            LOG.error(f"Error setting accel filter bandwidth: {bandwidth}")
             return False
 
     def set_power_mode(self, mode):
@@ -793,7 +799,7 @@ class MPU9250:
             return True
             
         except Exception:
-            print(f"Error setting power mode: {mode}")
+            LOG.error(f"Error setting power mode: {mode}")
             return False
 
 class SensorFusion:

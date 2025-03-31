@@ -12,7 +12,6 @@ from Mission_planner.layout.resources.style import control_button_style
 
 from Mission_planner.layout.contents.motor_slider import MotorSlider
 from Mission_planner.controller.video_controller import VideoReceiver
-from Mission_planner.controller.mode_controller import ModeChangeDialog
 from Mission_planner.controller.joystick_controller import VirtualJoystick
 from Mission_planner.controller.button_controller import ButtonController
 

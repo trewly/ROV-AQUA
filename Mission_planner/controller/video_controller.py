@@ -46,16 +46,11 @@ def find_window_by_pid(pid, max_attempts=5):
     
     while attempt < max_attempts and not result:
         attempt += 1
-        print(f"Searching for GStreamer window (attempt {attempt}/{max_attempts})...")
-        
         def callback(hwnd, _):
             if win32gui.IsWindowVisible(hwnd):
                 try:
                     _, found_pid = win32process.GetWindowThreadProcessId(hwnd)
                     if found_pid == pid:
-                        title = win32gui.GetWindowText(hwnd)
-                        class_name = win32gui.GetClassName(hwnd)
-                        print(f"Found window: HWND={hwnd}, Title='{title}', Class='{class_name}'")
                         result.append(hwnd)
                 except Exception as e:
                     print(f"Error during window enumeration: {e}")
@@ -84,7 +79,7 @@ class VideoReceiver(QWidget):
         self.gst_process = None
         self.process_monitor = None
         
-        QTimer.singleShot(500, self.start_gstreamer)
+        QTimer.singleShot(5000, self.start_gstreamer)
         
     def start_gstreamer(self):
         GST_PATH = r"C:\gstreamer\1.0\msvc_x86_64\bin\gst-launch-1.0.exe"
@@ -154,7 +149,6 @@ class VideoReceiver(QWidget):
                 QMessageBox.warning(self, "Warning", "Could not find GStreamer window after multiple attempts.")
             return
             
-        print(f"✅ Found window: {hwnds[0]}")
         self.status_label.setText(f"Found window: {hwnds[0]}")
         
         try:

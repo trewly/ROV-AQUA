@@ -2,7 +2,7 @@ import time
 import threading
 import sys
 import os
-import signal
+import atexit
 import logging
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
@@ -12,52 +12,11 @@ from pymavlink import mavutil
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
+from Autopilot.system_info.sensor import raspi_sensor_read as sensor
 from Autopilot.system_info.status import raspi_status as status
-from Autopilot.system_info.sensor import raspi_sensor_calibrate as calibrate
 from Autopilot.controller.motor import raspi_motor_control as rov
 from Autopilot.controller.camera import raspi_camera as camera
-
-def setup_logger(name="MAVLink", log_subdir="../logs"):
-    log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), log_subdir))
-    os.makedirs(log_dir, exist_ok=True)
-    
-    current_date = datetime.now().strftime("%Y-%m-%d-%H")
-    log_file = os.path.join(log_dir, f"mavlink_raspi_{current_date}.log")
-    
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
-    
-    if logger.handlers:
-        return
-    
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    console_handler.setFormatter(console_formatter)
-    logger.addHandler(console_handler)
-    
-    file_handler = TimedRotatingFileHandler(
-        log_file, 
-        when='midnight',
-        interval=1,
-        backupCount=30
-    )
-    file_handler.setLevel(logging.INFO)
-    file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler.setFormatter(file_formatter)
-    file_handler.suffix = "%Y-%m-%d"
-    logger.addHandler(file_handler)
-    
-    logger.propagate = False
-    
-    logger.info("=" * 50)
-    logger.info(f"{name} Logger initialized")
-    logger.info(f"Log file: {log_file}")
-    logger.info("=" * 50)
-    
-    return logger
-
-logger = None
+from Autopilot.controller.utils.raspi_logger import LOG
 
 class MavCommand(IntEnum):
     SURFACE = 1000
@@ -90,12 +49,7 @@ class MavCommand(IntEnum):
 
 class MavlinkController:
     def __init__(self, receive_port=5000, send_ip="169.254.54.121", send_port=5001):
-        global logger
-        
-        if logger is None:
-            logger = setup_logger("MAVLink", "../logs")
-            
-        logger.info("Initializing MAVLink controller")
+        LOG.info("Initializing MAVLink controller")
             
         self.receive_port = receive_port
         self.send_ip = send_ip
@@ -118,7 +72,72 @@ class MavlinkController:
         ]
         
         self._lock = threading.RLock()
-    
+
+    def _initialize_connection(self):
+        with self._lock:
+            if self.running:
+                LOG.warning("MAVLink controller already running")
+                return False
+                
+            self.running = True
+        
+        try:
+            self.receiver = mavutil.mavlink_connection(f"udpin:0.0.0.0:{self.receive_port}")
+            receiver_thread = threading.Thread(
+                target=self.receive_messages, 
+                daemon=True,
+                name="MAVLink-Receiver"
+            )
+            receiver_thread.start()
+            self.threads.append(receiver_thread)
+            
+            self.transmitter = mavutil.mavlink_connection(f"udpout:{self.send_ip}:{self.send_port}")
+            transmitter_thread = threading.Thread(
+                target=self.send_status_updates, 
+                daemon=True,
+                name="MAVLink-Transmitter"
+            )
+            transmitter_thread.start()
+            self.threads.append(transmitter_thread)
+            
+            LOG.info("MAVLink controller started successfully")
+            return True
+            
+        except Exception as e:
+            LOG.error(f"Failed to start MAVLink controller: {e}", exc_info=True)
+            self.stop()
+            return False
+
+    def shudown(self):
+        LOG.info("Stopping MAVLink controller...")
+        
+        with self._lock:
+            self.running = False
+        
+        for thread in self.threads:
+            if thread.is_alive():
+                thread.join(timeout=2)
+                if thread.is_alive():
+                    LOG.warning(f"Thread {thread.name} did not terminate gracefully")
+        
+        self.threads = []
+        
+        if self.receiver:
+            try:
+                self.receiver.close()
+            except Exception:
+                pass
+            self.receiver = None
+            
+        if self.transmitter:
+            try:
+                self.transmitter.close()
+            except Exception:
+                pass
+            self.transmitter = None
+            
+        LOG.info("MAVLink controller stopped")
+
     def _handle_manual_command(self, command: MavCommand) -> None:
         command_handlers = {
             MavCommand.SURFACE: rov.surface,
@@ -136,7 +155,7 @@ class MavlinkController:
         if handler:
             handler()
         else:
-            logger.warning(f"Unknown manual command: {command}")
+            LOG.warning(f"Unknown manual command: {command}")
     
     def _handle_mode_commands(self, msg) -> None:
         command = msg.command
@@ -209,7 +228,7 @@ class MavlinkController:
             status.update_status(key="camera", value=msg.param1)
         
         elif command == MavCommand.START_MAG_CALIBRATION:
-            calibrate.calibrate_mag()
+            sensor.compass.calibrate()
             status.update_status(key="calibrated", value=True)
             try:
                 self.transmitter.mav.param_value_send(
@@ -220,7 +239,7 @@ class MavlinkController:
                     1
                 )
             except Exception as e:
-                logger.error(f"Failed to send calibration status: {e}")
+                LOG.error(f"Failed to send calibration status: {e}")
 
         elif command == MavCommand.START_CAMERA_STREAM:
             camera.start_stream()
@@ -251,28 +270,28 @@ class MavlinkController:
                 
                 if command in important_commands:
                     if command == MavCommand.SET_MANUAL:
-                        logger.info(f"Mode changed: Manual control")
+                        LOG.info(f"Mode changed: Manual control")
                     elif command == MavCommand.SET_AUTO_HEADING:
-                        logger.info(f"Mode changed: Auto heading with target {msg.param1}°")
+                        LOG.info(f"Mode changed: Auto heading with target {msg.param1}°")
                     elif command == MavCommand.SET_AUTO_DEPTH:
-                        logger.info(f"Mode changed: Auto depth with target {msg.param1}m")
+                        LOG.info(f"Mode changed: Auto depth with target {msg.param1}m")
                     elif command == MavCommand.SET_PID:
-                        logger.info(f"PID parameters set: Kp={msg.param1:.2f}, Ki={msg.param2:.2f}, Kd={msg.param3:.2f}")
+                        LOG.info(f"PID parameters set: Kp={msg.param1:.2f}, Ki={msg.param2:.2f}, Kd={msg.param3:.2f}")
                     elif command == MavCommand.SET_SPEED_FORWARD:
-                        logger.info(f"Forward speed set to {msg.param1}%")
+                        LOG.info(f"Forward speed set to {msg.param1}%")
                     elif command == MavCommand.SET_SPEED_BACKWARD:
-                        logger.info(f"Backward speed set to {msg.param1}%") 
+                        LOG.info(f"Backward speed set to {msg.param1}%") 
                     elif command == MavCommand.SET_SPEED_DIVE:
-                        logger.info(f"Dive speed set to {msg.param1}%")
+                        LOG.info(f"Dive speed set to {msg.param1}%")
                     elif command == MavCommand.SET_SPEED_SURFACE:
-                        logger.info(f"Surface speed set to {msg.param1}%")
+                        LOG.info(f"Surface speed set to {msg.param1}%")
                     elif command == MavCommand.SET_LIGHT:
-                        logger.info(f"Light set to {msg.param1}%")
+                        LOG.info(f"Light set to {msg.param1}%")
                     elif command == MavCommand.SET_CAMERA:
                         mode_str = "ON" if int(msg.param1) == 1 else "OFF"
-                        logger.info(f"Camera set to {mode_str}")
+                        LOG.info(f"Camera set to {mode_str}")
                     elif command == MavCommand.START_MAG_CALIBRATION:
-                        logger.info(f"Starting magnetometer calibration")
+                        LOG.info(f"Starting magnetometer calibration")
                 
                 current_mode = status.read_status(key="mode")
 
@@ -289,13 +308,13 @@ class MavlinkController:
                 self._handle_configuration_commands(msg)
 
             except ValueError:
-                logger.warning(f"Received unknown command ID: {msg.command}")
+                LOG.warning(f"Received unknown command ID: {msg.command}")
             except Exception as e:
-                logger.error(f"Error handling command: {e}", exc_info=True)
+                LOG.error(f"Error handling command: {e}", exc_info=True)
 
     def _handle_connection_lost(self) -> None:
         if not self.connection_lost_reported:
-            logger.warning("Connection lost with ground station, initiating surface maneuver")
+            LOG.warning("Connection lost with ground station, initiating surface maneuver")
             self.connection_lost_reported = True
             
         status.update_status(key="disconnect", value=True)
@@ -305,7 +324,7 @@ class MavlinkController:
             rov.surface()
 
     def receive_messages(self) -> None:
-        logger.info(f"MAVLink receiver started on port {self.receive_port}")
+        LOG.info(f"MAVLink receiver started on port {self.receive_port}")
         
         while self.running:
             try:
@@ -325,14 +344,14 @@ class MavlinkController:
                             if not status.read_status(key="disconnect", default=False):
                                 self._handle_connection_lost()
             except ConnectionError as e:
-                logger.error(f"Connection error in receiver: {e}")
+                LOG.error(f"Connection error in receiver: {e}")
                 time.sleep(1)
             except Exception as e:
-                logger.error(f"Error in receiver thread: {e}", exc_info=True)
+                LOG.error(f"Error in receiver thread: {e}", exc_info=True)
                 time.sleep(1)
 
     def send_status_updates(self):
-        logger.info(f"MAVLink transmitter sending to {self.send_ip}:{self.send_port}")
+        LOG.info(f"MAVLink transmitter sending to {self.send_ip}:{self.send_port}")
         
         param_type = mavutil.mavlink.MAV_PARAM_TYPE_REAL32
         last_send_time = 0
@@ -359,9 +378,9 @@ class MavlinkController:
                                 len(self.status_params)
                             )
                         except (ValueError, TypeError) as e:
-                            logger.warning(f"Invalid value for {key}: {e}")
+                            LOG.warning(f"Invalid value for {key}: {e}")
                         except Exception as e:
-                            logger.error(f"Error sending {key}: {e}")
+                            LOG.error(f"Error sending {key}: {e}")
                     
                     # self.transmitter.mav.heartbeat_send(
                     #     mavutil.mavlink.MAV_TYPE_SUBMARINE,
@@ -374,122 +393,29 @@ class MavlinkController:
                 time.sleep(0.01)
                 
             except Exception as e:
-                logger.error(f"Error in transmitter thread: {e}", exc_info=True)
+                LOG.error(f"Error in transmitter thread: {e}", exc_info=True)
                 time.sleep(1)
 
-    def start(self):
-        with self._lock:
-            if self.running:
-                logger.warning("MAVLink controller already running")
-                return False
-                
-            self.running = True
-        
-        try:
-            self.receiver = mavutil.mavlink_connection(f"udpin:0.0.0.0:{self.receive_port}")
-            receiver_thread = threading.Thread(
-                target=self.receive_messages, 
-                daemon=True,
-                name="MAVLink-Receiver"
-            )
-            receiver_thread.start()
-            self.threads.append(receiver_thread)
-            
-            self.transmitter = mavutil.mavlink_connection(f"udpout:{self.send_ip}:{self.send_port}")
-            transmitter_thread = threading.Thread(
-                target=self.send_status_updates, 
-                daemon=True,
-                name="MAVLink-Transmitter"
-            )
-            transmitter_thread.start()
-            self.threads.append(transmitter_thread)
-            
-            logger.info("MAVLink controller started successfully")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Failed to start MAVLink controller: {e}", exc_info=True)
-            self.stop()
-            return False
+MAV = MavlinkController()
 
-    def stop(self):
-        logger.info("Stopping MAVLink controller...")
-        
-        with self._lock:
-            self.running = False
-        
-        for thread in self.threads:
-            if thread.is_alive():
-                thread.join(timeout=2)
-                if thread.is_alive():
-                    logger.warning(f"Thread {thread.name} did not terminate gracefully")
-        
-        self.threads = []
-        
-        if self.receiver:
-            try:
-                self.receiver.close()
-            except Exception:
-                pass
-            self.receiver = None
-            
-        if self.transmitter:
-            try:
-                self.transmitter.close()
-            except Exception:
-                pass
-            self.transmitter = None
-            
-        logger.info("MAVLink controller stopped")
+def initialize_mavlink():
+    if MAV._initialize_connection():
+        LOG.info("MAVLink connection initialized successfully")
+    else:
+        LOG.error("Failed to initialize MAVLink connection")
 
+def cleanup():
+    MAV.shutdown()
+    for handler in LOG.handlers:
+        handler.flush()
+        handler.close()
 
-controller = None
-
-def init_mavlink(receive_port=5000, 
-                 send_ip="169.254.54.121", 
-                 send_port=5001):
-    global controller, logger
-    
-    if logger is None:
-        logger = setup_logger("MAVLink", "../logs")
-    
-    if controller is None:
-        controller = MavlinkController(receive_port, send_ip, send_port)
-    
-    return controller.start()
-
-def stop_mavlink():
-    global controller
-    
-    if controller is not None:
-        controller.stop()
-
-def signal_handler(sig, frame) -> None:
-    global logger
-    
-    if logger is None:
-        logger = setup_logger("MAVLink", "../logs")
-        
-    logger.info("Received shutdown signal, stopping MAVLink connections...")
-    stop_mavlink()
-    sys.exit(0)
+atexit.register(cleanup)
 
 if __name__ == "__main__":
-    logger = setup_logger("MAVLink", "../logs")
-    
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-    
-    if init_mavlink():
-        logger.info("MAVLink communication started successfully")
-        
-        try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            logger.info("Manual shutdown initiated...")
-        finally:
-            stop_mavlink()
-    else:
-        logger.error("Failed to initialize MAVLink communication")
-        sys.exit(1)
+    MAV._initialize_connection()
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        MAV.shutdown()

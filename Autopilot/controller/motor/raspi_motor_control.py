@@ -5,7 +5,9 @@ import time
 import threading
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+
 from Autopilot.system_info.status import raspi_status as status
+from Autopilot.controller.utils.raspi_logger import LOG
 
 FORWARD = 1
 BACKWARD = -1
@@ -26,7 +28,7 @@ def get_pi_instance():
         if _pi is None or not _pi.connected:
             _pi = pigpio.pi()
             if not _pi.connected:
-                print("Failed to connect to pigpio daemon")
+                LOG.error("Failed to connect to pigpio daemon")
                 return None
     return _pi
 
@@ -37,7 +39,7 @@ class Motor:
     def __init__(self, pin, name=None):
         self.pi = get_pi_instance()
         if self.pi is None:
-            raise ConnectionError("Could not connect to pigpio daemon")
+            LOG.error("Failed to initialize pigpio instance")
             
         self.pin = pin
         self.name = name or f"Motor_PIN{pin}"
@@ -50,31 +52,48 @@ class Motor:
         time.sleep(0.1)
         
     def get_direction(self):
-        current_duty_cycle = self.pi.get_PWM_dutycycle(self.pin)
-        if abs(current_duty_cycle - DUTY_CYCLE_STOP) < 0.5:
+        try:
+            current_duty_cycle = self.pi.get_PWM_dutycycle(self.pin)
+            if abs(current_duty_cycle - DUTY_CYCLE_STOP) < 0.5:
+                return STOP
+            elif current_duty_cycle > DUTY_CYCLE_STOP:
+                return FORWARD
+            else:
+                return BACKWARD
+        except Exception as e:
+            LOG.error(f"Error getting direction: {e}")
             return STOP
-        elif current_duty_cycle > DUTY_CYCLE_STOP:
-            return FORWARD
-        else:
-            return BACKWARD
 
     def set_dutycycle(self, duty_cycle):
-        duty_cycle = min(DUTY_CYCLE_MAX_FORWARD, max(DUTY_CYCLE_MAX_BACKWARD, duty_cycle))
-        self.pi.set_PWM_dutycycle(self.pin, duty_cycle)
-        self.direction = self.get_direction()
+        try:
+            duty_cycle = min(DUTY_CYCLE_MAX_FORWARD, max(DUTY_CYCLE_MAX_BACKWARD, duty_cycle))
+            self.pi.set_PWM_dutycycle(self.pin, duty_cycle)
+            self.direction = self.get_direction()
+
+        except Exception as e:
+            LOG.error(f"Error setting duty cycle: {e}")
         
     def set_speed(self, speed_percentage):
-        speed_percentage = min(100, max(-100, speed_percentage))
-        self.last_speed = speed_percentage
-        dutycycle = scale_to_pwm(speed_percentage)
-        self.set_dutycycle(dutycycle)
-        return dutycycle
+        try:
+            speed_percentage = min(100, max(-100, speed_percentage))
+            self.last_speed = speed_percentage
+            dutycycle = scale_to_pwm(speed_percentage)
+            self.set_dutycycle(dutycycle)
+            return dutycycle
+        
+        except Exception as e:
+            LOG.error(f"Error setting speed: {e}")
+            return None
         
     def stop(self):
-        if self.get_direction() != STOP:
-            self.pi.set_PWM_dutycycle(self.pin, DUTY_CYCLE_STOP)
-            self.direction = STOP
-            self.last_speed = 0
+        try:
+            if self.get_direction() != STOP:
+                self.pi.set_PWM_dutycycle(self.pin, DUTY_CYCLE_STOP)
+                self.direction = STOP
+                self.last_speed = 0
+        
+        except Exception as e:
+            LOG.error(f"Error stopping motor: {e}")
             
     def thrust_forward(self):
         speed = status.read_status("max_speed_forward", 100)
@@ -119,14 +138,14 @@ def initialize_motors(left_pin=5, right_pin=6, left_depth_pin=7, right_depth_pin
         RIGHT_DEPTH_MOTOR = get_motor(right_depth_pin, "RIGHT_DEPTH_MOTOR")
         
         if all([LEFT_MOTOR, RIGHT_MOTOR, LEFT_DEPTH_MOTOR, RIGHT_DEPTH_MOTOR]):
-            print("All motors initialized successfully")
+            LOG.info("All motors initialized successfully")
             return True
         else:
-            print("Failed to initialize one or more motors")
+            LOG.error("Failed to initialize one or more motors")
             return False
             
     except Exception as e:
-        print(f"Error initializing motors: {e}")
+        LOG.error(f"Error initializing motors: {e}")
         return False
 
 def move_forward():

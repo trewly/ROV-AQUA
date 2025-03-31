@@ -7,6 +7,8 @@ import threading
 import signal
 from picamera2 import Picamera2, encoders #type: ignore
 
+from Autopilot.controller.utils.raspi_logger import LOG
+
 DEFAULT_SERVER_IP = "169.254.54.121"
 DEFAULT_SERVER_PORT = 5001
 DEFAULT_STREAM_PORT = 5000
@@ -33,10 +35,10 @@ def send_file(server_ip, server_port, file_path):
             while chunk := file.read(4096):
                 client_socket.sendall(chunk)
 
-        print(f"Đã gửi file: {file_path}")
+        LOG.info("File sent successfully")
         return True
     except Exception as e:
-        print(f"Lỗi khi gửi file: {e}")
+        LOG.error(f"Error sending file: {e}")
         return False
     finally:
         try:
@@ -64,10 +66,10 @@ def capture_image(file_path=None, rotate=True, resolution=DEFAULT_RESOLUTION):
             rotated_image = cv2.rotate(image, cv2.ROTATE_180)
             cv2.imwrite(file_path, rotated_image)
             
-        print(f"Đã chụp ảnh: {file_path}")
+        LOG.info(f"Image captured: {file_path}")
         return file_path
     except Exception as e:
-        print(f"Lỗi khi chụp ảnh: {e}")
+        LOG.error(f"Error capturing image: {e}")
         return None
 
 def capture_and_send(server_ip=DEFAULT_SERVER_IP, server_port=DEFAULT_SERVER_PORT, file_path=None, rotate=True):
@@ -87,16 +89,16 @@ def record_video(file_path=None, duration=5, resolution=DEFAULT_RESOLUTION, bitr
 
         encoder = encoders.H264Encoder(bitrate=bitrate)
 
-        print(f"Đang quay video ({duration} giây)...")
+        LOG.info(f"Recording video for {duration} seconds")
         picam2.start_recording(encoder, file_path)
         time.sleep(duration)
         picam2.stop_recording()
         picam2.close()
 
-        print(f"Đã quay xong video: {file_path}")
+        LOG.info(f"Video recorded: {file_path}")
         return file_path
     except Exception as e:
-        print(f"Lỗi khi quay video: {e}")
+        LOG.error(f"Error recording video: {e}")
         return None
 
 def record_and_send(server_ip=DEFAULT_SERVER_IP, server_port=DEFAULT_SERVER_PORT, file_path=None, duration=5):
@@ -118,7 +120,7 @@ def _run_streaming(command):
     global stream_process, is_streaming
     
     try:
-        print(f"Starting stream with command: {command}")
+        LOG.info("Starting video stream...")
         stream_process = subprocess.Popen(
             command, 
             shell=True, 
@@ -129,25 +131,23 @@ def _run_streaming(command):
         time.sleep(0.5)
         if stream_process.poll() is not None:
             error_output = stream_process.stderr.read().decode('utf-8')
-            print(f"Stream failed to start. Error: {error_output}")
+            LOG.error(f"Stream process error: {error_output}")
             is_streaming = False
             return
             
         is_streaming = True
-        print("Stream started successfully")
-        
-        return_code = stream_process.wait()
-        print(f"Stream process exited with code: {return_code}")
+        LOG.info("Stream started successfully")
         
     except Exception as e:
-        print(f"Streaming error: {e}")
+        LOG.error(f"Error starting stream: {e}")
+        is_streaming = False
+        return
     finally:
         is_streaming = False
-        print("Stream terminated")
+        stream_process = None
+        LOG.info("Stream process terminated")
 
-def start_stream(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT, 
-                resolution=DEFAULT_RESOLUTION, framerate=DEFAULT_FRAMERATE, 
-                bitrate=DEFAULT_BITRATE):
+def start_stream(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT):
     global stream_thread, is_streaming
     while True:
         if is_network_reachable(host):
@@ -156,12 +156,10 @@ def start_stream(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT,
     
     with stream_lock:
         if is_streaming:
-            print("Stream already running")
+            LOG.info("Stream is already active")
             return True
             
         is_streaming = False
-            
-        width, height = resolution
         
         stream_thread = threading.Thread(
             target=_run_streaming, 
@@ -172,10 +170,14 @@ def start_stream(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT,
         time.sleep(2)
         
         if not is_streaming:
-            print("Failed to start stream")
+            LOG.error("Failed to start stream")
+            try:
+                os.killpg(os.getpgid(stream_process.pid), signal.SIGKILL)
+            except:
+                pass
             return False
             
-        print(f"Stream started successfully to {host}:{port}")
+        LOG.info("Stream started successfully")
         return True
 
 def stop_stream():
@@ -183,27 +185,31 @@ def stop_stream():
     
     with stream_lock:
         if not is_streaming or stream_process is None:
-            print("No active stream to stop")
+            LOG.info("Stream is not active")
             return False
             
         try:
-            print("Stopping stream...")
+            LOG.info("Stopping stream...")
             
             os.killpg(os.getpgid(stream_process.pid), signal.SIGTERM)
             
+
             for _ in range(30):
                 if stream_process.poll() is not None:
                     break
                 time.sleep(0.1)
                 
             if stream_process.poll() is None:
-                print("Force killing stream process...")
+                LOG.info("Stream process did not terminate, killing it...")
                 os.killpg(os.getpgid(stream_process.pid), signal.SIGKILL)
-                
-            print("Stream stopped successfully")
+            
+            LOG.info("Stream stopped successfully")
+            stream_process = None
+            is_streaming = False
+
             return True
         except Exception as e:
-            print(f"Error stopping stream: {e}")
+            LOG.error(f"Error stopping stream: {e}")
             try:
                 os.killpg(os.getpgid(stream_process.pid), signal.SIGKILL)
             except:
@@ -230,24 +236,14 @@ def restart_stream(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT,
     time.sleep(1)
     return start_stream(host, port, resolution, framerate, bitrate)
 
-def cleanup():
-    if is_streaming:
-        stop_stream()
-
 if __name__ == "__main__":
     try:
-        print("Starting video stream...")
         success = start_stream()
         
         if success:
-            print("Stream started successfully")
-            print("Press Ctrl+C to stop streaming")
             while True:
                 pass
-        else:
-            print("Failed to start stream")
-            
     except KeyboardInterrupt:
-        print("\nStopping streaming...")
-    finally:
-        cleanup()
+        stop_stream()
+    stop_stream()
+        

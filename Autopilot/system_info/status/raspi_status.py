@@ -3,6 +3,9 @@ import os
 import time
 import threading
 
+
+from Autopilot.controller.utils.raspi_logger import LOG
+
 STATUS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "status.json")
 
 _status_cache = {}
@@ -60,6 +63,7 @@ def init_status():
             
         return data
     except Exception as e:
+        LOG.error(f"Failed to initialize status file: {e}")
         return data
 
 def update_status(key, value):
@@ -83,6 +87,7 @@ def update_status(key, value):
         _last_update_time = time.time()
         return True
     except Exception as e:
+        LOG.error(f"Failed to update status for key {key}: {e}")
         return False
 
 def update_multiple(update_dict):
@@ -111,6 +116,7 @@ def update_multiple(update_dict):
         _last_update_time = time.time()
         return True
     except Exception as e:
+        LOG.error(f"Failed to update multiple status: {e}")
         return False
 
 def read_all_status():
@@ -133,7 +139,8 @@ def read_all_status():
             
         return data
     except Exception as e:
-        return init_status()
+        LOG.error(f"Failed to read status file: {e}")
+        return False
 
 def read_status(key, default=None):
     with _cache_lock:
@@ -146,6 +153,7 @@ def read_status(key, default=None):
         data = read_all_status()
         return data.get(key, default)
     except Exception as e:
+        LOG.error(f"Failed to read status for key {key}: {e}")
         return default
 
 def read_multiple_status(keys):
@@ -160,6 +168,7 @@ def read_multiple_status(keys):
             data = read_all_status()
             return {key: data.get(key) for key in keys}
     except Exception as e:
+        LOG.error(f"Failed to read multiple status: {e}")
         return {key: None for key in keys}
     
 def force_refresh():
