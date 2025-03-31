@@ -1,3 +1,4 @@
+import os
 import sys
 import subprocess
 import time
@@ -5,11 +6,15 @@ import win32gui
 import win32process
 import win32con
 import threading
+import queue
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QMessageBox, QLabel
 from PyQt5.QtGui import QWindow
 from PyQt5.QtCore import QTimer, Qt, pyqtSignal, QObject
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
 from Mission_planner.connection.pc_mavlink import MAV
+from Mission_planner.utils.pc_logger import LOG
 
 class ProcessMonitor(QObject):
     error_signal = pyqtSignal(str)
@@ -29,10 +34,11 @@ class ProcessMonitor(QObject):
                 if stderr_line:
                     line = stderr_line.strip()
                     if line and "ERROR" in line:
-                        print(f"GStreamer error: {line}")
+                        LOG.error(f"GStreamer error: {line}")
                         self.error_signal.emit(line)
             except Exception as e:
-                print(f"Error reading process output: {e}")
+                LOG.error(f"Error reading GStreamer stderr: {e}")
+                break
             time.sleep(0.1)
             
     def stop(self):
@@ -40,26 +46,34 @@ class ProcessMonitor(QObject):
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=1.0)
 
-def find_window_by_pid(pid, max_attempts=5):
+def find_window_by_pid(pid, max_attempts=5, result_queue=None):
     result = []
     attempt = 0
     
     while attempt < max_attempts and not result:
         attempt += 1
+        LOG.info(f"Attempt {attempt}/{max_attempts} to find window for PID: {pid}")
+        
         def callback(hwnd, _):
             if win32gui.IsWindowVisible(hwnd):
                 try:
                     _, found_pid = win32process.GetWindowThreadProcessId(hwnd)
                     if found_pid == pid:
+                        title = win32gui.GetWindowText(hwnd)
+                        class_name = win32gui.GetClassName(hwnd)
+                        LOG.info(f"Found window: {title} (HWND: {hwnd}, PID: {found_pid})")
                         result.append(hwnd)
                 except Exception as e:
-                    print(f"Error during window enumeration: {e}")
+                    LOG.error(f"Error getting window info: {e}")
         
         win32gui.EnumWindows(callback, None)
         
         if not result:
             time.sleep(1)
-            
+    
+    if result_queue is not None:
+        result_queue.put(result)
+    
     return result
 
 class VideoReceiver(QWidget):
@@ -79,7 +93,7 @@ class VideoReceiver(QWidget):
         self.gst_process = None
         self.process_monitor = None
         
-        QTimer.singleShot(5000, self.start_gstreamer)
+        QTimer.singleShot(500, self.start_gstreamer)
         
     def start_gstreamer(self):
         GST_PATH = r"C:\gstreamer\1.0\msvc_x86_64\bin\gst-launch-1.0.exe"
@@ -106,9 +120,8 @@ class VideoReceiver(QWidget):
                 bufsize=1
             )
             
-            print(f"GStreamer process started with PID: {self.gst_process.pid}")
             self.status_label.setText(f"GStreamer started with PID: {self.gst_process.pid}")
-            MAV.start_camera_stream()
+            
             self.process_monitor = ProcessMonitor(self.gst_process)
             self.process_monitor.error_signal.connect(self.handle_gstreamer_error)
             
@@ -126,18 +139,32 @@ class VideoReceiver(QWidget):
     def find_and_embed_window(self):
         if not self.gst_process or self.gst_process.poll() is not None:
             error = "GStreamer process is not running"
-            print(f"❗️ {error}")
+            LOG.error(error)
             self.status_label.setText(error)
             QMessageBox.critical(self, "Error", error)
             return
         
         self.status_label.setText("Looking for GStreamer window...")
         
-        hwnds = threading.Thread(target=find_window_by_pid, args=(self.gst_process.pid,), daemon=True).start()
+        result_queue = queue.Queue()
+        
+        find_window_thread = threading.Thread(
+            target=find_window_by_pid, 
+            args=(self.gst_process.pid, 5, result_queue), 
+            daemon=True
+        )
+        find_window_thread.start()
+        
+        find_window_thread.join(timeout=10)
+        
+        try:
+            hwnds = result_queue.get(block=False)
+        except queue.Empty:
+            hwnds = []
         
         if not hwnds:
             error = "Không tìm thấy cửa sổ GStreamer"
-            print(f"❗️ {error}")
+            LOG.error(error)
             self.status_label.setText(error)
             
             self.window_find_attempts += 1
@@ -148,7 +175,8 @@ class VideoReceiver(QWidget):
             else:
                 QMessageBox.warning(self, "Warning", "Could not find GStreamer window after multiple attempts.")
             return
-            
+        
+        LOG.info(f"Found GStreamer window: {hwnds[0]}")
         self.status_label.setText(f"Found window: {hwnds[0]}")
         
         try:
@@ -167,7 +195,7 @@ class VideoReceiver(QWidget):
             
         except Exception as e:
             error = f"Error embedding GStreamer window: {e}"
-            print(f"❗️ {error}")
+            LOG.error(error)
             self.status_label.setText(error)
             QMessageBox.critical(self, "Error", error)
     
@@ -176,12 +204,12 @@ class VideoReceiver(QWidget):
             self.process_monitor.stop()
         
         if self.gst_process:
-            print("Terminating GStreamer process...")
+            LOG.info("Terminating GStreamer process...")
             try:
                 self.gst_process.terminate()
                 self.gst_process.wait(timeout=3)
             except Exception as e:
-                print(f"Error terminating GStreamer: {e}")
+                LOG.error(f"Error terminating GStreamer process: {e}")
                 try:
                     self.gst_process.kill()
                 except:
