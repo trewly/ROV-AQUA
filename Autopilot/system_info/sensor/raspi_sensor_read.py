@@ -5,7 +5,6 @@ import threading
 import sys
 import os
 import numpy as np
-from datetime import datetime
 
 from Autopilot.system_info.status import raspi_status as status
 from Autopilot.controller.utils.raspi_Filter import KalmanFilter, low_pass_filter
