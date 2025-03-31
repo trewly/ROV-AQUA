@@ -1,7 +1,7 @@
 from PyQt5.QtCore import Qt
 
 from .mode_controller import ModeChangeDialog
-from Mission_planner.communication.pc_mavlink import MAV
+from Mission_planner.connection.pc_mavlink import MAV
 
 class ButtonController:
     KEY_MAPPINGS = {

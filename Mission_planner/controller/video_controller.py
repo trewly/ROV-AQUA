@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QMe
 from PyQt5.QtGui import QWindow
 from PyQt5.QtCore import QTimer, Qt, pyqtSignal, QObject
 
-from Mission_planner.communication.pc_mavlink import MAV
+from Mission_planner.connection.pc_mavlink import MAV
 
 class ProcessMonitor(QObject):
     error_signal = pyqtSignal(str)

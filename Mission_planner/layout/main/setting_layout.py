@@ -3,7 +3,7 @@ from PyQt5.QtGui import QPalette, QColor
 import sys
 import os
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from resources.style import setting_button_style
 
 class SettingWidget(QWidget):
