@@ -12,7 +12,7 @@ from layout.main import screen3d_layout
 from layout.main import canvas_layout
 from layout.main import setting_layout
 from layout.main.control_layout import ControlWidget
-from connection.system_update_timer import SystemStatusManager
+from utils.system_update_timer import SystemStatusManager
 
 STL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
                        "layout", "resources", "shell_assem.STL")

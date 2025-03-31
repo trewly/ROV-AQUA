@@ -11,7 +11,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 
 from Mission_planner.layout.resources.style import canvas_button_style
 from Mission_planner.status import pc_status as status
-from Mission_planner.connection.system_update_timer import SystemStatusManager
+from Mission_planner.utils.system_update_timer import SystemStatusManager
 from Mission_planner.status.log_viewer import LogViewer
 from Mission_planner.status.state_graph import AttitudePlotter
 

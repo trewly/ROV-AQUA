@@ -16,7 +16,7 @@ import random
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))) 
 
-from Mission_planner.connection.system_update_timer import SystemStatusManager
+from Mission_planner.utils.system_update_timer import SystemStatusManager
 
 RESOURCE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "resources")
 
