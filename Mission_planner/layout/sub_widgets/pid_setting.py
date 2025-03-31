@@ -119,7 +119,7 @@ class PIDTuner(QWidget):
 
     def update_temp_pid(self, pid_name, param, value, label, step):
         index = {'Kp': 0, 'Ki': 1, 'Kd': 2}[param]
-        self.updated_params[pid_name][index] = value * step
+        self.updated_params[pid_name][index] = round(value * step, 3)
         label.setText(f"{param}: {self.updated_params[pid_name][index]:.3f}")
     
     def confirm_update(self, pid_name):
