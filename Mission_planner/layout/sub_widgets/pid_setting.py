@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSlider, QHBoxLayout, QGroupBox, QGridLayout, QPushButton
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPalette, QColor
 import sys
 
 import os
@@ -17,6 +18,11 @@ class PIDTuner(QWidget):
         self.setWindowTitle("PID Tuner")
         self.setGeometry(100, 100, 1200, 400)
         
+        palette = self.palette()
+        palette.setColor(QPalette.Window, QColor("#F3F3E0")) 
+        self.setPalette(palette)
+        self.setAutoFillBackground(True)
+
         layout = QVBoxLayout()
         
         self.pid_params = {
@@ -41,20 +47,37 @@ class PIDTuner(QWidget):
         #tao button
         button_layout = QHBoxLayout()
         for pid_name in self.pid_params:
-            button = QPushButton(f"Cập nhật {pid_name}")
+            button = QPushButton(f"Update {pid_name}")
             button.clicked.connect(lambda checked, n=pid_name: self.confirm_update(n))
             button_layout.addWidget(button)
+            button.setStyleSheet(st.canvas_button_style)
         layout.addLayout(button_layout)
         
         #tao reset button
         reset_button = QPushButton("Reset")
         reset_button.clicked.connect(self.reset_values)
+        reset_button.setStyleSheet(st.control_button_style)
         layout.addWidget(reset_button)
         
         self.setLayout(layout)
         
     def create_pid_controls(self, pid_name):
         group_box = QGroupBox(pid_name)
+        group_box.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                font-size: 20px;
+                border: 2px solid #395B64;
+                border-radius: 5px;
+                margin-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top center;
+                padding: 2px 10px;
+                color: #395B64;
+            }
+        """)
         grid = QGridLayout()
         
         labels = ['Kp', 'Ki', 'Kd']
@@ -66,6 +89,9 @@ class PIDTuner(QWidget):
         for i, param in enumerate(labels):
             label = QLabel(f"{param}: {self.pid_params[pid_name][i]:.3f}")
             slider = QSlider(Qt.Horizontal)
+
+            label.setStyleSheet("font-size: 16px;")
+
             min_val, max_val = ranges[param]
             step = steps[param]
             

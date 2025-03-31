@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPixmap, QPalette, QColor
-from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow, QVBoxLayout, QWidget, QPushButton
+from PyQt5.QtWidgets import  QApplication,QLabel, QMainWindow, QVBoxLayout, QWidget, QPushButton
 
 import os
 
@@ -12,12 +12,11 @@ from Mission_planner.status import pc_status
 
 YAW_CALIB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "resources", "calib_image", "yaw_calib.png")
 
-class MyWindow(QMainWindow):
+class calibration(QWidget):
     def __init__(self):
         super().__init__()
 
         self.central_widget = QWidget(self)
-        self.setCentralWidget(self.central_widget)
 
         palette = self.palette()
         palette.setColor(QPalette.Window, QColor("#F3F3E0")) 
@@ -36,6 +35,7 @@ class MyWindow(QMainWindow):
         #button init
         self.start_button = QPushButton("Start Yaw Calib", self.central_widget)
         self.start_button.clicked.connect(self.start_calib)
+        self.start_button.setStyleSheet(st.control_button_style)
 
         #main window
         layout = QVBoxLayout(self.central_widget)
@@ -44,7 +44,7 @@ class MyWindow(QMainWindow):
         layout.addWidget(self.start_button)
 
         self.setWindowTitle("Yaw Calibration")
-        self.setGeometry(100, 100, 500, 600)  # Điều chỉnh kích thước cửa sổ
+        self.setGeometry(100, 100, 520, 600)  # Điều chỉnh kích thước cửa sổ
 
         #notify
         self.toast_label = QLabel(self)
@@ -93,6 +93,6 @@ class MyWindow(QMainWindow):
         QTimer.singleShot(2000, self.toast_label.hide) 
 
 # app = QApplication(sys.argv)
-# window = MyWindow()
+# window = calibration()
 # window.show()
 # sys.exit(app.exec_())

@@ -6,6 +6,9 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from resources.style import setting_button_style
 
+from sub_widgets.pid_setting import PIDTuner
+from sub_widgets.calibration import calibration
+
 class SettingWidget(QWidget):
     def __init__(self):
         super().__init__()
@@ -37,7 +40,12 @@ class SettingWidget(QWidget):
             button.clicked.connect(lambda _, b=i+1: self.button_clicked(b))
 
     def button_clicked(self, button_number):
-        print(f"Button {button_number} clicked")
+        if button_number == 1:
+            self.calib= calibration()
+            self.calib.show()
+        if button_number == 2:
+            self.pid_tuning=PIDTuner()
+            self.pid_tuning.show()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
