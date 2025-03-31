@@ -8,7 +8,7 @@ from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 
 from Mission_planner.layout.resources.style import canvas_button_style
 from Mission_planner.status import pc_status as status
-from Mission_planner.communication.system_update_timer import SystemStatusManager
+from Mission_planner.connection.system_update_timer import SystemStatusManager
 from Mission_planner.status.log_viewer import LogViewer
 from Mission_planner.status.state_graph import AttitudePlotter
 

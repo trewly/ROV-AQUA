@@ -10,7 +10,7 @@ import time
 
 from Mission_planner.layout.resources.style import control_button_style
 
-from Mission_planner.layout.sub_widgets import motor_slider
+from Mission_planner.layout.contents import motor_slider
 from Mission_planner.controller.video_controller import VideoReceiver
 from Mission_planner.controller.mode_controller import ModeChangeDialog
 from Mission_planner.controller.joystick_controller import VirtualJoystick
