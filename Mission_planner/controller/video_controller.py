@@ -46,30 +46,27 @@ class ProcessMonitor(QObject):
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=1.0)
 
-def find_window_by_pid(pid, max_attempts=5, result_queue=None):
+def find_window_by_pid(pid, result_queue=None):
     result = []
-    attempt = 0
+
+    LOG.info(f"Finding window for PID: {pid}")
+    def callback(hwnd, _):
+        if win32gui.IsWindowVisible(hwnd):
+            try:
+                _, found_pid = win32process.GetWindowThreadProcessId(hwnd)
+                if found_pid == pid:
+                    title = win32gui.GetWindowText(hwnd)
+                    class_name = win32gui.GetClassName(hwnd)
+                    LOG.info(f"Found window: {title} (HWND: {hwnd}, PID: {found_pid})")
+                    result.append(hwnd)
+            except Exception as e:
+                LOG.error(f"Error getting window info: {e}")
     
-    while attempt < max_attempts and not result:
-        attempt += 1
-        LOG.info(f"Attempt {attempt}/{max_attempts} to find window for PID: {pid}")
-        
-        def callback(hwnd, _):
-            if win32gui.IsWindowVisible(hwnd):
-                try:
-                    _, found_pid = win32process.GetWindowThreadProcessId(hwnd)
-                    if found_pid == pid:
-                        title = win32gui.GetWindowText(hwnd)
-                        class_name = win32gui.GetClassName(hwnd)
-                        LOG.info(f"Found window: {title} (HWND: {hwnd}, PID: {found_pid})")
-                        result.append(hwnd)
-                except Exception as e:
-                    LOG.error(f"Error getting window info: {e}")
-        
-        win32gui.EnumWindows(callback, None)
-        
-        if not result:
-            time.sleep(1)
+    win32gui.EnumWindows(callback, None)
+    
+    if not result:
+        LOG.info(f"No window found for PID: {pid}")
+        return result
     
     if result_queue is not None:
         result_queue.put(result)
@@ -152,7 +149,7 @@ class VideoReceiver(QWidget):
         
         find_window_thread = threading.Thread(
             target=find_window_by_pid, 
-            args=(self.gst_process.pid, 5, result_queue), 
+            args=(self.gst_process.pid, result_queue), 
             daemon=True
         )
         find_window_thread.start()
@@ -165,7 +162,7 @@ class VideoReceiver(QWidget):
             hwnds = []
         
         if not hwnds:
-            error = "Không tìm thấy cửa sổ GStreamer"
+            error = "No GStreamer window found"
             LOG.error(error)
             self.status_label.setText(error)
             return
@@ -209,9 +206,9 @@ class VideoReceiver(QWidget):
                 except:
                     pass
     
-    def closeEvent(self, a0):
+    def closeEvent(self, event):
         self.cleanup()
-        return super().closeEvent(a0)
+        return super().closeEvent(event)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

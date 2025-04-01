@@ -11,7 +11,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 from Mission_planner.layout.resources.style import control_button_style
 from Mission_planner.layout.contents.motor_slider import MotorSlider
 from Mission_planner.controller.video_controller import VideoReceiver
-from Mission_planner.controller import button_controller as ButtonController
+from Mission_planner.controller.button_controller import ButtonController
 
 
 class ControlButton(QPushButton):
@@ -47,21 +47,10 @@ class DirectionButton(QPushButton):
         self.setCursor(Qt.PointingHandCursor)
 
 class ControlWidget(QWidget):
-    activityDetected = pyqtSignal()
-
-    IDLE_TIMEOUT = 100
-
     def __init__(self):
         super().__init__()
         self.light_on = False
-        self.last_activity_time = time.time()
-        self.is_active = False
         self.setFocusPolicy(Qt.StrongFocus)
-        
-        self.idle_timer = QTimer(self)
-        self.idle_timer.timeout.connect(self.check_idle_time)
-        
-        self.input_active = False
 
         self.setFixedSize(985, 785)
 
@@ -128,98 +117,43 @@ class ControlWidget(QWidget):
         self.connect_signals()
         
     def connect_signals(self):
-        self.forward_button.pressed.connect(
-            self.on_button_activity(ButtonController.controller.on_forward_button_clicked))
-        self.forward_button.released.connect(
-            self.on_button_activity(ButtonController.controller.on_forward_button_released, False))
+        self.forward_button.pressed.connect(ButtonController.on_forward_button_clicked)
+        self.forward_button.released.connect(ButtonController.on_forward_button_released, False)
             
-        self.backward_button.pressed.connect(
-            self.on_button_activity(ButtonController.controller.on_backward_button_clicked))
-        self.backward_button.released.connect(
-            self.on_button_activity(ButtonController.controller.on_backward_button_released, False))
+        self.backward_button.pressed.connect(ButtonController.on_backward_button_clicked)
+        self.backward_button.released.connect(ButtonController.on_backward_button_released, False)
             
-        self.left_button.pressed.connect(
-            self.on_button_activity(ButtonController.controller.on_left_button_clicked))
-        self.left_button.released.connect(
-            self.on_button_activity(ButtonController.controller.on_left_button_released, False))
+        self.left_button.pressed.connect(ButtonController.on_left_button_clicked)
+        self.left_button.released.connect(ButtonController.on_left_button_released, False)
             
-        self.right_button.pressed.connect(
-            self.on_button_activity(ButtonController.controller.on_right_button_clicked))
-        self.right_button.released.connect(
-            self.on_button_activity(ButtonController.controller.on_right_button_released, False))
+        self.right_button.pressed.connect(ButtonController.on_right_button_clicked)
+        self.right_button.released.connect(ButtonController.on_right_button_released, False)
         
-        self.surface_button.pressed.connect(
-            self.on_button_activity(ButtonController.controller.on_surface_button_clicked))
-        self.surface_button.released.connect(
-            self.on_button_activity(ButtonController.controller.on_surface_button_released, False))
+        self.surface_button.pressed.connect(ButtonController.on_surface_button_clicked)
+        self.surface_button.released.connect(ButtonController.on_surface_button_released, False)
         
-        self.dive_button.pressed.connect(
-            self.on_button_activity(ButtonController.controller.on_dive_button_clicked))
-        self.dive_button.released.connect(
-            self.on_button_activity(ButtonController.controller.on_dive_button_released, False))
+        self.dive_button.pressed.connect(ButtonController.on_dive_button_clicked)
+        self.dive_button.released.connect(ButtonController.on_dive_button_released, False)
 
-        self.roll_right_button.pressed.connect(
-            self.on_button_activity(ButtonController.controller.on_roll_right_button_clicked))
-        self.roll_right_button.released.connect(
-            self.on_button_activity(ButtonController.controller.on_roll_right_button_released, False))
+        self.roll_right_button.pressed.connect(ButtonController.on_roll_right_button_clicked)
+        self.roll_right_button.released.connect(ButtonController.on_roll_right_button_released, False)
 
-        self.roll_left_button.pressed.connect(
-            self.on_button_activity(ButtonController.controller.on_roll_left_button_clicked))
-        self.roll_left_button.released.connect(
-            self.on_button_activity(ButtonController.controller.on_roll_left_button_released, False))
+        self.roll_left_button.pressed.connect(ButtonController.on_roll_left_button_clicked)
+        self.roll_left_button.released.connect(ButtonController.on_roll_left_button_released, False)
         
-        self.mode_change_button.clicked.connect(
-            self.on_button_activity(ButtonController.controller.on_mode_change_button_clicked))
-        
-    def on_button_activity(self, func, input_active=True):
-        def wrapper(*args, **kwargs):
-            self.register_activity()
-            self.input_active = input_active
-            result = func(*args, **kwargs)
-            return result
-        return wrapper
-    
-    def register_activity(self):
-        self.last_activity_time = time.time()
-        self.activityDetected.emit()
-    
-    def check_idle_time(self):
-        if not self.is_active:
-            return
-        
-        current_time = time.time()
-        idle_time_ms = (current_time - self.last_activity_time) * 1000
-        
-        if idle_time_ms >= self.IDLE_TIMEOUT and not self.input_active:
-            pass
+        self.mode_change_button.clicked.connect(ButtonController.on_mode_change_button_clicked)
     
     def keyPressEvent(self, event):
-        self.register_activity()
-        self.input_active = True
-        if not ButtonController.controller.handle_key_press(event):
+        if not ButtonController.handle_key_press(event):
             super().keyPressEvent(event)
 
     def keyReleaseEvent(self, event):
-        self.register_activity()
-        self.input_active = False
-        if not ButtonController.controller.handle_key_release(event):
+        if not ButtonController.handle_key_release(event):
             super().keyReleaseEvent(event)
 
-    def mousePressEvent(self, event):
-        self.register_activity()
-        self.input_active = True
-        super().mousePressEvent(event)
-        
-    def mouseReleaseEvent(self, event):
-        self.register_activity()
-        self.input_active = False
-        super().mouseReleaseEvent(event)
-
     def closeEvent(self, event):
-        if self.idle_timer.isActive():
-            self.idle_timer.stop()
         self.video_receiver.closeEvent(event)
-        ButtonController.controller.cleanup()
+        ButtonController.cleanup()
         event.accept()
 
 if __name__ == "__main__":
