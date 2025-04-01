@@ -8,6 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 #print(os.path.dirname(os.path.abspath(__file__)))
 
 from status import pc_status as status
+from config import raspi_config as config
 
 class SystemStatusManager(QObject):
     got_disconnected_info = pyqtSignal(bool)  
