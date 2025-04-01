@@ -11,6 +11,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 
 from Autopilot.system_info.sensor import raspi_sensor_read as sensor
 from Autopilot.system_info.status import raspi_status as status
+from Autopilot.config import raspi_config as config
 from Autopilot.controller.motor import raspi_motor_control as rov
 from Autopilot.controller.camera import raspi_camera as camera
 from Autopilot.controller.utils.raspi_logger import LOG
@@ -98,6 +99,7 @@ class MavlinkController:
             self.threads.append(transmitter_thread)
             
             LOG.info("MAVLink controller started successfully")
+
             return True
             
         except Exception as e:
@@ -154,21 +156,21 @@ class MavlinkController:
         else:
             LOG.warning(f"Unknown manual command: {command}")
     
-    def _handle_mode_commands(self, msg) -> None:
+    def _handle_mode_commands(self, msg):
         command = msg.command
         
         if command == MavCommand.SET_MANUAL:
             status.update_multiple({
                 "mode": "manual",
-                "auto_heading": False,
-                "auto_depth": False
+                "auto_heading": 0,
+                "auto_depth": 0
             })
             rov.stop_all()
             
         elif command == MavCommand.SET_AUTO_HEADING:
             heading = max(0, min(360, msg.param1))
             status.update_multiple({
-                "auto_heading": True,
+                "auto_heading": 1,
                 "target_heading": heading,
                 "mode": "auto_heading"
             })
@@ -176,43 +178,43 @@ class MavlinkController:
         elif command == MavCommand.SET_AUTO_DEPTH:
             depth = max(0, min(10, msg.param1))
             status.update_multiple({
-                "auto_depth": True,
+                "auto_depth": 1,
                 "target_depth": depth,
                 "mode": "auto_depth"
             })
             
     
-    def _handle_configuration_commands(self, msg) -> None:
+    def _handle_configuration_commands(self, msg):
         command = msg.command
         
         if command == MavCommand.SET_SPEED_FORWARD:
-            status.update_status(key="max_speed_forward", value=msg.param1)
+            config.update_config(key="max_speed_forward", value=msg.param1)
             
         elif command == MavCommand.SET_SPEED_BACKWARD:
-            status.update_status(key="max_speed_backward", value=-msg.param1)
+            config.update_config(key="max_speed_backward", value=-msg.param1)
             
         elif command == MavCommand.SET_SPEED_DIVE:
-            status.update_status(key="max_speed_dive", value=-msg.param1)
+            config.update_config(key="max_speed_dive", value=-msg.param1)
             
         elif command == MavCommand.SET_SPEED_SURFACE:
-            status.update_status(key="max_speed_surface", value=msg.param1)
+            config.update_config(key="max_speed_surface", value=msg.param1)
 
         elif command == MavCommand.SET_PID_YAW:
-            status.update_multiple({
+            config.update_multiple({
                 "Kp_yaw": msg.param1,
                 "Ki_yaw": msg.param2,
                 "Kd_yaw": msg.param3
             })
         
         elif command == MavCommand.SET_PID_DEPTH:
-            status.update_multiple({
+            config.update_multiple({
                 "Kp_depth": msg.param1,
                 "Ki_depth": msg.param2,
                 "Kd_depth": msg.param3
             })
         
         elif command == MavCommand.SET_PID_AUTOHEADING:
-            status.update_multiple({
+            config.update_multiple({
                 "Kp_autoheading": msg.param1,
                 "Ki_autoheading": msg.param2,
                 "Kd_autoheading": msg.param3
@@ -226,7 +228,7 @@ class MavlinkController:
         
         elif command == MavCommand.START_MAG_CALIBRATION:
             sensor.compass.calibrate()
-            status.update_status(key="calibrated", value=True)
+            status.update_status(key="calibrated", value=1)
             try:
                 self.transmitter.mav.param_value_send(
                     "calibrated".encode("ascii"),
@@ -241,7 +243,7 @@ class MavlinkController:
         elif command == MavCommand.START_CAMERA_STREAM:
             camera.start_stream()
 
-    def handle_received_msg(self, msg) -> None:
+    def handle_received_msg(self, msg):
         if msg is None:
             return
 
@@ -268,25 +270,32 @@ class MavlinkController:
                 if command in important_commands:
                     if command == MavCommand.SET_MANUAL:
                         LOG.info(f"Mode changed: Manual control")
+
                     elif command == MavCommand.SET_AUTO_HEADING:
                         LOG.info(f"Mode changed: Auto heading with target {msg.param1}°")
+
                     elif command == MavCommand.SET_AUTO_DEPTH:
                         LOG.info(f"Mode changed: Auto depth with target {msg.param1}m")
-                    elif command == MavCommand.SET_PID:
-                        LOG.info(f"PID parameters set: Kp={msg.param1:.2f}, Ki={msg.param2:.2f}, Kd={msg.param3:.2f}")
+                
                     elif command == MavCommand.SET_SPEED_FORWARD:
                         LOG.info(f"Forward speed set to {msg.param1}%")
+
                     elif command == MavCommand.SET_SPEED_BACKWARD:
                         LOG.info(f"Backward speed set to {msg.param1}%") 
+
                     elif command == MavCommand.SET_SPEED_DIVE:
                         LOG.info(f"Dive speed set to {msg.param1}%")
+
                     elif command == MavCommand.SET_SPEED_SURFACE:
                         LOG.info(f"Surface speed set to {msg.param1}%")
+
                     elif command == MavCommand.SET_LIGHT:
                         LOG.info(f"Light set to {msg.param1}%")
+
                     elif command == MavCommand.SET_CAMERA:
                         mode_str = "ON" if int(msg.param1) == 1 else "OFF"
                         LOG.info(f"Camera set to {mode_str}")
+                        
                     elif command == MavCommand.START_MAG_CALIBRATION:
                         LOG.info(f"Starting magnetometer calibration")
                 
@@ -296,6 +305,7 @@ class MavlinkController:
                     MavCommand.SURFACE, MavCommand.DIVE,
                     MavCommand.LEFT, MavCommand.RIGHT,
                     MavCommand.FORWARD, MavCommand.BACKWARD,
+                    MavCommand.ROLL_LEFT, MavCommand.ROLL_RIGHT,
                     MavCommand.STOP
                 }:
                     self._handle_manual_command(command)
@@ -338,7 +348,7 @@ class MavlinkController:
                 else:
                     with self._lock:
                         if time.time() - self.last_heartbeat > self.heartbeat_timeout:
-                            if not status.read_status(key="disconnect", default=False):
+                            if status.read_status(key="disconnect", default=0) == 1:
                                 self._handle_connection_lost()
             except ConnectionError as e:
                 LOG.error(f"Connection error in receiver: {e}")
@@ -360,10 +370,9 @@ class MavlinkController:
                 if current_time - last_send_time >= self.status_send_interval:
                     last_send_time = current_time
                     
-                    status_data = status.read_all_status()
+                    status_data = status.read_multiple_status(self.status_params)
                     
                     for key in self.status_params:
-                        print(f"Sending {key}: {status_data.get(key, 0)}")
                         try:
                             value = float(status_data.get(key, 0))
                             param_id = key.ljust(16, '\0')

@@ -3,10 +3,11 @@ import sys
 import os
 import time
 import threading
+import atexit
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
-from Autopilot.system_info.status import raspi_status as status
+from Autopilot.config import raspi_config as config
 from Autopilot.controller.utils.raspi_logger import LOG
 
 FORWARD = 1
@@ -96,13 +97,13 @@ class Motor:
             LOG.error(f"Error stopping motor: {e}")
             
     def thrust_forward(self):
-        speed = status.read_status("max_speed_forward", 100)
+        speed = config.read_config("max_speed_forward", 100)
         dutycycle = scale_to_pwm(speed)
         self.set_dutycycle(dutycycle)
         return speed
             
     def thrust_backward(self):
-        speed = status.read_status("max_speed_backward", -100)
+        speed = config.read_config("max_speed_backward", -100)
         dutycycle = scale_to_pwm(speed)
         self.set_dutycycle(dutycycle)
         return speed
@@ -198,3 +199,5 @@ def cleanup():
     if _pi is not None and _pi.connected:
         _pi.stop()
         _pi = None
+
+atexit.register(cleanup)

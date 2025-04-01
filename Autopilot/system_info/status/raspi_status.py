@@ -1,10 +1,12 @@
 import json
 import os
+import sys
 import time
 import threading
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
-# from Autopilot.controller.utils.raspi_logger import LOG
+from Autopilot.controller.utils.raspi_logger import LOG
 
 STATUS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "status.json")
 
@@ -22,27 +24,10 @@ def init_status():
         "pitch": 0,
         "roll": 0,
         "heading": 0,
-        "auto_heading": False,
+        "auto_heading": 0,
         "target_heading": 0,
-        "auto_depth": False,
+        "auto_depth": 0,
         "target_depth": 0,
-        "max_speed_forward": 100.0,
-        "max_speed_backward": -100.0,
-        "max_speed_dive": 100.0,
-        "max_speed_surface": 100.0,
-        "left_speed": 100,
-        "right_speed": 100,
-        "left_depth_speed": 100,
-        "right_depth_speed": 100,
-        "Kp_depth": 0,
-        "Ki_depth": 0,
-        "Kd_depth": 0,
-        "Kp_autoheading": 0,
-        "Ki_autoheading": 0,
-        "Kd_autoheading": 0,
-        "Kp_yaw": 0,
-        "Ki_yaw": 0,
-        "Kd_yaw": 0,
         "mode": "manual",
         "disconnect": 0,
         "light": 0,
@@ -63,7 +48,7 @@ def init_status():
             
         return data
     except Exception as e:
-        # LOG.error(f"Failed to initialize status file: {e}")
+        LOG.error(f"Failed to initialize status file: {e}")
         return data
 
 def update_status(key, value):
@@ -87,7 +72,7 @@ def update_status(key, value):
         _last_update_time = time.time()
         return True
     except Exception as e:
-        # LOG.error(f"Failed to update status for key {key}: {e}")
+        LOG.error(f"Failed to update status for key {key}: {e}")
         return False
 
 def update_multiple(update_dict):
@@ -116,7 +101,7 @@ def update_multiple(update_dict):
         _last_update_time = time.time()
         return True
     except Exception as e:
-        # LOG.error(f"Failed to update multiple status: {e}")
+        LOG.error(f"Failed to update multiple status: {e}")
         return False
 
 def read_all_status():
@@ -139,7 +124,7 @@ def read_all_status():
             
         return data
     except Exception as e:
-        # LOG.error(f"Failed to read status file: {e}")
+        LOG.error(f"Failed to read status file: {e}")
         return False
 
 def read_status(key, default=None):
@@ -153,7 +138,7 @@ def read_status(key, default=None):
         data = read_all_status()
         return data.get(key, default)
     except Exception as e:
-        # LOG.error(f"Failed to read status for key {key}: {e}")
+        LOG.error(f"Failed to read status for key {key}: {e}")
         return default
 
 def read_multiple_status(keys):
@@ -168,7 +153,7 @@ def read_multiple_status(keys):
             data = read_all_status()
             return {key: data.get(key) for key in keys}
     except Exception as e:
-        # LOG.error(f"Failed to read multiple status: {e}")
+        LOG.error(f"Failed to read multiple status: {e}")
         return {key: None for key in keys}
     
 def force_refresh():

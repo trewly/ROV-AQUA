@@ -19,29 +19,12 @@ def init_status():
         "pitch": 0,
         "roll": 0,
         "heading": 0,
-        "auto_heading": False,
+        "auto_heading": 0,
         "target_heading": 0,
-        "auto_depth": False,
+        "auto_depth": 0,
         "target_depth": 0,
-        "max_speed_forward": 100.0,
-        "max_speed_backward": -100.0,
-        "max_speed_dive": 100.0,
-        "max_speed_surface": 100.0,
-        "left_speed": 100,
-        "right_speed": 100,
-        "left_depth_speed": 100,
-        "right_depth_speed": 100,
-        "Kp_depth": 0,
-        "Ki_depth": 0,
-        "Kd_depth": 0,
-        "Kp_autoheading": 0,
-        "Ki_autoheading": 0,
-        "Kd_autoheading": 0,
-        "Kp_yaw": 0,
-        "Ki_yaw": 0,
-        "Kd_yaw": 0,
         "mode": "manual",
-        "disconnect": True,
+        "disconnect": 1,
         "light": 0,
         "camera": 0,
         "calibrated": 0
@@ -161,5 +144,4 @@ def force_refresh():
         _last_update_time = 0
     return read_all_status()
 
-# init_status()
-# print(read_status("heading"))
+init_status()
