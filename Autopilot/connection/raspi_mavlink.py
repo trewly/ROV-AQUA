@@ -3,9 +3,6 @@ import threading
 import sys
 import os
 import atexit
-import logging
-from datetime import datetime
-from logging.handlers import TimedRotatingFileHandler
 from enum import IntEnum
 from typing import List
 from pymavlink import mavutil
@@ -366,6 +363,7 @@ class MavlinkController:
                     status_data = status.read_all_status()
                     
                     for key in self.status_params:
+                        print(f"Sending {key}: {status_data.get(key, 0)}")
                         try:
                             value = float(status_data.get(key, 0))
                             param_id = key.ljust(16, '\0')
