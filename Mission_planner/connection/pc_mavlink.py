@@ -42,7 +42,7 @@ class MavCommands:
 
 class MavlinkController:
     def __init__(self, raspi_ip="169.254.54.120", send_port=5000, receive_port=5001, 
-                heartbeat_interval=1.0, connection_timeout=5.0):
+                heartbeat_interval=1.0, connection_timeout=10.0):
         self.raspi_ip = raspi_ip
         self.send_port = send_port
         self.receive_port = receive_port
@@ -133,11 +133,12 @@ class MavlinkController:
                 current_time = time.time()
                 
                 if msg is not None:
+                    print(f"Received message: {msg}")
                     if not self._is_connected:
                         LOG.info("Connection established")
                         self._is_connected = True
                     
-                    status.update_status("disconnect", False)
+                    status.update_status("disconnect", 0)
                     self.last_message_time = current_time
                     
                     self._process_message(msg)
@@ -145,7 +146,7 @@ class MavlinkController:
                     if current_time - self.last_message_time > self.connection_timeout:
                         if self._is_connected:
                             LOG.warning("Connection lost!")
-                            status.update_status("disconnect", True)
+                            status.update_status("disconnect", 1)
                             self._is_connected = False
             except Exception as e:
                 LOG.error(f"Error receiving message: {e}")
@@ -168,31 +169,6 @@ class MavlinkController:
                 
             except Exception as e:
                 LOG.error(f"Error processing parameter: {e}")
-        elif msg_type == "COMMAND_ACK":
-            result_str = "ACCEPTED" if msg.result == 0 else f"FAILED ({msg.result})"
-            LOG.info(f"CMD_ACK: Command {msg.command} {result_str}")
-        elif msg_type == "STATUSTEXT":
-            try:
-                if isinstance(msg.text, bytes):
-                    text = msg.text.decode('ascii')
-                else:
-                    text = str(msg.text)
-                
-                severity = msg.severity
-                severity_str = {
-                    0: "EMERGENCY",
-                    1: "ALERT",
-                    2: "CRITICAL",
-                    3: "ERROR",
-                    4: "WARNING",
-                    5: "NOTICE",
-                    6: "INFO",
-                    7: "DEBUG"
-                }.get(severity, str(severity))
-                
-                LOG.info(f"STATUS [{severity_str}]: {text}")
-            except Exception as e:
-                LOG.error(f"Error processing status text: {e}")
         else:
             try:
                 msg_dict = msg.to_dict()

@@ -128,7 +128,7 @@ def _run_streaming(command):
             stderr=subprocess.PIPE,
         )
         
-        time.sleep(0.5)
+        time.sleep(0.1)
         if stream_process.poll() is not None:
             error_output = stream_process.stderr.read().decode('utf-8')
             LOG.error(f"Stream process error: {error_output}")
@@ -176,8 +176,6 @@ def start_stream(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT):
             except:
                 pass
             return False
-            
-        LOG.info("Stream started successfully")
         return True
 
 def stop_stream():

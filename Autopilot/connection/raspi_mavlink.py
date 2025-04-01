@@ -46,15 +46,16 @@ class MavCommand(IntEnum):
     START_CAMERA_STREAM = 1201
 
 class MavlinkController:
-    def __init__(self, receive_port=5000, send_ip="169.254.54.121", send_port=5001):
+    def __init__(self, pc_ip="169.254.54.121", receive_port=5000, send_port=5001, status_send_interval=0.01,
+                  heartbeat_timeout=10.0):
         LOG.info("Initializing MAVLink controller")
             
         self.receive_port = receive_port
-        self.send_ip = send_ip
+        self.pc_ip = pc_ip
         self.send_port = send_port
         
-        self.status_send_interval = 0.01
-        self.heartbeat_timeout = 10.0
+        self.status_send_interval = status_send_interval
+        self.heartbeat_timeout = heartbeat_timeout
         self.last_heartbeat = time.time()
         
         self.running = False
@@ -89,7 +90,7 @@ class MavlinkController:
             receiver_thread.start()
             self.threads.append(receiver_thread)
             
-            self.transmitter = mavutil.mavlink_connection(f"udpout:{self.send_ip}:{self.send_port}")
+            self.transmitter = mavutil.mavlink_connection(f"udpout:{self.pc_ip}:{self.send_port}")
             transmitter_thread = threading.Thread(
                 target=self.send_status_updates, 
                 daemon=True,
@@ -352,13 +353,11 @@ class MavlinkController:
                                 self._handle_connection_lost()
             except ConnectionError as e:
                 LOG.error(f"Connection error in receiver: {e}")
-                time.sleep(1)
             except Exception as e:
                 LOG.error(f"Error in receiver thread: {e}", exc_info=True)
-                time.sleep(1)
 
     def send_status_updates(self):
-        LOG.info(f"MAVLink transmitter sending to {self.send_ip}:{self.send_port}")
+        LOG.info(f"MAVLink transmitter sending to {self.pc_ip}:{self.send_port}")
         
         param_type = mavutil.mavlink.MAV_PARAM_TYPE_REAL32
         last_send_time = 0
@@ -397,11 +396,8 @@ class MavlinkController:
                     #     mavutil.mavlink.MAV_STATE_ACTIVE
                     # )
                 
-                time.sleep(0.01)
-                
             except Exception as e:
                 LOG.error(f"Error in transmitter thread: {e}", exc_info=True)
-                time.sleep(1)
 
 MAV = MavlinkController()
 
@@ -423,6 +419,6 @@ if __name__ == "__main__":
     MAV._initialize_connection()
     try:
         while True:
-            time.sleep(1)
+            pass
     except KeyboardInterrupt:
         MAV.shutdown()
