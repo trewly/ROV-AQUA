@@ -24,34 +24,46 @@ class ROVSimulationThread(QThread):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.running = True
-        self.dt = 0.1 
-        self.velocity_x = 0
-        self.velocity_y = 0 
-        self.position_x = 2200
-        self.position_y = 2400 
-        self.acceleration_x = 2  
-        self.angle = 30
+        self.dt = 0.1  # Time step in seconds
+        self.velocity = 0  # Forward velocity (m/s)
+        self.position_x = 2200  # Initial X position
+        self.position_y = 2400  # Initial Y position
+        self.angle = 0  # Current heading angle (degrees)
+        self.previous_angle = 0  # Previous heading angle
 
     def run(self):
-        while self.running:
-            # Chuyển đổi gia tốc theo góc yaw
-            a_world_x = self.acceleration_x * math.cos(math.radians(self.angle))
-            a_world_y = self.acceleration_x * math.sin(math.radians(self.angle))
+        # Create timer INSIDE the thread where it will run
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_simulation)
+        self.timer.setInterval(int(self.dt * 1000))  # Convert to milliseconds
+        self.timer.start()
+        
+        # Start event loop
+        self.exec_()
 
-            # Cập nhật vận tốc trong hệ toàn cục
-            self.velocity_x += a_world_x * self.dt
-            self.velocity_y += a_world_y * self.dt  # Thêm cập nhật vận tốc Y
-
-            # Cập nhật vị trí trong hệ toàn cục
-            self.position_x += self.velocity_x * self.dt
-            self.position_y += self.velocity_y * self.dt  # Thêm cập nhật vị trí Y
-
-            # Phát tín hiệu cập nhật
-            self.update_position.emit(self.position_x, self.position_y, self.angle)
-            time.sleep(self.dt)
+    def update_simulation(self):
+        if not self.running:
+            return
+            
+        # Read current status
+        self.angle = status.read_status("heading")
+        self.velocity = status.read_status("vertical_velocity")  # Get velocity directly
+        
+        # Calculate velocity components based on current heading
+        velocity_x = self.velocity * math.cos(math.radians(self.angle))
+        velocity_y = self.velocity * math.sin(math.radians(self.angle))
+        
+        # Update position
+        self.position_x += velocity_x * self.dt
+        self.position_y += velocity_y * self.dt
+        
+        # Emit updated position
+        self.update_position.emit(self.position_x, self.position_y, self.angle)
 
     def stop(self):
         self.running = False
+        if hasattr(self, 'timer'):
+            self.timer.stop()
         self.quit()
         self.wait()
 
@@ -102,7 +114,6 @@ class CanvasWidget(QWidget):
         self.status_manager = status_manager
         self.status_manager.got_disconnected_info.connect(self.update_vehicle_status)
         self.status_manager.got_temp_depth_info.connect(self.update_temp_depth_info)
-
         # Đọc trạng thái ban đầu
         self.update_vehicle_status(0)
 
@@ -315,4 +326,15 @@ class CanvasWidget(QWidget):
         self.vehicle_dot.setPos(x, y)
         self.vehicle_dot.setTransform(QTransform().rotate(yaw))
 
-        
+        #add tracking
+        track_path = QGraphicsEllipseItem(x, y, 3, 3)  # Vẽ hình tròn nhỏ (6x6 pixel)
+        track_path.setBrush(Qt.green)  # Đặt màu đỏ cho waypoint
+        track_path.setPen(QPen(Qt.NoPen))
+        self.scene.addItem(track_path)
+
+# if __name__ == "__main__":
+#     app = QApplication(sys.argv)
+#     status_manager = SystemStatusManager()  # Tạo đối tượng quản lý trạng thái hệ thống
+#     main_window = CanvasWidget(status_manager)
+#     main_window.show()
+#     sys.exit(app.exec_())
