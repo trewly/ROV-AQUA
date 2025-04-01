@@ -13,6 +13,7 @@ class SystemStatusManager(QObject):
     got_disconnected_info = pyqtSignal(bool)  
     got_temp_depth_info = pyqtSignal(float,float)
     got_roll_pitch_yaw_info= pyqtSignal(float,float,float)
+    got_x_acce_info = pyqtSignal(bool,float,bool)
 
     def __init__(self):
         super().__init__()
@@ -32,6 +33,7 @@ class SystemStatusManager(QObject):
         #timer theo ms
         self.timer_2= QTimer()
         self.timer_2.timeout.connect(self.get_roll_pitch_yaw_info)
+        self.timer_2.timeout.connect(self.get_x_acce_info)
         self.timer_2.start(10)
 
     def initial_read(self):
@@ -55,7 +57,7 @@ class SystemStatusManager(QObject):
     def get_temp_depth_info(self):
         if self.disconnected:
             self.got_temp_depth_info.emit(6,6)
-            return
+            #return
         else:
             try:
                 self.temp=status.read_status("temp")
@@ -65,8 +67,9 @@ class SystemStatusManager(QObject):
                 print("Error read temp,depth")
 
     def get_roll_pitch_yaw_info(self):
-        if self.disconnected:
-            self.got_roll_pitch_yaw_info.emit(6,6,6)
+        if False:
+        #if self.disconnected:
+            self.got_roll_pitch_yaw_info.emit(6,6,90)
             return
         else:
             try:
@@ -77,3 +80,15 @@ class SystemStatusManager(QObject):
                 self.got_roll_pitch_yaw_info.emit(self.roll,self.pitch,self.yaw)
             except:
                 print("Error read roll,pitch,yaw")
+
+    def get_x_acce_info(self):
+        if False:
+        #if self.disconnected:
+            self.got_roll_pitch_yaw_info.emit(0,5,0)
+            return
+        else:
+            try:
+                self.x_acce=status.read_status("x_acce")
+                self.got_x_acce_info.emit(0,self.x_acce,0)
+            except:
+                print("Error read x acce")

@@ -147,16 +147,20 @@ class STLViewerWidget(QWidget):
         self.ai_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.ai_view.setFrameShape(QFrame.NoFrame)
 
-        #Khởi động luồng đọc dữ liệu xoay giả lập
-        self.rotation_thread = RotationThread()
-        self.rotation_thread.new_rotation.connect(self.rotate_model)  # xoay theo truc the gioi
-        self.rotation_thread.new_rotation.connect(self.attitude_indicator_position_change)  # xoay pitch roll
-        self.rotation_thread.new_rotation.connect(self.compass_position_change)  # xoay compass
-        self.rotation_thread.start()
+        # #Khởi động luồng đọc dữ liệu xoay giả lập
+        # self.rotation_thread = RotationThread()
+        # self.rotation_thread.new_rotation.connect(self.rotate_model)  # xoay theo truc the gioi
+        # self.rotation_thread.new_rotation.connect(self.attitude_indicator_position_change)  # xoay pitch roll
+        # self.rotation_thread.new_rotation.connect(self.compass_position_change)  # xoay compass
+        # self.rotation_thread.start()
         
         #cap nhat giao dien voi timer
         self.status_manager = status_manager
         self.status_manager.got_roll_pitch_yaw_info.connect(self.update_sate_show)
+        self.status_manager.got_roll_pitch_yaw_info.connect(self.rotate_model)
+        self.status_manager.got_roll_pitch_yaw_info.connect(self.attitude_indicator_position_change)
+        self.status_manager.got_roll_pitch_yaw_info.connect(self.compass_position_change)
+
 
     #ham khoi tao, chuc nang mo hinh
     def on_stl_loaded(self, vertices, faces):
@@ -238,7 +242,7 @@ class STLViewerWidget(QWidget):
 
         transform = QMatrix4x4()
         transform.rotate(x_angle, 1, 0, 0)  # Xoay quanh trục X
-        transform.rotate(y_angle, 0, 1, 0)  # Xoay quanh trục Y
+        transform.rotate((-1)*y_angle, 0, 1, 0)  # Xoay quanh trục Y
         transform.rotate(z_angle, 0, 0, 1)  # Xoay quanh trục Z
 
         self.mesh_item.setTransform(transform)  # Cập nhật mô hình
