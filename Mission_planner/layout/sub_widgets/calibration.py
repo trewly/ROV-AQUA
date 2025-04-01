@@ -63,12 +63,12 @@ class calibration(QWidget):
         yaw_calib_status = 0  
         self.start_button.setText("Calibrating...") 
         self.start_button.setEnabled(False) 
-        self.timer.start(5000) 
+        self.timer.start(25000) 
 
     def finish_calib(self):
         yaw_calib_status = pc_status.read_status("calibrated")
         self.timer.stop()  
-        if yaw_calib_status == 2:
+        if yaw_calib_status == 1:
             self.show_successful_message()
         else:
             self.show_unsuccessful_message()
