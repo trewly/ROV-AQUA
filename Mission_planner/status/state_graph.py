@@ -9,6 +9,7 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 from Mission_planner.layout.resources.style import control_button_style as st
+from Mission_planner.status import pc_status as status
 
 class AttitudePlotter(QWidget):
     def __init__(self):
@@ -68,7 +69,8 @@ class AttitudePlotter(QWidget):
         self.stop_btn.clicked.connect(self.stop_tracking)
 
     def start_tracking(self):
-        self.timer.start(100)  # cập nhật mỗi 50ms
+        self.timer.start(200)  # cập nhật mỗi 50ms
+
 
     def stop_tracking(self):
         self.pitch_data=[]
@@ -79,9 +81,17 @@ class AttitudePlotter(QWidget):
         self.timer.stop()
 
     def update_data(self):
-        pitch = random.uniform(-90, 90)
-        roll = random.uniform(-90, 90)
-        yaw = random.uniform(-180, 180)
+        # pitch = random.uniform(-90, 90)
+        # roll = random.uniform(-90, 90)
+        # yaw = random.uniform(-180, 180)
+
+        #cap nhat theo du lieu that
+        try:
+            pitch=status.read_status("pitch")
+            roll=status.read_status("roll")
+            yaw=status.read_status("heading")
+        except:
+            print("Loi read tu file state_graph")
 
         self.x.append(self.counter)
         self.pitch_data.append(pitch)

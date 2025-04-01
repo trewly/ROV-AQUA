@@ -35,7 +35,7 @@ class SystemStatusManager(QObject):
         self.timer_2= QTimer()
         self.timer_2.timeout.connect(self.get_roll_pitch_yaw_info)
         self.timer_2.timeout.connect(self.get_x_velo_info)
-        self.timer_2.start(10)
+        self.timer_2.start(50)
 
     def initial_read(self):
         try:
