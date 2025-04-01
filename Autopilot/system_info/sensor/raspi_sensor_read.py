@@ -11,6 +11,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 from Autopilot.system_info.status import raspi_status as status
 from Autopilot.controller.utils.raspi_Filter import KalmanFilter, low_pass_filter
 from Autopilot.controller.utils.raspi_logger import LOG
+from Autopilot.controller.utils.raspi_Filter import CircularAverageFilter, MedianFilter, AdaptiveFilter
 
 class HMC5883L:
     HMC5883L_ADDR = 0x1E
@@ -86,11 +87,15 @@ class HMC5883L:
         self.m_bias = np.array([0.0, 0.0, 0.0], dtype=float)
         self.m_scale = np.array([1.0, 1.0, 1.0], dtype=float)
         self.current_heading = 0.0
-        self.declination = 0.0
+        self.declination = -0.0305
         self.current_gain = self.GAIN_HIGH
         self.current_sample_rate = self.DEFAULT_SAMPLE_RATE
         self.update_thread = None
         self.running = False
+        
+        self.heading_median_filter = MedianFilter(window_size=5)
+        self.heading_avg_filter = CircularAverageFilter(window_size=10)
+        self.heading_adaptive_filter = AdaptiveFilter(window_size=7, threshold=15.0)
 
     def initialize(self):
         try:
@@ -188,7 +193,7 @@ class HMC5883L:
 
     def get_heading(self):
         mag_status = self.read_mag_status()
-        if mag_status & self.STATUS_RDY and not mag_status & self.STATUS_LOCK:
+        if (mag_status & self.STATUS_RDY) and not (mag_status & self.STATUS_LOCK):
             mag = self.read_mag_data()
 
             mag_corrected = (mag - self.m_bias) * self.m_scale
@@ -201,13 +206,21 @@ class HMC5883L:
                 heading += 2 * math.pi
 
             heading_degrees = math.degrees(heading)
-
-            self.current_heading = heading_degrees
-            status.update_status(key="heading", value=heading_degrees)
+            
+            heading_median = self.heading_median_filter.update(heading_degrees)
+            
+            heading_avg = self.heading_avg_filter.update(heading_median)
+            
+            self.current_heading = heading_avg
+            
+            # heading_filtered = self.heading_adaptive_filter.update(heading_degrees)
+            # self.current_heading = heading_filtered
+            
+            status.update_status(key="heading", value=self.current_heading)
             time.sleep(0.013)
         else:
             return 0.0
-        return heading_degrees
+        return self.current_heading
 
     def calibrate(self, sample_count=1500):
         LOG.info("Starting calibration...")
