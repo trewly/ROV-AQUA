@@ -6,8 +6,8 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from resources.style import setting_button_style
 
-from sub_widgets.pid_setting import PIDTuner
-from sub_widgets.calibration import calibration
+from widgets.pid_setting_widget import PIDTuner
+from widgets.calibration_widget import calibration
 
 class SettingWidget(QWidget):
     def __init__(self):

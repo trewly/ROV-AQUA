@@ -8,12 +8,13 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 #print(os.path.dirname(os.path.abspath(__file__)))
 
 from status import pc_status as status
+from config import raspi_config as config
 
 class SystemStatusManager(QObject):
     got_disconnected_info = pyqtSignal(bool)  
     got_temp_depth_info = pyqtSignal(float,float)
     got_roll_pitch_yaw_info= pyqtSignal(float,float,float)
-    got_x_acce_info = pyqtSignal(bool,float,bool)
+    got_x_velo_info = pyqtSignal(bool,float,bool)
 
     def __init__(self):
         super().__init__()
@@ -33,8 +34,8 @@ class SystemStatusManager(QObject):
         #timer theo ms
         self.timer_2= QTimer()
         self.timer_2.timeout.connect(self.get_roll_pitch_yaw_info)
-        self.timer_2.timeout.connect(self.get_x_acce_info)
-        self.timer_2.start(10)
+        self.timer_2.timeout.connect(self.get_x_velo_info)
+        self.timer_2.start(50)
 
     def initial_read(self):
         try:
@@ -81,14 +82,14 @@ class SystemStatusManager(QObject):
             except:
                 print("Error read roll,pitch,yaw")
 
-    def get_x_acce_info(self):
+    def get_x_velo_info(self):
         if False:
         #if self.disconnected:
             self.got_roll_pitch_yaw_info.emit(0,5,0)
             return
         else:
             try:
-                self.x_acce=status.read_status("x_acce")
-                self.got_x_acce_info.emit(0,self.x_acce,0)
+                self.x_velo=status.read_status("vertical_velocity")
+                self.got_x_velo_info.emit(0,self.x_velo,0)
             except:
-                print("Error read x acce")
+                print("Error read x velo")

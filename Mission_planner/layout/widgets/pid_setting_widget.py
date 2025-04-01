@@ -10,6 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 
 from Mission_planner.connection.pc_mavlink import MAV
 from Mission_planner.status import pc_status as status
+from Mission_planner.config import raspi_config as config
 from Mission_planner.layout.resources import style as st
 
 class PIDTuner(QWidget):
@@ -114,7 +115,7 @@ class PIDTuner(QWidget):
         pid = ['Kp', 'Ki', 'Kd']
         for param, values in self.pid_params.items():
             for index, k in enumerate(pid):
-                self.pid_params[param][index] = status.read_status(f"{k}_{param}")
+                self.pid_params[param][index] = config.read_config(f"{k}_{param}")
                 print(self.pid_params)
 
     def update_temp_pid(self, pid_name, param, value, label, step):

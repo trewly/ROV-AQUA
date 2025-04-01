@@ -11,7 +11,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 
 from Mission_planner.connection.pc_mavlink import MAV
 from Mission_planner.layout.resources import style as st
-
+from Mission_planner.config import raspi_config
 
 class MotorSlider(QWidget):
     def __init__(self):
@@ -78,7 +78,7 @@ class MotorSlider(QWidget):
         if sender == self.motorxy_forward:
             MAV.set_max_speed_forward(self.motorxy_forward.value())
         elif sender == self.motorxy_backward:
-            MAV.set_max_speed_backward(self.motorxy_backward.value())
+            MAV.set_max_speed_backward((-1)*self.motorxy_backward.value())
         self.label1.setText(f"Motor xy: {self.motorxy_forward.value()}/{self.motorxy_backward.value()}")
 
     def update_label2(self):
@@ -86,7 +86,7 @@ class MotorSlider(QWidget):
         if sender == self.motorz_forward:
             MAV.set_max_speed_surface(self.motorz_forward.value())
         elif sender == self.motorz_backward:
-            MAV.set_max_speed_dive(self.motorz_backward.value())
+            MAV.set_max_speed_dive((-1)*self.motorz_backward.value())
         self.label2.setText(f"Motor z: {self.motorz_forward.value()}/{self.motorz_backward.value()}")
 
 
