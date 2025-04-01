@@ -1,11 +1,11 @@
 {
-    "depth": 0,
+    "depth": 0.0,
     "horizontal_velocity": 0,
     "vertical_velocity": 0,
-    "temp": 0,
-    "pitch": 0,
-    "roll": 0,
-    "heading": 0,
+    "temp": 0.0,
+    "pitch": 0.0,
+    "roll": 0.0,
+    "heading": 97.2706527709961,
     "auto_heading": false,
     "target_heading": 0,
     "auto_depth": false,
@@ -28,8 +28,10 @@
     "Ki_yaw": 0,
     "Kd_yaw": 0,
     "mode": "manual",
-    "disconnect": true,
+    "disconnect": false,
     "light": 0,
     "camera": 0,
-    "calibrated": 0
+    "calibrated": 0,
+    "horizontal_veloc": 0.0,
+    "vertical_velocit": 0.0
 }

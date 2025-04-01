@@ -28,7 +28,7 @@
     "Ki_yaw": 0,
     "Kd_yaw": 0,
     "mode": "manual",
-    "disconnect": true,
+    "disconnect": 0,
     "light": 0,
     "camera": 0,
     "calibrated": 0

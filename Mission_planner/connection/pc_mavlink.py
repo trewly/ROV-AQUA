@@ -87,6 +87,8 @@ class MavlinkController:
             self.receive_thread.start()
             
             self.connection_initialized = True
+            self.running = True
+            self._is_connected = True
             LOG.info("MAVLink controller initialized successfully")
             return True
         except Exception as e:
@@ -334,7 +336,8 @@ if __name__ == "__main__":
     print("Press Ctrl+C to exit")
     
     try:
-        MAV.initialize()
+        MAV._initialize_connections()
+        time.sleep(10)
         MAV.set_manual_mode()
         time.sleep(1)
         MAV.set_max_speed_forward(80)
@@ -342,7 +345,7 @@ if __name__ == "__main__":
         MAV.set_auto_heading(90)
         
         while True:
-            time.sleep(1)
+            pass
     except KeyboardInterrupt:
         print("\nExiting...")
     finally:

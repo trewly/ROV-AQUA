@@ -4,7 +4,7 @@ import time
 import threading
 
 
-from Autopilot.controller.utils.raspi_logger import LOG
+# from Autopilot.controller.utils.raspi_logger import LOG
 
 STATUS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "status.json")
 
@@ -44,7 +44,7 @@ def init_status():
         "Ki_yaw": 0,
         "Kd_yaw": 0,
         "mode": "manual",
-        "disconnect": True,
+        "disconnect": 0,
         "light": 0,
         "camera": 0,
         "calibrated": 0
@@ -63,7 +63,7 @@ def init_status():
             
         return data
     except Exception as e:
-        LOG.error(f"Failed to initialize status file: {e}")
+        # LOG.error(f"Failed to initialize status file: {e}")
         return data
 
 def update_status(key, value):
@@ -87,7 +87,7 @@ def update_status(key, value):
         _last_update_time = time.time()
         return True
     except Exception as e:
-        LOG.error(f"Failed to update status for key {key}: {e}")
+        # LOG.error(f"Failed to update status for key {key}: {e}")
         return False
 
 def update_multiple(update_dict):
@@ -116,7 +116,7 @@ def update_multiple(update_dict):
         _last_update_time = time.time()
         return True
     except Exception as e:
-        LOG.error(f"Failed to update multiple status: {e}")
+        # LOG.error(f"Failed to update multiple status: {e}")
         return False
 
 def read_all_status():
@@ -139,7 +139,7 @@ def read_all_status():
             
         return data
     except Exception as e:
-        LOG.error(f"Failed to read status file: {e}")
+        # LOG.error(f"Failed to read status file: {e}")
         return False
 
 def read_status(key, default=None):
@@ -153,7 +153,7 @@ def read_status(key, default=None):
         data = read_all_status()
         return data.get(key, default)
     except Exception as e:
-        LOG.error(f"Failed to read status for key {key}: {e}")
+        # LOG.error(f"Failed to read status for key {key}: {e}")
         return default
 
 def read_multiple_status(keys):
@@ -168,7 +168,7 @@ def read_multiple_status(keys):
             data = read_all_status()
             return {key: data.get(key) for key in keys}
     except Exception as e:
-        LOG.error(f"Failed to read multiple status: {e}")
+        # LOG.error(f"Failed to read multiple status: {e}")
         return {key: None for key in keys}
     
 def force_refresh():
@@ -178,20 +178,21 @@ def force_refresh():
         _last_update_time = 0
     return read_all_status()
 
-if __name__ == "__main__":
-    print(f"Status file path: {STATUS_PATH}")
+init_status()
+# if __name__ == "__main__":
+#     print(f"Status file path: {STATUS_PATH}")
     
-    init_status()
-    print("Status initialized")
+#     init_status()
+#     print("Status initialized")
     
-    print("\nTesting status functions:")
-    update_status("depth", 5.5)
-    print(f"Updated depth: {read_status('depth')}")
+#     print("\nTesting status functions:")
+#     update_status("depth", 5.5)
+#     print(f"Updated depth: {read_status('depth')}")
     
-    update_multiple({"pitch": 10.2, "roll": -5.1})
-    print(f"Updated pitch: {read_status('pitch')}, roll: {read_status('roll')}")
+#     update_multiple({"pitch": 10.2, "roll": -5.1})
+#     print(f"Updated pitch: {read_status('pitch')}, roll: {read_status('roll')}")
     
-    all_status = read_all_status()
-    print("\nAll status values:")
-    for key, value in all_status.items():
-        print(f"  {key}: {value}")
+#     all_status = read_all_status()
+#     print("\nAll status values:")
+#     for key, value in all_status.items():
+#         print(f"  {key}: {value}")
