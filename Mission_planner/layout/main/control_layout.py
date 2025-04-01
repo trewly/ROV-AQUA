@@ -9,17 +9,41 @@ import time
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
 from Mission_planner.layout.resources.style import control_button_style
-
 from Mission_planner.layout.contents.motor_slider import MotorSlider
 from Mission_planner.controller.video_controller import VideoReceiver
-from Mission_planner.controller.joystick_controller import VirtualJoystick
-from Mission_planner.controller.button_controller import ButtonController
+from Mission_planner.controller import button_controller as ButtonController
+
 
 class ControlButton(QPushButton):
     def __init__(self, text, parent=None):
-        super().__init__(text, parent)
+        super().__init__(text, parent)  
         self.setMinimumSize(100, 35)
         self.setStyleSheet(control_button_style)
+        self.setCursor(Qt.PointingHandCursor)
+
+class DirectionButton(QPushButton):
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+        self.setMinimumSize(60, 60)
+        self.setMaximumSize(60, 60)
+        
+        self.setStyleSheet("""
+            QPushButton {
+                background-color: #2C3333;
+                color: white;
+                border: none;
+                border-radius: 30px;
+                font-weight: bold;
+                font-size: 24px;
+            }
+            QPushButton:hover {
+                background-color: #395B64;
+            }
+            QPushButton:pressed {
+                background-color: #A5C9CA;
+                color: #2C3333;
+            }
+        """)
         self.setCursor(Qt.PointingHandCursor)
 
 class ControlWidget(QWidget):
@@ -56,18 +80,25 @@ class ControlWidget(QWidget):
         self.video_receiver.setFixedSize(960, 540)
         video_layout.addWidget(self.video_receiver)
         
-        self.joystick_container = QFrame(self)
-        self.joystick_container.setGeometry(10, 570, 200, 200)
-        self.joystick_container.setFrameShape(QFrame.StyledPanel)
-        self.joystick_container.setStyleSheet("background-color: #395B64; border-radius: 10px;")
+        self.direction_container = QFrame(self)
+        self.direction_container.setGeometry(10, 570, 200, 200)
+        self.direction_container.setFrameShape(QFrame.StyledPanel)
+        self.direction_container.setStyleSheet("background-color: #395B64; border-radius: 10px;")
 
-        joystick_layout = QVBoxLayout(self.joystick_container)
-        joystick_layout.setContentsMargins(10, 10, 10, 10)
-        joystick_layout.setAlignment(Qt.AlignCenter)
+        direction_layout = QGridLayout(self.direction_container)
+        direction_layout.setContentsMargins(10, 10, 10, 10)
         
-        self.joystick = VirtualJoystick()
-        self.joystick.setFocusPolicy(Qt.StrongFocus)
-        joystick_layout.addWidget(self.joystick)
+        self.forward_button = DirectionButton("▲")
+        self.backward_button = DirectionButton("▼")
+        self.left_button = DirectionButton("◄")
+        self.right_button = DirectionButton("►")
+        
+        direction_layout.addWidget(self.forward_button, 0, 1)
+        direction_layout.addWidget(self.left_button, 1, 0)
+        direction_layout.addWidget(self.right_button, 1, 2)
+        direction_layout.addWidget(self.backward_button, 2, 1)
+        
+        direction_layout.setSpacing(10)
         
         self.buttons_container = QFrame(self)
         self.buttons_container.setGeometry(220, 550, 755, 50)
@@ -83,8 +114,7 @@ class ControlWidget(QWidget):
         self.roll_right_button = ControlButton("ROLL RIGHT")
         self.roll_left_button = ControlButton("ROLL LEFT")
         self.mode_change_button = ControlButton("MODE")
-        self.connect_signals()
-
+        
         buttons_layout.addWidget(self.surface_button)
         buttons_layout.addWidget(self.dive_button)
         buttons_layout.addWidget(self.roll_right_button)
@@ -95,35 +125,56 @@ class ControlWidget(QWidget):
         self.motoSlider.setParent(self)
         self.motoSlider.setGeometry(280, 600, 755, 180)
         
+        self.connect_signals()
+        
     def connect_signals(self):
-        self.surface_button.pressed.connect(self.wrap_activity_tracking(
-            ButtonController.on_surface_button_clicked))
-        self.surface_button.released.connect(self.wrap_activity_tracking(
-            ButtonController.on_surface_button_released))
+        self.forward_button.pressed.connect(
+            self.on_button_activity(ButtonController.controller.on_forward_button_clicked))
+        self.forward_button.released.connect(
+            self.on_button_activity(ButtonController.controller.on_forward_button_released, False))
+            
+        self.backward_button.pressed.connect(
+            self.on_button_activity(ButtonController.controller.on_backward_button_clicked))
+        self.backward_button.released.connect(
+            self.on_button_activity(ButtonController.controller.on_backward_button_released, False))
+            
+        self.left_button.pressed.connect(
+            self.on_button_activity(ButtonController.controller.on_left_button_clicked))
+        self.left_button.released.connect(
+            self.on_button_activity(ButtonController.controller.on_left_button_released, False))
+            
+        self.right_button.pressed.connect(
+            self.on_button_activity(ButtonController.controller.on_right_button_clicked))
+        self.right_button.released.connect(
+            self.on_button_activity(ButtonController.controller.on_right_button_released, False))
         
-        self.dive_button.pressed.connect(self.wrap_activity_tracking(
-            ButtonController.on_dive_button_clicked))
-        self.dive_button.released.connect(self.wrap_activity_tracking(
-            ButtonController.on_dive_button_released))
+        self.surface_button.pressed.connect(
+            self.on_button_activity(ButtonController.controller.on_surface_button_clicked))
+        self.surface_button.released.connect(
+            self.on_button_activity(ButtonController.controller.on_surface_button_released, False))
+        
+        self.dive_button.pressed.connect(
+            self.on_button_activity(ButtonController.controller.on_dive_button_clicked))
+        self.dive_button.released.connect(
+            self.on_button_activity(ButtonController.controller.on_dive_button_released, False))
 
-        self.roll_right_button.pressed.connect(self.wrap_activity_tracking(
-            ButtonController.on_roll_right_button_clicked))
-        self.roll_right_button.released.connect(self.wrap_activity_tracking(
-            ButtonController.on_roll_right_button_released))
+        self.roll_right_button.pressed.connect(
+            self.on_button_activity(ButtonController.controller.on_roll_right_button_clicked))
+        self.roll_right_button.released.connect(
+            self.on_button_activity(ButtonController.controller.on_roll_right_button_released, False))
 
-        self.roll_left_button.pressed.connect(self.wrap_activity_tracking(
-            ButtonController.on_roll_left_button_clicked))
-        self.roll_left_button.released.connect(self.wrap_activity_tracking(
-            ButtonController.on_roll_left_button_released))
+        self.roll_left_button.pressed.connect(
+            self.on_button_activity(ButtonController.controller.on_roll_left_button_clicked))
+        self.roll_left_button.released.connect(
+            self.on_button_activity(ButtonController.controller.on_roll_left_button_released, False))
         
-        self.mode_change_button.clicked.connect(self.wrap_activity_tracking(
-            ButtonController.on_mode_change_button_clicked))
+        self.mode_change_button.clicked.connect(
+            self.on_button_activity(ButtonController.controller.on_mode_change_button_clicked))
         
-    
-    def wrap_activity_tracking(self, func):
+    def on_button_activity(self, func, input_active=True):
         def wrapper(*args, **kwargs):
             self.register_activity()
-            self.input_active = True
+            self.input_active = input_active
             result = func(*args, **kwargs)
             return result
         return wrapper
@@ -140,19 +191,18 @@ class ControlWidget(QWidget):
         idle_time_ms = (current_time - self.last_activity_time) * 1000
         
         if idle_time_ms >= self.IDLE_TIMEOUT and not self.input_active:
-            if self.isVisible() and not self.joystick.hasFocus():
-                self.joystick.setFocus()
+            pass
     
     def keyPressEvent(self, event):
         self.register_activity()
         self.input_active = True
-        if not ButtonController.handle_key_press(self, event):
+        if not ButtonController.controller.handle_key_press(event):
             super().keyPressEvent(event)
 
     def keyReleaseEvent(self, event):
         self.register_activity()
         self.input_active = False
-        if not ButtonController.handle_key_release(event):
+        if not ButtonController.controller.handle_key_release(event):
             super().keyReleaseEvent(event)
 
     def mousePressEvent(self, event):
@@ -169,6 +219,7 @@ class ControlWidget(QWidget):
         if self.idle_timer.isActive():
             self.idle_timer.stop()
         self.video_receiver.closeEvent(event)
+        ButtonController.controller.cleanup()
         event.accept()
 
 if __name__ == "__main__":

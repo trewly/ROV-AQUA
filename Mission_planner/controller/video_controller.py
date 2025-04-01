@@ -93,7 +93,7 @@ class VideoReceiver(QWidget):
         self.gst_process = None
         self.process_monitor = None
         
-        QTimer.singleShot(500, self.start_gstreamer)
+        QTimer.singleShot(3000, self.start_gstreamer)
         
     def start_gstreamer(self):
         GST_PATH = r"C:\gstreamer\1.0\msvc_x86_64\bin\gst-launch-1.0.exe"
@@ -121,11 +121,13 @@ class VideoReceiver(QWidget):
             )
             
             self.status_label.setText(f"GStreamer started with PID: {self.gst_process.pid}")
-            
+            MAV._initialize_connections()
+            MAV.start_camera_stream()
+
             self.process_monitor = ProcessMonitor(self.gst_process)
             self.process_monitor.error_signal.connect(self.handle_gstreamer_error)
             
-            QTimer.singleShot(2000, self.find_and_embed_window)
+            QTimer.singleShot(5000, self.find_and_embed_window)
             
         except Exception as e:
             error = f"Failed to start GStreamer: {e}"
@@ -166,14 +168,6 @@ class VideoReceiver(QWidget):
             error = "Không tìm thấy cửa sổ GStreamer"
             LOG.error(error)
             self.status_label.setText(error)
-            
-            self.window_find_attempts += 1
-            
-            if self.window_find_attempts <= 3:
-                self.status_label.setText(f"Retrying window search (attempt {self.window_find_attempts}/3)...")
-                QTimer.singleShot(2000, self.find_and_embed_window)
-            else:
-                QMessageBox.warning(self, "Warning", "Could not find GStreamer window after multiple attempts.")
             return
         
         LOG.info(f"Found GStreamer window: {hwnds[0]}")
