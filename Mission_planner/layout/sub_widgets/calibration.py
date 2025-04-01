@@ -9,6 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 
 from Mission_planner.layout.resources import style as st
 from Mission_planner.status import pc_status 
+from Mission_planner.connection.pc_mavlink import MAV
 
 YAW_CALIB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "resources", "calib_image", "yaw_calib.png")
 
@@ -61,6 +62,7 @@ class calibration(QWidget):
     def start_calib(self):
         global yaw_calib_status
         yaw_calib_status = 0  
+        MAV.start_mag_calibration()
         self.start_button.setText("Calibrating...") 
         self.start_button.setEnabled(False) 
         self.timer.start(25000) 
