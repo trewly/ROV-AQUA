@@ -12,11 +12,6 @@ from system_info.status import raspi_status as status
 def initilize_system():
     status.init_status()
     mavlink.initialize_mavlink()
-    sensor.compass.initialize()
-    
-    time.sleep(0.5)
-    sensor.compass.calibrate()
+
     while True:
         print(sensor.compass.get_heading())
-
-    print("System initialized")
