@@ -11,7 +11,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 from Autopilot.system_info.status import raspi_status as status
 from Autopilot.controller.utils.raspi_Filter import KalmanFilter, low_pass_filter
 from Autopilot.controller.utils.raspi_logger import LOG
-from Autopilot.controller.utils.raspi_Filter import CircularAverageFilter, MedianFilter, AdaptiveFilter
+from Autopilot.controller.utils.raspi_Filter import CircularAverageFilter, MedianFilter, AdaptiveFilter, MovingAverageFilter
 
 class HMC5883L:
     HMC5883L_ADDR = 0x1E
@@ -100,7 +100,7 @@ class HMC5883L:
     def initialize(self):
         try:
             config_a_value = self.DEFAULT_SAMPLE_RATE | self.DEFAULT_MEASUREMENT_MODE | self.DEFAULT_NUMBER_OF_SAMPLES
-            self.bus.write_byte_data(self.HMC5883L_ADDR, self.CONFIG_A, 0x78)
+            self.bus.write_byte_data(self.HMC5883L_ADDR, self.CONFIG_A, config_a_value)
 
             self.bus.write_byte_data(self.HMC5883L_ADDR, self.CONFIG_B, self.GAIN_HIGH)
 
@@ -218,8 +218,6 @@ class HMC5883L:
             
             status.update_status(key="heading", value=self.current_heading)
             time.sleep(0.013)
-        else:
-            return 0.0
         return self.current_heading
 
     def calibrate(self, sample_count=1500):
@@ -238,7 +236,7 @@ class HMC5883L:
             time.sleep(0.013)
 
         LOG.info(f"Calibration completed")
-        status.update_status(key="calibrated", value=True)
+        status.update_status(key="calibrated", value=1)
         self.m_bias = (mag_max + mag_min) / 2
         scale_factors = (mag_max - mag_min) / 2
         avg_radius = np.mean(scale_factors)
@@ -357,11 +355,17 @@ class MPU9250:
         self.bus = smbus.SMBus(bus_num)
         self.is_initialized = False
 
-        self.kalman_pitch = KalmanFilter()
-        self.kalman_roll = KalmanFilter()
         self.prev_time = time.time()
         self.current_pitch = 0
         self.current_roll = 0
+
+        self.pitch_median_filter = MedianFilter(window_size=5)
+        self.roll_median_filter = MedianFilter(window_size=5)
+        self.pitch_avg_filter = MovingAverageFilter(window_size=10)
+        self.roll_avg_filter = MovingAverageFilter(window_size=10)
+        
+        self.pitch_adaptive_filter = AdaptiveFilter(window_size=7, threshold=5.0)
+        self.roll_adaptive_filter = AdaptiveFilter(window_size=7, threshold=5.0)
 
         self.current_temp = 0.0
 
@@ -397,37 +401,73 @@ class MPU9250:
             self.bus.write_byte_data(self.MPU9250_ADDR, self.ACCEL_CONFIG_2, self.ACCEL_DLPF_41HZ)
 
             self.bus.write_byte_data(self.MPU9250_ADDR, self.PWR_MGMT_2, 0x00)
-
             who_am_i = self.bus.read_byte_data(self.MPU9250_ADDR, self.WHO_AM_I)
-            if who_am_i == 0x71 or who_am_i == 0x73:
+            time.sleep(0.1)
+            if who_am_i == 0x68 or who_am_i == 0x70:
+                self.is_initialized = True
+                
+                self.current_velocity_x = 0.0
+                self.current_velocity_y = 0.0
+                self.current_velocity_z = 0.0
+                self.velocity_last_update = time.time()
+                self.velocity_reset_counter = 0
+                
+                self.stationary_counter = 0
+                self.stationary_threshold = 5
+                self.is_stationary = True
+                self.velocity_confidence = 1.0
+                
+                if hasattr(self, 'accel_window'):
+                    self.accel_window = []
+                if hasattr(self, 'gyro_window'):
+                    self.gyro_window = []
+                    
+                if hasattr(self, 'accel_x_filter'):
+                    self.accel_x_filter.reset()
+                    self.accel_y_filter.reset()
+                    self.accel_z_filter.reset()
+                    
+                if hasattr(self, 'vx_filter'):
+                    self.vx_filter.reset()
+                    self.vy_filter.reset()
+                    self.vz_filter.reset()
+                
+                self.kalman_pitch = KalmanFilter(q_angle=0.01, q_bias=0.003, r_measure=0.03)
+                self.kalman_roll = KalmanFilter(q_angle=0.01, q_bias=0.003, r_measure=0.03)
+                
+                self.pitch_median_filter.reset()
+                self.roll_median_filter.reset()
+                self.pitch_avg_filter.reset()
+                self.roll_avg_filter.reset()
+                
                 ax, ay, az = self.read_accel_data()
                 pitch, roll = self.calculate_pitch_roll(ax, ay, az)
 
                 self.kalman_pitch.angle = pitch
                 self.kalman_roll.angle = roll
-
+                
                 self.current_pitch = pitch
                 self.current_roll = roll
+                self.prev_time = time.time()
 
                 self.filtered_accel_x = 0.0
                 self.filtered_accel_y = 0.0
                 self.filtered_accel_z = 0.0
 
-                self.is_initialized = True
                 return True
             else:
                 LOG.error("MPU9250 not detected")
                 self.is_initialized = False
                 return False
-        except Exception:
-            LOG.error("Error initializing MPU9250")
+        except Exception as e:
+            LOG.error(f"Error initializing MPU9250: {e}")
             self.is_initialized = False
             return False
 
     def check_connection(self):
         try:
             who_am_i = self.bus.read_byte_data(self.MPU9250_ADDR, self.WHO_AM_I)
-            if who_am_i == 0x71 or who_am_i == 0x73:
+            if who_am_i == 0x68 or who_am_i == 0x70:
                 self.is_initialized = True
                 return True
             LOG.info("MPU9250 not detected")
@@ -502,54 +542,228 @@ class MPU9250:
             return 0, 0
 
     def get_velocity(self):
-        ax, ay, az = self.read_accel_data()
+        try:
+            ax, ay, az = self.read_accel_data()
 
-        current_time = time.time()
-        dt = current_time - self.velocity_last_update
-        self.velocity_last_update = current_time
+            current_time = time.time()
+            dt = current_time - self.velocity_last_update
+            self.velocity_last_update = current_time
 
-        ax_ms2 = ax * self.G
-        ay_ms2 = ay * self.G
-        az_ms2 = (az - 1.0) * self.G
+            ax_ms2 = ax * self.G
+            ay_ms2 = ay * self.G
+            az_ms2 = (az - 1.0) * self.G
 
-        delta_vx = ax_ms2 * dt
-        delta_vy = ay_ms2 * dt
-        delta_vz = az_ms2 * dt
+            ACCEL_DEADBAND = 0.05
+            ax_ms2 = 0.0 if abs(ax_ms2) < ACCEL_DEADBAND * self.G else ax_ms2
+            ay_ms2 = 0.0 if abs(ay_ms2) < ACCEL_DEADBAND * self.G else ay_ms2
+            az_ms2 = 0.0 if abs(az_ms2) < ACCEL_DEADBAND * self.G else az_ms2
 
-        self.current_velocity_x = low_pass_filter(
-            self.current_velocity_x,
-            self.current_velocity_x + delta_vx,
-            self.VELOCITY_ALPHA
-        )
-        self.current_velocity_y = low_pass_filter(
-            self.current_velocity_y,
-            self.current_velocity_y + delta_vy,
-            self.VELOCITY_ALPHA
-        )
-        self.current_velocity_z = low_pass_filter(
-            self.current_velocity_z,
-            self.current_velocity_z + delta_vz,
-            self.VELOCITY_ALPHA
-        )
+            if not hasattr(self, 'accel_x_filter'):
+                self.accel_x_filter = MovingAverageFilter(window_size=20)
+                self.accel_y_filter = MovingAverageFilter(window_size=20)
+                self.accel_z_filter = MovingAverageFilter(window_size=20)
+                
+            ax_filtered = self.accel_x_filter.update(ax_ms2)
+            ay_filtered = self.accel_y_filter.update(ay_ms2)
+            az_filtered = self.accel_z_filter.update(az_ms2)
 
-        self.velocity_reset_counter += 1
+            delta_vx = ax_filtered * dt
+            delta_vy = ay_filtered * dt
+            delta_vz = az_filtered * dt
 
-        if self.velocity_reset_counter >= self.VELOCITY_RESET_THRESHOLD:
-            self.velocity_reset_counter = 0
-            self.current_velocity_x *= 0.5
-            self.current_velocity_y *= 0.5
-            self.current_velocity_z *= 0.5
+            if abs(ax_filtered) < ACCEL_DEADBAND * self.G and abs(ay_filtered) < ACCEL_DEADBAND * self.G and abs(az_filtered) < ACCEL_DEADBAND * self.G:
+                damping_factor = 0.95
+                self.current_velocity_x *= damping_factor
+                self.current_velocity_y *= damping_factor
+                self.current_velocity_z *= damping_factor
+            else:
+                self.current_velocity_x += delta_vx
+                self.current_velocity_y += delta_vy
+                self.current_velocity_z += delta_vz
 
-        status.update_status(key="velocity_x", value=self.current_velocity_x)
-        status.update_status(key="velocity_y", value=self.current_velocity_y)
-        status.update_status(key="velocity_z", value=self.current_velocity_z)
+            self.current_velocity_x = low_pass_filter(
+                self.current_velocity_x,
+                self.current_velocity_x,
+                self.VELOCITY_ALPHA
+            )
+            self.current_velocity_y = low_pass_filter(
+                self.current_velocity_y,
+                self.current_velocity_y,
+                self.VELOCITY_ALPHA
+            )
+            self.current_velocity_z = low_pass_filter(
+                self.current_velocity_z,
+                self.current_velocity_z,
+                self.VELOCITY_ALPHA
+            )
 
-        horizontal_velocity = math.sqrt(self.current_velocity_x**2 + self.current_velocity_y**2)
-        status.update_status(key="horizontal_velocity", value=horizontal_velocity)
-        status.update_status(key="vertical_velocity", value=self.current_velocity_z)
+            self.velocity_reset_counter += 1
 
-        return self.current_velocity_x, self.current_velocity_y, self.current_velocity_z
+            if self.velocity_reset_counter >= self.VELOCITY_RESET_THRESHOLD:
+                self.velocity_reset_counter = 0
+                self.current_velocity_x *= 0.25
+                self.current_velocity_y *= 0.25
+                self.current_velocity_z *= 0.25
 
+            MAX_EXPECTED_VELOCITY = 5.0
+            if (abs(self.current_velocity_x) > MAX_EXPECTED_VELOCITY or 
+                abs(self.current_velocity_y) > MAX_EXPECTED_VELOCITY or 
+                abs(self.current_velocity_z) > MAX_EXPECTED_VELOCITY):
+                if (abs(ax_filtered) < 2 * ACCEL_DEADBAND * self.G and 
+                    abs(ay_filtered) < 2 * ACCEL_DEADBAND * self.G and 
+                    abs(az_filtered) < 2 * ACCEL_DEADBAND * self.G):
+                    self.current_velocity_x *= 0.5
+                    self.current_velocity_y *= 0.5
+                    self.current_velocity_z *= 0.5
+
+            horizontal_velocity = math.sqrt(self.current_velocity_x**2 + self.current_velocity_y**2)
+            status.update_status(key="horizontal_velocity", value=horizontal_velocity)
+            status.update_status(key="vertical_velocity", value=self.current_velocity_z)
+
+            return self.current_velocity_x, self.current_velocity_y, self.current_velocity_z
+
+        except Exception as e:
+            LOG.error(f"Error in get_velocity: {e}")
+            return self.current_velocity_x, self.current_velocity_y, self.current_velocity_z
+
+    def get_velocity_enhanced(self):
+        try:
+            ax, ay, az = self.read_accel_data()
+            
+            if not hasattr(self, 'stationary_counter'):
+                self.stationary_counter = 0
+                self.stationary_threshold = 3
+                self.is_stationary = False
+                self.velocity_confidence = 1.0
+                
+            current_time = time.time()
+            dt = current_time - self.velocity_last_update
+            self.velocity_last_update = current_time
+            
+            dt = min(dt, 0.1)
+            
+            ax_ms2 = ax * self.G
+            ay_ms2 = ay * self.G
+            az_ms2 = (az - 1.0) * self.G
+            
+            ACCEL_DEADBAND = 0.02
+            if abs(ax_ms2) < ACCEL_DEADBAND * self.G:
+                ax_ms2 = 0.0
+            if abs(ay_ms2) < ACCEL_DEADBAND * self.G:
+                ay_ms2 = 0.0
+            if abs(az_ms2) < ACCEL_DEADBAND * self.G:
+                az_ms2 = 0.0
+            
+            if not hasattr(self, 'last_accel'):
+                self.last_accel = (ax_ms2, ay_ms2, az_ms2)
+            
+            accel_change = (abs(ax_ms2 - self.last_accel[0]) + 
+                            abs(ay_ms2 - self.last_accel[1]) + 
+                            abs(az_ms2 - self.last_accel[2]))
+            
+            self.last_accel = (ax_ms2, ay_ms2, az_ms2)
+            
+            ACCEL_CHANGE_THRESHOLD = 0.1 * self.G
+            if accel_change > ACCEL_CHANGE_THRESHOLD:
+                self.is_stationary = False
+                self.stationary_counter = 0
+                
+            is_currently_stationary = self.detect_stationary(window_size=10, threshold_accel=0.02, threshold_gyro=2.0)
+            
+            if is_currently_stationary:
+                self.stationary_counter += 1
+                if self.stationary_counter >= self.stationary_threshold:
+                    if not self.is_stationary:
+                        LOG.info("Device is now stationary - resetting velocity")
+                        self.current_velocity_x = 0.0
+                        self.current_velocity_y = 0.0
+                        self.current_velocity_z = 0.0
+                        self.velocity_confidence = 1.0
+                    self.is_stationary = True
+            else:
+                self.stationary_counter = 0
+                if self.is_stationary:
+                    LOG.info("Device is now moving")
+                self.is_stationary = False
+                
+            if not hasattr(self, 'accel_x_filter'):
+                self.accel_x_filter = MovingAverageFilter(window_size=8)
+                self.accel_y_filter = MovingAverageFilter(window_size=8)
+                self.accel_z_filter = MovingAverageFilter(window_size=8)
+                
+                self.vx_filter = MovingAverageFilter(window_size=5) 
+                self.vy_filter = MovingAverageFilter(window_size=5)
+                self.vz_filter = MovingAverageFilter(window_size=5)
+                
+            ax_filtered = self.accel_x_filter.update(ax_ms2)
+            ay_filtered = self.accel_y_filter.update(ay_ms2)
+            az_filtered = self.accel_z_filter.update(az_ms2)
+            
+            if hasattr(self, 'prev_ax'):
+                delta_vx = ((self.prev_ax + ax_filtered) / 2) * dt
+                delta_vy = ((self.prev_ay + ay_filtered) / 2) * dt
+                delta_vz = ((self.prev_az + az_filtered) / 2) * dt
+            else:
+                delta_vx = ax_filtered * dt
+                delta_vy = ay_filtered * dt
+                delta_vz = az_filtered * dt
+                
+            self.prev_ax = ax_filtered
+            self.prev_ay = ay_filtered
+            self.prev_az = az_filtered
+            
+            acceleration_weight = 1.0
+            if not self.is_stationary and (abs(ax_filtered) > 0.1 * self.G or 
+                                           abs(ay_filtered) > 0.1 * self.G or 
+                                           abs(az_filtered) > 0.1 * self.G):
+                acceleration_weight = 1.5
+            
+            if self.is_stationary:
+                damping_factor = 0.7
+                self.current_velocity_x *= damping_factor
+                self.current_velocity_y *= damping_factor
+                self.current_velocity_z *= damping_factor
+            else:
+                self.current_velocity_x += delta_vx * self.velocity_confidence * acceleration_weight
+                self.current_velocity_y += delta_vy * self.velocity_confidence * acceleration_weight
+                self.current_velocity_z += delta_vz * self.velocity_confidence * acceleration_weight
+                
+                self.velocity_confidence *= 0.998
+                
+            if not self.is_stationary:
+                self.current_velocity_x = self.vx_filter.update(self.current_velocity_x)
+                self.current_velocity_y = self.vy_filter.update(self.current_velocity_y)
+                self.current_velocity_z = self.vz_filter.update(self.current_velocity_z)
+            
+            MAX_EXPECTED_VELOCITY = 5.0
+            if abs(self.current_velocity_x) > MAX_EXPECTED_VELOCITY:
+                self.current_velocity_x = np.sign(self.current_velocity_x) * MAX_EXPECTED_VELOCITY
+                
+            if abs(self.current_velocity_y) > MAX_EXPECTED_VELOCITY:
+                self.current_velocity_y = np.sign(self.current_velocity_y) * MAX_EXPECTED_VELOCITY
+                
+            if abs(self.current_velocity_z) > MAX_EXPECTED_VELOCITY:
+                self.current_velocity_z = np.sign(self.current_velocity_z) * MAX_EXPECTED_VELOCITY
+            
+            self.velocity_confidence = max(0.5, self.velocity_confidence)
+            
+            self.velocity_reset_counter += 1
+            if self.velocity_reset_counter >= self.VELOCITY_RESET_THRESHOLD:
+                self.velocity_reset_counter = 0
+                confidence_factor = max(0.5, self.velocity_confidence ** 2)
+                self.current_velocity_x *= confidence_factor
+                self.current_velocity_y *= confidence_factor
+                self.current_velocity_z *= confidence_factor
+            
+            horizontal_velocity = math.sqrt(self.current_velocity_x**2 + self.current_velocity_y**2)
+            status.update_status(key="horizontal_velocity", value=horizontal_velocity)
+            status.update_status(key="vertical_velocity", value=self.current_velocity_z)
+            
+            return self.current_velocity_x, self.current_velocity_y, self.current_velocity_z
+                
+        except Exception as e:
+            LOG.error(f"Error in get_velocity_enhanced: {e}")
+            return self.current_velocity_x, self.current_velocity_y, self.current_velocity_z
 
     def get_orientation(self):
         try:
@@ -560,16 +774,29 @@ class MPU9250:
             self.prev_time = current_time
 
             pitch_accel, roll_accel = self.calculate_pitch_roll(ax, ay, az)
-
-            self.current_pitch = self.kalman_pitch.update(pitch_accel, gy, dt)
-            self.current_roll = self.kalman_roll.update(roll_accel, gx, dt)
-
+            
+            gyro_x_rad = math.radians(gx)
+            gyro_y_rad = math.radians(gy)
+            
+            kalman_pitch = self.kalman_pitch.update(pitch_accel, gyro_y_rad, dt)
+            kalman_roll = self.kalman_roll.update(roll_accel, gyro_x_rad, dt)
+            
+            pitch_median = self.pitch_median_filter.update(kalman_pitch)
+            roll_median = self.roll_median_filter.update(kalman_roll)
+            
+            pitch_avg = self.pitch_avg_filter.update(pitch_median)
+            roll_avg = self.roll_avg_filter.update(roll_median)
+            
+            self.current_pitch = pitch_avg
+            self.current_roll = roll_avg
+            
             status.update_status(key="pitch", value=self.current_pitch)
             status.update_status(key="roll", value=self.current_roll)
 
             return self.current_pitch, self.current_roll
 
-        except Exception:
+        except Exception as e:
+            LOG.error(f"Error in get_orientation: {e}")
             return self.current_pitch, self.current_roll
 
     def read_all_sensors(self):
@@ -792,6 +1019,54 @@ class MPU9250:
             LOG.error(f"Error setting power mode: {mode}")
             return False
 
+    def detect_stationary(self, window_size=5, threshold_accel=0.02, threshold_gyro=2.0):
+        ax, ay, az, gx, gy, gz = self.read_accel_gyro_data()
+        
+        if not hasattr(self, 'accel_window'):
+            self.accel_window = []
+            self.gyro_window = []
+        
+        self.accel_window.append((ax, ay, az))
+        self.gyro_window.append((gx, gy, gz))
+        
+        if len(self.accel_window) > window_size:
+            self.accel_window.pop(0)
+        if len(self.gyro_window) > window_size:
+            self.gyro_window.pop(0)
+        
+        min_samples = max(3, window_size // 3)
+        if len(self.accel_window) < min_samples or len(self.gyro_window) < min_samples:
+            return False
+        
+        ax_samples = np.array([a[0] for a in self.accel_window])
+        ay_samples = np.array([a[1] for a in self.accel_window])
+        az_samples = np.array([a[2] for a in self.accel_window])
+        
+        ax_var = np.var(ax_samples)
+        ay_var = np.var(ay_samples)
+        az_var = np.var(az_samples)
+        
+        gx_samples = np.array([g[0] for g in self.gyro_window])
+        gy_samples = np.array([g[1] for g in self.gyro_window])
+        gz_samples = np.array([g[2] for g in self.gyro_window])
+        
+        gx_max = np.max(np.abs(gx_samples))
+        gy_max = np.max(np.abs(gy_samples))
+        gz_max = np.max(np.abs(gz_samples))
+        
+        if gx_max > threshold_gyro * 1.5 or gy_max > threshold_gyro * 1.5 or gz_max > threshold_gyro * 1.5:
+            return False
+        
+        accel_stable = (ax_var < threshold_accel*threshold_accel and 
+                        ay_var < threshold_accel*threshold_accel and 
+                        az_var < threshold_accel*threshold_accel)
+        
+        gyro_stable = (np.var(gx_samples) < threshold_gyro*threshold_gyro and 
+                       np.var(gy_samples) < threshold_gyro*threshold_gyro and 
+                       np.var(gz_samples) < threshold_gyro*threshold_gyro)
+        
+        return accel_stable and gyro_stable
+
 class SensorFusion:
     def __init__(self, mpu_instance, compass_instance):
         self.mpu = mpu_instance
@@ -800,6 +1075,10 @@ class SensorFusion:
         self.running = False
         self.update_interval = 0.013
         self.compass_update_counter = 0
+
+    def initialize(self):
+        self.mpu.initialize()
+        self.compass.initialize()
 
     def update_loop(self):
         self.running = True
@@ -824,12 +1103,6 @@ class SensorFusion:
                         pass
 
     def start_update(self):
-        mpu_init_success = self.mpu.initialize()
-        compass_init_success = self.compass.initialize()
-
-        if not (mpu_init_success or compass_init_success):
-            return False
-
         if self.update_thread is None or not self.update_thread.is_alive():
             self.update_thread = threading.Thread(target=self.update_loop, daemon=True)
             self.update_thread.start()
@@ -844,25 +1117,32 @@ class SensorFusion:
             return not self.update_thread.is_alive()
         return True
 
-#mpu = MPU9250()
+mpu = MPU9250()
 compass = HMC5883L()
 
-#sensor_fusion = SensorFusion(mpu, compass)
+sensor_fusion = SensorFusion(mpu, compass)
 
-# def initialize_sensors():
-#     return sensor_fusion.start_update()
+def initialize_sensors():
+    return sensor_fusion.start_update()
 
-# def stop_sensors():
-#     return sensor_fusion.stop_update()
+def stop_sensors():
+    return sensor_fusion.stop_update()
 
 # def read_all_sensors_with_heading():
 #     sensor_data = mpu.read_all_sensors()
 #     sensor_data["heading"] = compass.current_heading
 #     return sensor_data
 
+# if __name__ == "__main__":
+#     compass.initialize()
+#     time.sleep(0.5)
+#     compass.calibrate()
+#     while True:
+#         print(compass.get_heading())
+
 if __name__ == "__main__":
-    compass.initialize()
+    mpu.initialize()
     time.sleep(0.5)
-    compass.calibrate()
     while True:
-        print(compass.get_heading())
+        mpu.get_velocity_enhanced()
+        print(status.read_status(key="horizontal_velocity"))
