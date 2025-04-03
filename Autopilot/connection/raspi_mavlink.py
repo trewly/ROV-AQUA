@@ -228,8 +228,11 @@ class MavlinkController:
             status.update_status(key="camera", value=msg.param1)
         
         elif command == MavCommand.START_MAG_CALIBRATION:
+            sensor.sensor_fusion.initialize()
+            time.sleep(0.1)
             sensor.compass.calibrate()
-            status.update_status(key="calibrated", value=1)
+            rov.initialize_motors()
+
             try:
                 self.transmitter.mav.param_value_send(
                     "calibrated".encode("ascii"),
@@ -240,6 +243,9 @@ class MavlinkController:
                 )
             except Exception as e:
                 LOG.error(f"Failed to send calibration status: {e}")
+
+            time.sleep(0.1)
+            sensor.sensor_fusion.start_update()
 
         elif command == MavCommand.START_CAMERA_STREAM:
             camera.start_stream()
