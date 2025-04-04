@@ -24,7 +24,7 @@ def init_status():
         "auto_depth": 0,
         "target_depth": 0,
         "mode": "manual",
-        "disconnect": 1,
+        "disconnected": 0,
         "light": 0,
         "camera": 0,
         "calibrated": 0

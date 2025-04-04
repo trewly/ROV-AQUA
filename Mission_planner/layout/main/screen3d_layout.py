@@ -355,4 +355,7 @@ class STLViewerWidget(QWidget):
         self.pitch_info=pitch
         self.yaw_info=yaw
 
-        self.state_status.setText(f"Pitch: {self.pitch_info}   Roll: {self.roll_info}   Yaw: {self.yaw_info}")
+        self.state_status.setText(f"Pitch: {self.pitch_info}   Roll: {self.roll_info}  Yaw: {self.yaw_info}")
+    
+    def closeEvent(self, a0):
+        return super().closeEvent(a0)

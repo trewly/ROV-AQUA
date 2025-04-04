@@ -73,7 +73,7 @@ class LogViewer(QWidget):
         self.load_log()
 
     def highlight_line(self, line):
-        cursor = QTextCursor(self.text_edit.document())  # Không ép cursor về cuối
+        cursor = QTextCursor(self.text_edit.document())
         cursor.movePosition(QTextCursor.End)
         format = QTextCharFormat()
         if "ERROR" in line:

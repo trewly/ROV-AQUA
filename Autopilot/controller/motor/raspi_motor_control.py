@@ -7,6 +7,7 @@ import atexit
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
+from Autopilot.system_info.status import raspi_status as status
 from Autopilot.config import raspi_config as config
 from Autopilot.controller.utils.raspi_logger import LOG
 
@@ -149,37 +150,65 @@ def initialize_motors(left_pin=5, right_pin=6, left_depth_pin=7, right_depth_pin
         LOG.error(f"Error initializing motors: {e}")
         return False
 
+def check_emergency_stop():
+    mode = status.read_status(key="mode", default="manual")
+    return mode == "emergency" or mode == "emergency_shutdown" 
+
 def move_forward():
-    LEFT_MOTOR.thrust_forward()
-    RIGHT_MOTOR.thrust_forward()
+    if not check_emergency_stop():
+        LEFT_MOTOR.thrust_forward()
+        RIGHT_MOTOR.thrust_forward()
+    else:
+        LOG.warning("Emergency stop activated, cannot move forward")
 
 def move_backward():
-    LEFT_MOTOR.thrust_backward()
-    RIGHT_MOTOR.thrust_backward()
+    if not check_emergency_stop():
+        LEFT_MOTOR.thrust_backward()
+        RIGHT_MOTOR.thrust_backward()
+    else:
+        LOG.warning("Emergency stop activated, cannot move backward")
 
 def turn_left():
-    LEFT_MOTOR.thrust_backward()
-    RIGHT_MOTOR.thrust_forward()
+    if not check_emergency_stop():
+        LEFT_MOTOR.thrust_backward()
+        RIGHT_MOTOR.thrust_forward()
+    else:
+        LOG.warning("Emergency stop activated, cannot turn left")
 
 def turn_right():
-    LEFT_MOTOR.thrust_forward()
-    RIGHT_MOTOR.thrust_backward()
+    if not check_emergency_stop():
+        LEFT_MOTOR.thrust_forward()
+        RIGHT_MOTOR.thrust_backward()
+    else:
+        LOG.warning("Emergency stop activated, cannot turn right")
 
 def dive():
-    LEFT_DEPTH_MOTOR.thrust_forward()
-    RIGHT_DEPTH_MOTOR.thrust_forward()
+    if not check_emergency_stop():
+        LEFT_DEPTH_MOTOR.thrust_backward()
+        RIGHT_DEPTH_MOTOR.thrust_backward()
+    else:
+        LOG.warning("Emergency stop activated, cannot dive")
 
 def surface():
-    LEFT_DEPTH_MOTOR.thrust_backward()
-    RIGHT_DEPTH_MOTOR.thrust_backward()
+    if not check_emergency_stop():
+        LEFT_DEPTH_MOTOR.thrust_forward()
+        RIGHT_DEPTH_MOTOR.thrust_forward()
+    else:
+        LOG.warning("Emergency stop activated, cannot surface")
 
 def roll_right():
-    LEFT_DEPTH_MOTOR.thrust_forward()
-    RIGHT_DEPTH_MOTOR.thrust_backward()
+    if not check_emergency_stop():
+        LEFT_DEPTH_MOTOR.thrust_forward()
+        RIGHT_DEPTH_MOTOR.thrust_backward()
+    else:
+        LOG.warning("Emergency stop activated, cannot roll right")
 
 def roll_left():
-    LEFT_DEPTH_MOTOR.thrust_backward()
-    RIGHT_DEPTH_MOTOR.thrust_forward()
+    if not check_emergency_stop():
+        LEFT_DEPTH_MOTOR.thrust_backward()
+        RIGHT_DEPTH_MOTOR.thrust_forward()
+    else:
+        LOG.warning("Emergency stop activated, cannot roll left")
 
 def stop_all():
     for motor in motors.values():

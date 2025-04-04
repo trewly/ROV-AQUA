@@ -18,9 +18,6 @@ class SystemStatusManager(QObject):
 
     def __init__(self):
         super().__init__()
-        
-        #in ra dam bao khoi tao
-        print("Khoi tao thanh cong status manager")
 
         #doc lan dau tien
         self.initial_read()
@@ -39,7 +36,7 @@ class SystemStatusManager(QObject):
 
     def initial_read(self):
         try:
-            self.disconnected=bool(status.read_status("disconnect"))
+            self.disconnected=bool(status.read_status("disconnected"))
             self.temp=status.read_status("temp")
             self.depth=status.read_status("depth")
             self.pitch=status.read_status("pitch")
@@ -50,7 +47,7 @@ class SystemStatusManager(QObject):
 
     def get_disconnected_info(self):
         try:
-            self.disconnected=bool(status.read_status("disconnect"))
+            self.disconnected=bool(status.read_status("disconnected"))
             self.got_disconnected_info.emit(self.disconnected)
         except:
             print("Error read connect status")

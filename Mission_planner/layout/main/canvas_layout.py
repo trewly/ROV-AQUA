@@ -332,9 +332,14 @@ class CanvasWidget(QWidget):
         track_path.setPen(QPen(Qt.NoPen))
         self.scene.addItem(track_path)
 
-# if __name__ == "__main__":
-#     app = QApplication(sys.argv)
-#     status_manager = SystemStatusManager()  # Tạo đối tượng quản lý trạng thái hệ thống
-#     main_window = CanvasWidget(status_manager)
-#     main_window.show()
-#     sys.exit(app.exec_())
+    def closeEvent(self, event):
+        self.simulation_thread.stop()
+        self.simulation_thread.quit()
+        return super().closeEvent(event)
+    
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    status_manager = SystemStatusManager()  # Tạo đối tượng quản lý trạng thái hệ thống
+    main_window = CanvasWidget(status_manager)
+    main_window.show()
+    sys.exit(app.exec_())

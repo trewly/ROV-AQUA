@@ -2,10 +2,13 @@ import subprocess
 import socket
 import time
 import os
+import sys
 import cv2
 import threading
 import signal
 from picamera2 import Picamera2, encoders #type: ignore
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
 from Autopilot.controller.utils.raspi_logger import LOG
 
@@ -107,7 +110,14 @@ def record_and_send(server_ip=DEFAULT_SERVER_IP, server_port=DEFAULT_SERVER_PORT
         return send_file(server_ip, server_port, file_path)
     return False
 
-command = ("libcamera-vid -t 0 --width 960 --height 540 --framerate 30 --libav-format h264 --profile baseline --inline --bitrate 3000000 -o - | gst-launch-1.0 fdsrc ! h264parse config-interval = 1 ! mpegtsmux ! udpsink host=169.254.54.121 port=5000 sync=False async=False")
+def get_streaming_command(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT, 
+                          resolution=(960, 540), framerate=30, bitrate=3000000):
+    width, height = resolution
+    return (f"libcamera-vid -n -t 0 --width {width} --height {height} "
+            f"--framerate {framerate} --libav-format h264 --profile baseline "
+            f"--inline --bitrate {bitrate} -o - | "
+            f"gst-launch-1.0 fdsrc ! h264parse config-interval=1 ! "
+            f"mpegtsmux ! udpsink host={host} port={port} sync=False async=False")
 
 def is_network_reachable(host=DEFAULT_SERVER_IP):
     try:
@@ -123,12 +133,14 @@ def _run_streaming(command):
         LOG.info("Starting video stream...")
         stream_process = subprocess.Popen(
             command, 
-            shell=True, 
+            shell=True,
             stdout=subprocess.PIPE, 
             stderr=subprocess.PIPE,
+            preexec_fn=os.setsid,
+            start_new_session=True
         )
         
-        time.sleep(0.1)
+        time.sleep(0.5)
         if stream_process.poll() is not None:
             error_output = stream_process.stderr.read().decode('utf-8')
             LOG.error(f"Stream process error: {error_output}")
@@ -138,28 +150,45 @@ def _run_streaming(command):
         is_streaming = True
         LOG.info("Stream started successfully")
         
+        stream_process.wait()
+        
     except Exception as e:
-        LOG.error(f"Error starting stream: {e}")
-        is_streaming = False
-        return
+        LOG.error(f"Error during streaming: {e}")
     finally:
+        LOG.info("Stream process terminated")
         is_streaming = False
         stream_process = None
-        LOG.info("Stream process terminated")
 
-def start_stream(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT):
-    global stream_thread, is_streaming
-    while True:
+def start_stream(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT, 
+                resolution=(960, 540), framerate=30, bitrate=3000000):
+    global stream_thread, is_streaming, stream_process
+    
+    retry_count = 0
+    max_retries = 5
+    while retry_count < max_retries:
         if is_network_reachable(host):
             break
-        time.sleep(0.1)
+        LOG.info(f"Waiting for network connection to {host}... attempt {retry_count+1}/{max_retries}")
+        time.sleep(1)
+        retry_count += 1
+    
+    if retry_count == max_retries:
+        LOG.error(f"Network destination {host} is unreachable after {max_retries} attempts")
+        return False
     
     with stream_lock:
-        if is_streaming:
+        if is_streaming and stream_process and stream_process.poll() is None:
             LOG.info("Stream is already active")
             return True
-            
+        
         is_streaming = False
+        if stream_process is not None:
+            try:
+                stop_stream()
+            except:
+                pass
+            
+        command = get_streaming_command(host, port, resolution, framerate, bitrate)
         
         stream_thread = threading.Thread(
             target=_run_streaming, 
@@ -167,15 +196,29 @@ def start_stream(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT):
             daemon=True
         )
         stream_thread.start()
-        time.sleep(2)
+        
+        wait_time = 0
+        max_wait = 5
+        while wait_time < max_wait and not is_streaming:
+            time.sleep(0.5)
+            wait_time += 0.5
+            
+            if stream_process and stream_process.poll() is not None:
+                LOG.error("Stream process terminated unexpectedly")
+                return False
         
         if not is_streaming:
-            LOG.error("Failed to start stream")
+            LOG.error("Failed to start stream after waiting")
             try:
-                os.killpg(os.getpgid(stream_process.pid), signal.SIGKILL)
-            except:
-                pass
+                if stream_process:
+                    os.killpg(os.getpgid(stream_process.pid), signal.SIGINT)
+                    time.sleep(0.5)
+                    if stream_process.poll() is None:
+                        os.killpg(os.getpgid(stream_process.pid), signal.SIGTERM)
+            except Exception as e:
+                LOG.error(f"Error terminating failed stream: {e}")
             return False
+        
         return True
 
 def stop_stream():
@@ -187,31 +230,40 @@ def stop_stream():
             return False
             
         try:
-            LOG.info("Stopping stream...")
+            LOG.info("Stopping stream gracefully...")
             
-            os.killpg(os.getpgid(stream_process.pid), signal.SIGTERM)
+            os.killpg(os.getpgid(stream_process.pid), signal.SIGINT)
             
-
-            for _ in range(30):
+            for _ in range(20):
                 if stream_process.poll() is not None:
                     break
                 time.sleep(0.1)
+            
+            if stream_process and stream_process.poll() is None:
+                LOG.info("Process still running, sending SIGTERM...")
+                os.killpg(os.getpgid(stream_process.pid), signal.SIGTERM)
                 
-            if stream_process.poll() is None:
-                LOG.info("Stream process did not terminate, killing it...")
-                os.killpg(os.getpgid(stream_process.pid), signal.SIGKILL)
+                for _ in range(30):
+                    if stream_process.poll() is not None:
+                        break
+                    time.sleep(0.1)
+                
+                if stream_process and stream_process.poll() is None:
+                    LOG.info("Process still running, forcing SIGKILL...")
+                    os.killpg(os.getpgid(stream_process.pid), signal.SIGKILL)
             
             LOG.info("Stream stopped successfully")
-            stream_process = None
-            is_streaming = False
-
             return True
         except Exception as e:
             LOG.error(f"Error stopping stream: {e}")
             try:
-                os.killpg(os.getpgid(stream_process.pid), signal.SIGKILL)
-            except:
-                pass
+                if stream_process and stream_process.poll() is None:
+                    stream_process.terminate()
+                    time.sleep(0.5)
+                    if stream_process.poll() is None:
+                        stream_process.kill()
+            except Exception as kill_error:
+                LOG.error(f"Failed to kill process: {kill_error}")
             return False
         finally:
             is_streaming = False
@@ -237,11 +289,10 @@ def restart_stream(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT,
 if __name__ == "__main__":
     try:
         success = start_stream()
-        
         if success:
             while True:
                 pass
     except KeyboardInterrupt:
         stop_stream()
-    stop_stream()
-        
+    finally:
+        stop_stream()

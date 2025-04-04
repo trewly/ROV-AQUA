@@ -46,6 +46,9 @@ class SettingWidget(QWidget):
         if button_number == 2:
             self.pid_tuning=PIDTuner()
             self.pid_tuning.show()
+    
+    def closeEvent(self, a0):
+        return super().closeEvent(a0)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

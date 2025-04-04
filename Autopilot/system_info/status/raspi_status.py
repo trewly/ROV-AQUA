@@ -29,7 +29,7 @@ def init_status():
         "auto_depth": 0,
         "target_depth": 0,
         "mode": "manual",
-        "disconnect": 0,
+        "disconnected": 0,
         "light": 0,
         "camera": 0,
         "calibrated": 0
@@ -54,22 +54,29 @@ def init_status():
 def update_status(key, value):
     try:
         if not os.path.exists(STATUS_PATH):
-            init_status()
+            data = init_status()
+        else:
+            try:
+                with open(STATUS_PATH, "r") as file:
+                    data = json.load(file)
+            except (json.JSONDecodeError, IOError) as e:
+                LOG.error(f"Error reading status file: {e}")
+                data = init_status()
         
         with _cache_lock:
             global _status_cache, _last_update_time
-            if _status_cache:
+            if _status_cache is not None:
                 _status_cache[key] = value
-        
-        with open(STATUS_PATH, "r") as file:
-            data = json.load(file)
+            else:
+                _status_cache = data.copy()
+                _status_cache[key] = value
+            _last_update_time = time.time()
         
         data[key] = value
         
         with open(STATUS_PATH, "w") as file:
             json.dump(data, file, indent=4)
             
-        _last_update_time = time.time()
         return True
     except Exception as e:
         LOG.error(f"Failed to update status for key {key}: {e}")
@@ -81,16 +88,25 @@ def update_multiple(update_dict):
         
     try:
         if not os.path.exists(STATUS_PATH):
-            init_status()
+            data = init_status()
+        else:
+            try:
+                with open(STATUS_PATH, "r") as file:
+                    data = json.load(file)
+            except (json.JSONDecodeError, IOError) as e:
+                LOG.error(f"Error reading status file: {e}")
+                data = init_status()
             
         with _cache_lock:
             global _status_cache, _last_update_time
-            if _status_cache:
+            if _status_cache is not None:
                 for key, value in update_dict.items():
                     _status_cache[key] = value
-        
-        with open(STATUS_PATH, "r") as file:
-            data = json.load(file)
+            else:
+                _status_cache = data.copy()
+                for key, value in update_dict.items():
+                    _status_cache[key] = value
+            _last_update_time = time.time()
             
         for key, value in update_dict.items():
             data[key] = value
@@ -98,7 +114,6 @@ def update_multiple(update_dict):
         with open(STATUS_PATH, "w") as file:
             json.dump(data, file, indent=4)
             
-        _last_update_time = time.time()
         return True
     except Exception as e:
         LOG.error(f"Failed to update multiple status: {e}")
@@ -123,9 +138,13 @@ def read_all_status():
             _last_update_time = time.time()
             
         return data
+    except json.JSONDecodeError as e:
+        LOG.error(f"JSON decode error in status file: {e}")
+        LOG.info("Reinitializing status file due to JSON error")
+        return init_status()
     except Exception as e:
         LOG.error(f"Failed to read status file: {e}")
-        return False
+        return {}
 
 def read_status(key, default=None):
     with _cache_lock:
@@ -147,11 +166,14 @@ def read_multiple_status(keys):
         current_time = time.time()
         if _status_cache and (current_time - _last_update_time) < _cache_valid_time:
             return {key: _status_cache.get(key) for key in keys}
-        
+    
     try:
-        for key in keys:
-            data = read_all_status()
+        data = read_all_status()
+        if data:
             return {key: data.get(key) for key in keys}
+        else:
+            LOG.error("read_all_status() returned None or False")
+            return {key: None for key in keys}
     except Exception as e:
         LOG.error(f"Failed to read multiple status: {e}")
         return {key: None for key in keys}
@@ -164,20 +186,3 @@ def force_refresh():
     return read_all_status()
 
 init_status()
-# if __name__ == "__main__":
-#     print(f"Status file path: {STATUS_PATH}")
-    
-#     init_status()
-#     print("Status initialized")
-    
-#     print("\nTesting status functions:")
-#     update_status("depth", 5.5)
-#     print(f"Updated depth: {read_status('depth')}")
-    
-#     update_multiple({"pitch": 10.2, "roll": -5.1})
-#     print(f"Updated pitch: {read_status('pitch')}, roll: {read_status('roll')}")
-    
-#     all_status = read_all_status()
-#     print("\nAll status values:")
-#     for key, value in all_status.items():
-#         print(f"  {key}: {value}")

@@ -9,7 +9,7 @@ import time
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
 from Mission_planner.layout.resources.style import control_button_style
-from Mission_planner.layout.contents.motor_slider import MotorSlider
+from Mission_planner.layout.widgets.motor_slider_widget import MotorSlider
 from Mission_planner.controller.video_controller import VideoReceiver
 from Mission_planner.controller.button_controller import ButtonController
 

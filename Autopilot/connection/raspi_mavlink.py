@@ -62,6 +62,12 @@ class MavlinkController:
         self.threads: List[threading.Thread] = []
         self.connection_lost_reported = False
         
+        self.connection_lost = False
+        self.connection_lost_time = 0
+        self.emergency_mode_active = False
+        
+        self.emergency_surface_timeout = 240
+        
         self.receiver = None
         self.transmitter = None
         
@@ -258,6 +264,16 @@ class MavlinkController:
             try:
                 command = MavCommand(msg.command)
                 
+                if self.emergency_mode_active:
+                    if command == MavCommand.SET_MANUAL:
+                        LOG.info("Emergency mode: Manual control restored by operator")
+                        self.emergency_mode_active = False
+                        status.update_status(key="mode", value="manual")
+                        rov.stop_all()
+                    else:
+                        LOG.warning(f"Emergency mode active: Ignoring command {command}")
+                        return
+                    
                 important_commands = {
                     MavCommand.SET_MANUAL, 
                     MavCommand.SET_AUTO_HEADING,
@@ -297,11 +313,10 @@ class MavlinkController:
                         LOG.info(f"Surface speed set to {msg.param1}%")
 
                     elif command == MavCommand.SET_LIGHT:
-                        LOG.info(f"Light set to {msg.param1}%")
+                        LOG.info(f"Light set to on")
 
                     elif command == MavCommand.SET_CAMERA:
-                        mode_str = "ON" if int(msg.param1) == 1 else "OFF"
-                        LOG.info(f"Camera set to {mode_str}")
+                        LOG.info(f"Camera set to on")
                         
                     elif command == MavCommand.START_MAG_CALIBRATION:
                         LOG.info(f"Starting magnetometer calibration")
@@ -326,16 +341,43 @@ class MavlinkController:
             except Exception as e:
                 LOG.error(f"Error handling command: {e}", exc_info=True)
 
-    def _handle_connection_lost(self) -> None:
+    def _handle_connection_lost(self):
         if not self.connection_lost_reported:
-            LOG.warning("Connection lost with ground station, initiating surface maneuver")
+            LOG.warning("Connection lost with ground station, initiating emergency surface protocol")
             self.connection_lost_reported = True
+            self.connection_lost = True
+            self.connection_lost_time = time.time()
+            self.emergency_mode_active = True
             
-        status.update_status(key="disconnect", value=True)
-        
-        current_depth = status.read_status(key="depth", default=0)
-        if current_depth > 0:
-            rov.surface()
+            status_update = {
+                "disconnect": 1,
+                "mode": "emergency",
+                "auto_heading": 0,
+                "auto_depth": 0
+            }
+            status.update_multiple(status_update)
+            
+            current_depth = status.read_status(key="depth", default=0)
+            if current_depth > 0.2:
+                LOG.info("Emergency protocol: Initiating surface command")
+                rov.surface()
+            else:
+                LOG.info("Emergency protocol: Already at surface level, stopping all motors")
+                rov.stop_all()
+
+    def _handle_connection_restored(self) -> None:
+        if self.connection_lost:
+            LOG.info("Connection with ground station restored")
+            self.connection_lost = False
+            self.connection_lost_reported = False
+            self.emergency_mode_active = False
+            
+            status.update_multiple({
+                "disconnect": 0,
+                "mode": "manual"
+            })
+            
+            rov.stop_all()
 
     def receive_messages(self) -> None:
         LOG.info(f"MAVLink receiver started on port {self.receive_port}")
@@ -345,8 +387,10 @@ class MavlinkController:
                 msg = self.receiver.recv_match(blocking=True, timeout=1)
                 if msg:
                     with self._lock:
-                        status.update_status(key="disconnect", value=False)
-                        self.connection_lost_reported = False
+                        if self.connection_lost:
+                            self._handle_connection_restored()
+                        
+                        status.update_status(key="disconnect", value=0)
                         
                         if msg.get_type() == "HEARTBEAT":
                             self.last_heartbeat = time.time()
@@ -354,9 +398,26 @@ class MavlinkController:
                             self.handle_received_msg(msg)
                 else:
                     with self._lock:
-                        if time.time() - self.last_heartbeat > self.heartbeat_timeout:
-                            if status.read_status(key="disconnect", default=0) == 1:
+                        current_time = time.time()
+                        if current_time - self.last_heartbeat > self.heartbeat_timeout:
+                            if not self.connection_lost:
                                 self._handle_connection_lost()
+                            elif self.emergency_mode_active:
+                                emergency_elapsed = current_time - self.connection_lost_time
+                                
+                                if int(emergency_elapsed) % 30 == 0:
+                                    LOG.info(f"Emergency mode active for {int(emergency_elapsed)}s")
+                                    
+                                    current_depth = status.read_status(key="depth", default=0)
+                                    if current_depth > 0.3:
+                                        LOG.info(f"Still submerged at depth {current_depth}m, continuing surface maneuver")
+                                        rov.surface()
+                                        
+                                if emergency_elapsed > self.emergency_surface_timeout:
+                                    if status.read_status(key="mode") != "emergency_shutdown":
+                                        LOG.warning("Emergency surface timeout reached, shutting down motors to conserve battery")
+                                        rov.stop_all()
+                                        status.update_status(key="mode", value="emergency_shutdown")
             except ConnectionError as e:
                 LOG.error(f"Connection error in receiver: {e}")
             except Exception as e:

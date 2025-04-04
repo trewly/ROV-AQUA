@@ -57,6 +57,13 @@ class MainWindow(QWidget):
         self.rup_screen.setParent(self)
         self.rup_screen.setGeometry(889,14,985, 785)
 
+    def closeEvent(self, event):
+        self.lup_screen.closeEvent(event)
+        self.ldown_screen.closeEvent(event)
+        self.rdown_screen.closeEvent(event)
+        self.rup_screen.closeEvent(event)
+        return super().closeEvent(event)
+
 class SplashScreen(QSplashScreen):
     def __init__(self):
         super().__init__(QPixmap(LOGO_PATH))

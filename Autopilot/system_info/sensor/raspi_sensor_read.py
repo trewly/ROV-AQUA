@@ -222,7 +222,7 @@ class HMC5883L:
 
     def calibrate(self, sample_count=1500):
         LOG.info("Starting calibration...")
-        mag_min = np.array([999999, 999999, 999999], dtype=float)
+        mag_min = np.array([999998, 999998, 999998], dtype=float)
         mag_max = np.array([-999999, -999999, -999999], dtype=float)
 
         time.sleep(2)

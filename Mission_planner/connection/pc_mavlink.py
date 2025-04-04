@@ -133,12 +133,11 @@ class MavlinkController:
                 current_time = time.time()
                 
                 if msg is not None:
-                    print(f"Received message: {msg}")
                     if not self._is_connected:
                         LOG.info("Connection established")
                         self._is_connected = True
                     
-                    status.update_status("disconnect", 0)
+                    status.update_status("disconnected", 0)
                     self.last_message_time = current_time
                     
                     self._process_message(msg)
@@ -146,7 +145,7 @@ class MavlinkController:
                     if current_time - self.last_message_time > self.connection_timeout:
                         if self._is_connected:
                             LOG.warning("Connection lost!")
-                            status.update_status("disconnect", 1)
+                            status.update_status("disconnected", 1)
                             self._is_connected = False
             except Exception as e:
                 LOG.error(f"Error receiving message: {e}")
