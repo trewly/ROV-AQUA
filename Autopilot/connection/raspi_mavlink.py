@@ -15,6 +15,7 @@ from Autopilot.config import raspi_config as config
 from Autopilot.controller.motor import raspi_motor_control as rov
 from Autopilot.controller.camera import raspi_camera as camera
 from Autopilot.controller.utils.raspi_logger import LOG
+from Autopilot.connection.raspi_uart import UART
 
 class MavCommand(IntEnum):
     SURFACE = 1000
@@ -211,15 +212,19 @@ class MavlinkController:
         command = msg.command
         
         if command == MavCommand.SET_SPEED_FORWARD:
+            UART.send_command("set_speed_forward", msg.param1)
             config.update_config(key="max_speed_forward", value=msg.param1)
             
         elif command == MavCommand.SET_SPEED_BACKWARD:
+            UART.send_command("set_speed_backward", msg.param1)
             config.update_config(key="max_speed_backward", value=-msg.param1)
             
         elif command == MavCommand.SET_SPEED_DIVE:
+            UART.send_command("set_speed_dive", msg.param1)
             config.update_config(key="max_speed_dive", value=-msg.param1)
             
         elif command == MavCommand.SET_SPEED_SURFACE:
+            UART.send_command("set_speed_surface", msg.param1)
             config.update_config(key="max_speed_surface", value=msg.param1)
 
         elif command == MavCommand.SET_PID_YAW:
@@ -343,7 +348,6 @@ class MavlinkController:
                     MavCommand.SURFACE, MavCommand.DIVE,
                     MavCommand.LEFT, MavCommand.RIGHT,
                     MavCommand.FORWARD, MavCommand.BACKWARD,
-                    MavCommand.ROLL_LEFT, MavCommand.ROLL_RIGHT,
                     MavCommand.STOP
                 }:
                     self._handle_manual_command(command)
@@ -509,8 +513,6 @@ class MavlinkController:
             MavCommand.RIGHT: rov.turn_right,
             MavCommand.FORWARD: rov.move_forward,
             MavCommand.BACKWARD: rov.move_backward,
-            MavCommand.ROLL_LEFT: rov.roll_left,
-            MavCommand.ROLL_RIGHT: rov.roll_right,
             MavCommand.STOP: rov.stop_all,
         }
         
