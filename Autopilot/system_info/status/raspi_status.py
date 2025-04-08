@@ -146,7 +146,7 @@ def read_all_status():
         LOG.error(f"Failed to read status file: {e}")
         return {}
 
-def read_status(key, default=None):
+def read_status(key, default=0):
     with _cache_lock:
         global _status_cache, _last_update_time
         current_time = time.time()

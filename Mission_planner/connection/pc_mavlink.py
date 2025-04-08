@@ -259,15 +259,13 @@ class MavlinkController:
         LOG.info(f"Setting PID_DEPTH: Kp={Kp}, Ki={Ki}, Kd={Kd}")
         return self.send_command(MavCommands.SET_PID_DEPTH, param1=Kp, param2=Ki, param3=Kd)
 
-    def set_light(self, enable):
-        state = "ON" if enable else "OFF"
-        LOG.info(f"Setting light: {state}")
-        return self.send_command(MavCommands.SET_LIGHT, param1=enable)
+    def set_light(self):
+        LOG.info(f"Setting light on")
+        return self.send_command(MavCommands.SET_LIGHT)
 
-    def set_camera(self, enable):
-        state = "ON" if enable else "OFF"
-        LOG.info(f"Setting camera: {state}")
-        return self.send_command(MavCommands.SET_CAMERA, param1=enable)
+    def set_camera(self):
+        LOG.info(f"Setting camera on")
+        return self.send_command(MavCommands.SET_CAMERA)
 
     def start_mag_calibration(self):
         LOG.info("Starting magnetometer calibration")
@@ -312,13 +310,6 @@ if __name__ == "__main__":
     
     try:
         MAV._initialize_connections()
-        time.sleep(10)
-        MAV.set_manual_mode()
-        time.sleep(1)
-        MAV.set_max_speed_forward(80)
-        time.sleep(1)
-        MAV.set_auto_heading(90)
-        
         while True:
             pass
     except KeyboardInterrupt:

@@ -6,6 +6,7 @@ import sys
 import cv2
 import threading
 import signal
+import atexit
 from picamera2 import Picamera2, encoders #type: ignore
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
@@ -113,7 +114,7 @@ def record_and_send(server_ip=DEFAULT_SERVER_IP, server_port=DEFAULT_SERVER_PORT
 def get_streaming_command(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT, 
                           resolution=(960, 540), framerate=30, bitrate=3000000):
     width, height = resolution
-    return (f"libcamera-vid -n -t 0 --width {width} --height {height} "
+    return (f"libcamera-vid -t 0 --width {width} --height {height} "
             f"--framerate {framerate} --libav-format h264 --profile baseline "
             f"--inline --bitrate {bitrate} -o - | "
             f"gst-launch-1.0 fdsrc ! h264parse config-interval=1 ! "
@@ -136,8 +137,6 @@ def _run_streaming(command):
             shell=True,
             stdout=subprocess.PIPE, 
             stderr=subprocess.PIPE,
-            preexec_fn=os.setsid,
-            start_new_session=True
         )
         
         time.sleep(0.5)
@@ -285,6 +284,16 @@ def restart_stream(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT,
     stop_stream()
     time.sleep(1)
     return start_stream(host, port, resolution, framerate, bitrate)
+
+def cleanup():
+    stop_stream()
+    if stream_thread and stream_thread.is_alive():
+        stream_thread.join(timeout=1)
+        if stream_thread.is_alive():
+            LOG.warning("Stream thread did not terminate in time")
+            stream_thread = None
+
+atexit.register(cleanup)
 
 if __name__ == "__main__":
     try:

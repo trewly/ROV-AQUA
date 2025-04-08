@@ -1,4 +1,4 @@
-import pigpio
+from gpiozero import PWMOutputDevice
 import sys
 import os
 import time
@@ -15,106 +15,60 @@ FORWARD = 1
 BACKWARD = -1
 STOP = 0
 
-DUTY_CYCLE_STOP = 75
-DUTY_CYCLE_MAX_FORWARD = 99
-DUTY_CYCLE_MAX_BACKWARD = 51
+DUTY_CYCLE_STOP = 75 / 100
+DUTY_CYCLE_MAX_FORWARD = 99 / 100
+DUTY_CYCLE_MAX_BACKWARD = 51 / 100
 
 BASE_FREQUENCY = 500
 
-_pi = None
-_pi_lock = threading.Lock()
-
-def get_pi_instance():
-    global _pi
-    with _pi_lock:
-        if _pi is None or not _pi.connected:
-            _pi = pigpio.pi()
-            if not _pi.connected:
-                LOG.error("Failed to connect to pigpio daemon")
-                return None
-    return _pi
+_pwm_instances = {}
 
 def scale_to_pwm(value):
-    return 51 + ((value - (-100)) * (99 - 51) / 200)
+    duty =  51 + ((value - (-100)) * (99 - 51) / 200)
+    return duty / 100
 
 class Motor:
     def __init__(self, pin, name=None):
-        self.pi = get_pi_instance()
-        if self.pi is None:
-            LOG.error("Failed to initialize pigpio instance")
-            
         self.pin = pin
         self.name = name or f"Motor_PIN{pin}"
         self.last_speed = 0
         self.direction = STOP
-        
-        self.pi.set_PWM_frequency(self.pin, BASE_FREQUENCY)
-        self.pi.set_PWM_range(self.pin, 100)
-        self.pi.set_PWM_dutycycle(self.pin, DUTY_CYCLE_STOP)
-        time.sleep(0.1)
-        
-    def get_direction(self):
-        try:
-            current_duty_cycle = self.pi.get_PWM_dutycycle(self.pin)
-            if abs(current_duty_cycle - DUTY_CYCLE_STOP) < 0.5:
-                return STOP
-            elif current_duty_cycle > DUTY_CYCLE_STOP:
-                return FORWARD
-            else:
-                return BACKWARD
-        except Exception as e:
-            LOG.error(f"Error getting direction: {e}")
-            return STOP
+
+        self.pwm = PWMOutputDevice(pin, frequency=500, initial_value=DUTY_CYCLE_STOP)
+        _pwm_instances[pin] = self.pwm
 
     def set_dutycycle(self, duty_cycle):
-        try:
-            duty_cycle = min(DUTY_CYCLE_MAX_FORWARD, max(DUTY_CYCLE_MAX_BACKWARD, duty_cycle))
-            self.pi.set_PWM_dutycycle(self.pin, duty_cycle)
-            self.direction = self.get_direction()
+        self.pwm.value = duty_cycle
 
-        except Exception as e:
-            LOG.error(f"Error setting duty cycle: {e}")
-        
     def set_speed(self, speed_percentage):
-        try:
-            speed_percentage = min(100, max(-100, speed_percentage))
-            self.last_speed = speed_percentage
-            dutycycle = scale_to_pwm(speed_percentage)
-            self.set_dutycycle(dutycycle)
-            return dutycycle
-        
-        except Exception as e:
-            LOG.error(f"Error setting speed: {e}")
-            return None
-        
+        speed_percentage = min(100, max(-100, speed_percentage))
+        self.last_speed = speed_percentage
+        dutycycle = scale_to_pwm(speed_percentage)
+        self.set_dutycycle(dutycycle)
+        return dutycycle
+
     def stop(self):
-        try:
-            if self.get_direction() != STOP:
-                self.pi.set_PWM_dutycycle(self.pin, DUTY_CYCLE_STOP)
-                self.direction = STOP
-                self.last_speed = 0
-        
-        except Exception as e:
-            LOG.error(f"Error stopping motor: {e}")
-            
+        self.set_speed(0)
+
     def thrust_forward(self):
         speed = config.read_config("max_speed_forward", 100)
         dutycycle = scale_to_pwm(speed)
         self.set_dutycycle(dutycycle)
         return speed
-            
+
     def thrust_backward(self):
         speed = config.read_config("max_speed_backward", -100)
         dutycycle = scale_to_pwm(speed)
         self.set_dutycycle(dutycycle)
         return speed
-        
+
     def cleanup(self):
         self.stop()
-        
+        self.pwm.close()
+
     def __del__(self):
         try:
-            self.stop()
+            self.cleanup()
         except:
             pass
 

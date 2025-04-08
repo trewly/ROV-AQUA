@@ -147,3 +147,6 @@ class ModeChangeDialog(QDialog):
             ModeChangeDialog.current_mode = "Manual"
             MAV.set_manual_mode()
             print("Mode: Manual")
+    
+    def closeEvent(self, event):
+        return super().closeEvent(event)

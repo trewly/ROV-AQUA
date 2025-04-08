@@ -11,7 +11,7 @@
     "auto_depth": 0,
     "target_depth": 0,
     "mode": "manual",
-    "disconnect": 0,
+    "disconnected": 1,
     "light": 0,
     "camera": 0,
     "calibrated": 0

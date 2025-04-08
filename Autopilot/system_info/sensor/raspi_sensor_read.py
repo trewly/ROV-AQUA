@@ -2,6 +2,7 @@ import smbus2 as smbus
 import time
 import math
 import threading
+import atexit
 import sys
 import os
 import numpy as np
@@ -1139,6 +1140,13 @@ def stop_sensors():
 #     compass.calibrate()
 #     while True:
 #         print(compass.get_heading())
+
+def cleanup():
+    mpu.stop_update()
+    compass.stop_update()
+    sensor_fusion.stop_update()
+
+atexit.register(cleanup)
 
 if __name__ == "__main__":
     mpu.initialize()

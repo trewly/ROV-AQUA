@@ -76,6 +76,11 @@ class MavlinkController:
             "horizontal_velocity", "vertical_velocity"
         ]
         
+        self.current_manual_command = None
+        self.manual_command_thread = None
+        self.manual_command_lock = threading.RLock()
+        self.manual_command_running = False
+        
         self._lock = threading.RLock()
 
     def _initialize_connection(self):
@@ -105,6 +110,16 @@ class MavlinkController:
             transmitter_thread.start()
             self.threads.append(transmitter_thread)
             
+            self.manual_command_running = True
+            manual_thread = threading.Thread(
+                target=self._continuous_manual_command_executor,
+                daemon=True,
+                name="MAVLink-Manual-Command-Executor"
+            )
+            manual_thread.start()
+            self.threads.append(manual_thread)
+            self.manual_command_thread = manual_thread
+            
             LOG.info("MAVLink controller started successfully")
 
             return True
@@ -119,6 +134,7 @@ class MavlinkController:
         
         with self._lock:
             self.running = False
+            self.manual_command_running = False
         
         for thread in self.threads:
             if thread.is_alive():
@@ -145,23 +161,23 @@ class MavlinkController:
         LOG.info("MAVLink controller stopped")
 
     def _handle_manual_command(self, command: MavCommand) -> None:
-        command_handlers = {
-            MavCommand.SURFACE: rov.surface,
-            MavCommand.DIVE: rov.dive,
-            MavCommand.LEFT: rov.turn_left,
-            MavCommand.RIGHT: rov.turn_right,
-            MavCommand.FORWARD: rov.move_forward,
-            MavCommand.BACKWARD: rov.move_backward,
-            MavCommand.ROLL_LEFT: rov.roll_left,
-            MavCommand.ROLL_RIGHT: rov.roll_right,
-            MavCommand.STOP: rov.stop_all,
-        }
-        
-        handler = command_handlers.get(command)
-        if handler:
-            handler()
-        else:
-            LOG.warning(f"Unknown manual command: {command}")
+        with self.manual_command_lock:
+            if command == MavCommand.STOP:
+                self.current_manual_command = None
+                rov.stop_all()
+                LOG.info("Manual command stopped")
+            else:
+                previous_command = self.current_manual_command
+                self.current_manual_command = command
+                
+                if previous_command != command:
+                    LOG.info(f"Manual command changed from {previous_command} to {command}")
+                
+                handler = self._get_command_handler(command)
+                if handler:
+                    handler()
+                else:
+                    LOG.warning(f"Unknown manual command: {command}")
     
     def _handle_mode_commands(self, msg):
         command = msg.command
@@ -466,13 +482,41 @@ class MavlinkController:
             except Exception as e:
                 LOG.error(f"Error in transmitter thread: {e}", exc_info=True)
 
-MAV = MavlinkController()
+    def _continuous_manual_command_executor(self):
+        LOG.info("Manual command executor thread started")
+        
+        while self.running and self.manual_command_running:
+            with self.manual_command_lock:
+                current_command = self.current_manual_command
+                
+            if current_command is not None:
+                handler = self._get_command_handler(current_command)
+                if handler:
+                    try:
+                        handler()
+                    except Exception as e:
+                        LOG.error(f"Error executing manual command {current_command}: {e}")
+            
+            time.sleep(0.1)
+        
+        LOG.info("Manual command executor thread stopped")
 
-def initialize_mavlink():
-    if MAV._initialize_connection():
-        LOG.info("MAVLink connection initialized successfully")
-    else:
-        LOG.error("Failed to initialize MAVLink connection")
+    def _get_command_handler(self, command):
+        command_handlers = {
+            MavCommand.SURFACE: rov.surface,
+            MavCommand.DIVE: rov.dive,
+            MavCommand.LEFT: rov.turn_left,
+            MavCommand.RIGHT: rov.turn_right,
+            MavCommand.FORWARD: rov.move_forward,
+            MavCommand.BACKWARD: rov.move_backward,
+            MavCommand.ROLL_LEFT: rov.roll_left,
+            MavCommand.ROLL_RIGHT: rov.roll_right,
+            MavCommand.STOP: rov.stop_all,
+        }
+        
+        return command_handlers.get(command)
+
+MAV = MavlinkController()
 
 def cleanup():
     MAV.shutdown()
