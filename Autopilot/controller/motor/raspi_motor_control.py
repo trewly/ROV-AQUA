@@ -84,7 +84,7 @@ RIGHT_MOTOR = None
 LEFT_DEPTH_MOTOR = None
 RIGHT_DEPTH_MOTOR = None
 
-def initialize_motors(left_pin=5, right_pin=6, left_depth_pin=7, right_depth_pin=8):
+def initialize_motors(left_pin=5, right_pin=6, left_depth_pin=9, right_depth_pin=10):
     global LEFT_MOTOR, RIGHT_MOTOR, LEFT_DEPTH_MOTOR, RIGHT_DEPTH_MOTOR
     
     try:
