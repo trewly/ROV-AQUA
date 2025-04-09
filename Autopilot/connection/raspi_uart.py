@@ -3,6 +3,7 @@ import threading
 import time
 from typing import Optional, List, Callable
 from enum import IntEnum
+from gpiozero import DigitalInputDevice
 
 class UARTCommand(IntEnum):
     SET_SPEED_RIGHT = 0
@@ -31,21 +32,23 @@ class UARTController:
                  port="/dev/ttyAMA0", 
                  baudrate=115200, 
                  timeout=1.0,
-                 read_interval=0.01):
+                 rx_pin=15):
         print(f"Initializing UART controller on {port} at {baudrate} baud")
         
         self.port = port
         self.baudrate = baudrate
         self.timeout = timeout
-        self.read_interval = read_interval
+        self.rx_pin = rx_pin
         
         self.serial_connection: Optional[serial.Serial] = None
         self.running = False
         self.threads: List[threading.Thread] = []
         
         self.receive_callback: Optional[Callable[[bytes], None]] = None
+        self.data_ready = threading.Event()
         
         self._lock = threading.RLock()
+        self.rx_sensor = None
     
     def initialize(self):
         with self._lock:
@@ -54,6 +57,14 @@ class UARTController:
                 return False
             
             try:
+                self.rx_sensor = DigitalInputDevice(
+                    pin=self.rx_pin,
+                    pull_up=True,
+                    bounce_time=0.001
+                )
+                
+                self.rx_sensor.when_activated = self._uart_interrupt_handler
+                
                 self.serial_connection = serial.Serial(
                     port=self.port,
                     baudrate=self.baudrate,
@@ -65,15 +76,15 @@ class UARTController:
                     
                 self.running = True
                 
-                receiver_thread = threading.Thread(
-                    target=self._receive_data,
+                processor_thread = threading.Thread(
+                    target=self._process_data,
                     daemon=True,
-                    name="UART-Receiver"
+                    name="UART-Data-Processor"
                 )
-                receiver_thread.start()
-                self.threads.append(receiver_thread)
+                processor_thread.start()
+                self.threads.append(processor_thread)
                 
-                print("UART controller started successfully")
+                print("UART controller started successfully with interrupt-based reception")
                 return True
                 
             except Exception as e:
@@ -81,11 +92,40 @@ class UARTController:
                 self.shutdown()
                 return False
     
+    def _uart_interrupt_handler(self):
+        self.data_ready.set()
+    
+    def _process_data(self):
+        print("UART data processor started")
+        
+        while self.running:
+            if self.data_ready.wait(timeout=0.1):
+                self.data_ready.clear()
+                
+                try:
+                    if self.serial_connection and self.serial_connection.in_waiting > 0:
+                        data = self.serial_connection.read(self.serial_connection.in_waiting)
+                        
+                        if data:
+                            print(f"Received {len(data)} bytes over UART (interrupt)")
+                            if self.receive_callback:
+                                try:
+                                    self.receive_callback(data)
+                                except Exception as e:
+                                    print(f"Error in receive callback: {e}")
+                                    
+                except Exception as e:
+                    print(f"Error reading UART data: {e}")
+    
     def shutdown(self):
         print("Shutting down UART controller...")
         
         with self._lock:
             self.running = False
+        
+        if self.rx_sensor:
+            self.rx_sensor.close()
+            self.rx_sensor = None
         
         for thread in self.threads:
             if thread.is_alive():
@@ -125,37 +165,6 @@ class UARTController:
     
     def register_receive_callback(self, callback):
         self.receive_callback = callback
-    
-    def _receive_data(self):
-        print(f"UART receiver started on {self.port}")
-        
-        while self.running:
-            try:
-                if self.serial_connection and self.serial_connection.in_waiting > 0:
-                    data = self.serial_connection.read(self.serial_connection.in_waiting)
-                    
-                    if data:
-                        print(f"Received {len(data)} bytes over UART")
-                        
-                        if self.receive_callback:
-                            try:
-                                self.receive_callback(data)
-                            except Exception as e:
-                                print(f"Error in receive callback: {e}")
-                
-                time.sleep(self.read_interval)
-                
-            except Exception as e:
-                print(f"Error receiving data: {e}")
-                time.sleep(1.0)
-                
-                with self._lock:
-                    if self.serial_connection and not self.serial_connection.is_open:
-                        try:
-                            print("Attempting to reopen serial connection...")
-                            self.serial_connection.open()
-                        except Exception as e:
-                            print(f"Failed to reopen serial connection: {e}")
 
     def send_command(self, command, param=0):
         if command == "set_speed_left":
@@ -206,7 +215,6 @@ class UARTController:
         elif command == "stop_all":
             command = UARTCommand.STOP_ALL
 
-            param = int(param)
         elif command == "initialize":
             command = UARTCommand.INTIALIZE
 
@@ -223,7 +231,8 @@ UART = UARTController()
 if __name__ == "__main__":
     uart = UARTController(
         port="/dev/ttyAMA0",
-        baudrate=115200
+        baudrate=115200,
+        rx_pin=155
     )
     
     def on_data_received(data: bytes):
