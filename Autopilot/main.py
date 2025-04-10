@@ -9,11 +9,8 @@ from controller.motor import raspi_motor_control as rov
 from system_info.sensor import raspi_sensor_read as sensor
 from system_info.status import raspi_status as status
 
-def initilize_system():
-    status.init_status()
-    MAV._initialize_connection()
-
+def initialize_system():
     while True:
-        print(sensor.compass.get_heading())
+        pass
 
-initilize_system()
+initialize_system()
