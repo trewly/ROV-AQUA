@@ -10,9 +10,9 @@ import numpy as np
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
 from Autopilot.system_info.status import raspi_status as status
-from Autopilot.controller.utils.raspi_Filter import KalmanFilter, low_pass_filter
-from Autopilot.controller.utils.raspi_logger import LOG
-from Autopilot.controller.utils.raspi_Filter import CircularAverageFilter, MedianFilter, AdaptiveFilter, MovingAverageFilter
+from Autopilot.utils.raspi_Filter import KalmanFilter, low_pass_filter
+from Autopilot.utils.raspi_logger import LOG
+from Autopilot.utils.raspi_Filter import CircularAverageFilter, MedianFilter, AdaptiveFilter, MovingAverageFilter
 
 class HMC5883L:
     HMC5883L_ADDR = 0x1E
