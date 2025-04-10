@@ -11,7 +11,7 @@ from picamera2 import Picamera2, encoders #type: ignore
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
-from Autopilot.controller.utils.raspi_logger import LOG
+from Autopilot.utils.raspi_logger import LOG
 
 DEFAULT_SERVER_IP = "169.254.54.121"
 DEFAULT_SERVER_PORT = 5001
