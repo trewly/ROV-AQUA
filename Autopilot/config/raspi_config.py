@@ -6,7 +6,7 @@ import threading
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from Autopilot.controller.utils.raspi_logger import LOG
+from Autopilot.utils.raspi_logger import LOG
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
