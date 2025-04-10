@@ -14,8 +14,11 @@ from Autopilot.system_info.status import raspi_status as status
 from Autopilot.config import raspi_config as config
 from Autopilot.controller.motor import raspi_motor_control as rov
 from Autopilot.controller.camera import raspi_camera as camera
-from Autopilot.controller.utils.raspi_logger import LOG
+from Autopilot.utils.raspi_logger import LOG
 from Autopilot.connection.raspi_uart import UART
+
+_MAV_INITIALIZED = False
+_MAV_LOCK = threading.RLock()
 
 class MavCommand(IntEnum):
     SURFACE = 1000
@@ -47,8 +50,20 @@ class MavCommand(IntEnum):
     START_CAMERA_STREAM = 1201
 
 class MavlinkController:
+    _instance = None
+    
+    def __new__(cls, *args, **kwargs):
+        with _MAV_LOCK:
+            if cls._instance is None:
+                cls._instance = super(MavlinkController, cls).__new__(cls)
+                cls._instance._initialized = False
+            return cls._instance
+            
     def __init__(self, pc_ip="169.254.54.121", receive_port=5000, send_port=5001, status_send_interval=0.01,
                   heartbeat_timeout=10.0):
+        if self._initialized:
+            return
+            
         LOG.info("Initializing MAVLink controller")
             
         self.receive_port = receive_port
@@ -77,17 +92,19 @@ class MavlinkController:
             "horizontal_velocity", "vertical_velocity"
         ]
         
-        self.current_manual_command = None
-        self.manual_command_thread = None
-        self.manual_command_lock = threading.RLock()
-        self.manual_command_running = False
-        
         self._lock = threading.RLock()
+        self._initialized = True
 
     def _initialize_connection(self):
+        global _MAV_INITIALIZED
+        
         with self._lock:
             if self.running:
                 LOG.warning("MAVLink controller already running")
+                return False
+                
+            if _MAV_INITIALIZED:
+                LOG.warning("MAVLink already initialized in another part of the application")
                 return False
                 
             self.running = True
@@ -110,32 +127,25 @@ class MavlinkController:
             )
             transmitter_thread.start()
             self.threads.append(transmitter_thread)
-            
-            self.manual_command_running = True
-            manual_thread = threading.Thread(
-                target=self._continuous_manual_command_executor,
-                daemon=True,
-                name="MAVLink-Manual-Command-Executor"
-            )
-            manual_thread.start()
-            self.threads.append(manual_thread)
-            self.manual_command_thread = manual_thread
-            
+
+            _MAV_INITIALIZED = True
             LOG.info("MAVLink controller started successfully")
 
             return True
             
         except Exception as e:
             LOG.error(f"Failed to start MAVLink controller: {e}", exc_info=True)
-            self.stop()
+            self.shutdown()
             return False
 
-    def shudown(self):
+    def shutdown(self):
+        global _MAV_INITIALIZED
+        
         LOG.info("Stopping MAVLink controller...")
         
         with self._lock:
             self.running = False
-            self.manual_command_running = False
+            _MAV_INITIALIZED = False
         
         for thread in self.threads:
             if thread.is_alive():
@@ -161,25 +171,30 @@ class MavlinkController:
             
         LOG.info("MAVLink controller stopped")
 
-    def _handle_manual_command(self, command: MavCommand) -> None:
-        with self.manual_command_lock:
-            if command == MavCommand.STOP:
-                self.current_manual_command = None
-                rov.stop_all()
-                LOG.info("Manual command stopped")
-            else:
-                previous_command = self.current_manual_command
-                self.current_manual_command = command
-                
-                if previous_command != command:
-                    LOG.info(f"Manual command changed from {previous_command} to {command}")
-                
-                handler = self._get_command_handler(command)
-                if handler:
+    def _get_command_handler(self, command):
+        command_handlers = {
+            MavCommand.SURFACE: rov.surface,
+            MavCommand.DIVE: rov.dive,
+            MavCommand.LEFT: rov.turn_left,
+            MavCommand.RIGHT: rov.turn_right,
+            MavCommand.FORWARD: rov.move_forward,
+            MavCommand.BACKWARD: rov.move_backward,
+            MavCommand.STOP: rov.stop_all,
+        }
+        
+        return command_handlers.get(command)
+
+    def _handle_manual_command(self, command):
+            handler = self._get_command_handler(command)
+            if handler:
+                try:
                     handler()
-                else:
-                    LOG.warning(f"Unknown manual command: {command}")
-    
+                    LOG.info(f"Executed manual command: {command}")
+                except Exception as e:
+                    LOG.error(f"Error executing manual command {command}: {e}")
+            else:
+                LOG.warning(f"Unknown manual command: {command}")
+
     def _handle_mode_commands(self, msg):
         command = msg.command
         
@@ -212,19 +227,19 @@ class MavlinkController:
         command = msg.command
         
         if command == MavCommand.SET_SPEED_FORWARD:
-            UART.send_command("set_speed_forward", msg.param1)
+            UART.set_speed_forward(msg.param1)
             config.update_config(key="max_speed_forward", value=msg.param1)
             
         elif command == MavCommand.SET_SPEED_BACKWARD:
-            UART.send_command("set_speed_backward", msg.param1)
+            UART.set_speed_backward(msg.param1)
             config.update_config(key="max_speed_backward", value=-msg.param1)
             
         elif command == MavCommand.SET_SPEED_DIVE:
-            UART.send_command("set_speed_dive", msg.param1)
+            UART.set_speed_dive(msg.param1)
             config.update_config(key="max_speed_dive", value=-msg.param1)
             
         elif command == MavCommand.SET_SPEED_SURFACE:
-            UART.send_command("set_speed_surface", msg.param1)
+            UART.set_speed_surface(msg.param1)
             config.update_config(key="max_speed_surface", value=msg.param1)
 
         elif command == MavCommand.SET_PID_YAW:
@@ -259,7 +274,7 @@ class MavlinkController:
             time.sleep(0.1)
             sensor.compass.calibrate()
             rov.initialize_motors()
-
+    
             try:
                 self.transmitter.mav.param_value_send(
                     "calibrated".encode("ascii"),
@@ -486,39 +501,16 @@ class MavlinkController:
             except Exception as e:
                 LOG.error(f"Error in transmitter thread: {e}", exc_info=True)
 
-    def _continuous_manual_command_executor(self):
-        LOG.info("Manual command executor thread started")
-        
-        while self.running and self.manual_command_running:
-            with self.manual_command_lock:
-                current_command = self.current_manual_command
-                
-            if current_command is not None:
-                handler = self._get_command_handler(current_command)
-                if handler:
-                    try:
-                        handler()
-                    except Exception as e:
-                        LOG.error(f"Error executing manual command {current_command}: {e}")
-            
-            time.sleep(0.1)
-        
-        LOG.info("Manual command executor thread stopped")
 
-    def _get_command_handler(self, command):
-        command_handlers = {
-            MavCommand.SURFACE: rov.surface,
-            MavCommand.DIVE: rov.dive,
-            MavCommand.LEFT: rov.turn_left,
-            MavCommand.RIGHT: rov.turn_right,
-            MavCommand.FORWARD: rov.move_forward,
-            MavCommand.BACKWARD: rov.move_backward,
-            MavCommand.STOP: rov.stop_all,
-        }
-        
-        return command_handlers.get(command)
 
 MAV = MavlinkController()
+
+def initialize():
+    with _MAV_LOCK:
+        if not _MAV_INITIALIZED:
+            MAV._initialize_connection()
+
+initialize()
 
 def cleanup():
     MAV.shutdown()
@@ -529,9 +521,8 @@ def cleanup():
 atexit.register(cleanup)
 
 if __name__ == "__main__":
-    MAV._initialize_connection()
     try:
         while True:
-            pass
+            time.sleep(1)
     except KeyboardInterrupt:
         MAV.shutdown()
