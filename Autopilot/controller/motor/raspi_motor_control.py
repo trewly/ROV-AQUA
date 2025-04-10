@@ -1,16 +1,14 @@
-from gpiozero import PWMOutputDevice
 import sys
 import os
-import time
-import threading
-import atexit
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
 from Autopilot.system_info.status import raspi_status as status
-from Autopilot.config import raspi_config as config
-from Autopilot.controller.utils.raspi_logger import LOG
+from Autopilot.utils.raspi_logger import LOG
 from Autopilot.connection.raspi_uart import UART
+
+def initialize_motors():
+    UART.initialize_motors()
 
 def check_emergency_stop():
     mode = status.read_status(key="mode", default="manual")
