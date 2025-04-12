@@ -88,7 +88,7 @@ class MavlinkController:
         self.transmitter = None
         
         self.status_params = [
-            "roll", "pitch", "heading", "temp", "depth", 
+            "roll", "pitch", "heading", "internal_temp", "external_temp", "depth", 
             "horizontal_velocity", "vertical_velocity"
         ]
         
@@ -270,9 +270,8 @@ class MavlinkController:
             status.update_status(key="camera", value=msg.param1)
         
         elif command == MavCommand.START_MAG_CALIBRATION:
-            sensor.sensor_fusion.initialize()
+            sensor.initialize_sensors()
             time.sleep(0.1)
-            sensor.compass.calibrate()
             rov.initialize_motors()
     
             try:
@@ -422,12 +421,16 @@ class MavlinkController:
                 msg = self.receiver.recv_match(blocking=True, timeout=1)
                 if msg:
                     with self._lock:
+                        # Log mọi message nhận được để debug
+                        LOG.debug(f"Received message: {msg.get_type()}")
+                        
                         if self.connection_lost:
                             self._handle_connection_restored()
                         
                         status.update_status(key="disconnect", value=0)
                         
                         if msg.get_type() == "HEARTBEAT":
+                            LOG.debug("HEARTBEAT received, updating last_heartbeat time")
                             self.last_heartbeat = time.time()
                         elif msg.get_type() == "COMMAND_LONG":
                             self.handle_received_msg(msg)
