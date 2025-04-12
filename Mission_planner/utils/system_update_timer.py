@@ -37,7 +37,7 @@ class SystemStatusManager(QObject):
     def initial_read(self):
         try:
             self.disconnected=bool(status.read_status("disconnected"))
-            self.temp=status.read_status("temp")
+            self.temp=status.read_status("internal_temp")
             self.depth=status.read_status("depth")
             self.pitch=status.read_status("pitch")
             self.roll=status.read_status("roll")
@@ -58,7 +58,7 @@ class SystemStatusManager(QObject):
             #return
         else:
             try:
-                self.temp=status.read_status("temp")
+                self.temp=status.read_status("internal_temp")
                 self.depth=status.read_status("depth")
                 self.got_temp_depth_info.emit(self.temp,self.depth)
             except:

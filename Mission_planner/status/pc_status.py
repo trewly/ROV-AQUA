@@ -5,6 +5,8 @@ import threading
 
 STATUS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "status.json")
 
+from Autopilot.utils.raspi_logger import LOG
+
 _status_cache = {}
 _last_update_time = 0
 _cache_valid_time = 0.1
@@ -15,7 +17,8 @@ def init_status():
         "depth": 0,
         "horizontal_velocity": 0,
         "vertical_velocity": 0,
-        "temp": 0,
+        "internal_temp": 0,
+        "external_temp": 0,
         "pitch": 0,
         "roll": 0,
         "heading": 0,
@@ -43,32 +46,51 @@ def init_status():
             
         return data
     except Exception as e:
-        print(f"Error initializing status: {e}")
+        LOG.error(f"Error initializing status: {e}")
         return data
 
 def update_status(key, value):
-    try:
-        if not os.path.exists(STATUS_PATH):
-            init_status()
-        
-        with _cache_lock:
-            global _status_cache, _last_update_time
-            if _status_cache:
-                _status_cache[key] = value
-        
-        with open(STATUS_PATH, "r") as file:
-            data = json.load(file)
-        
-        data[key] = value
-        
-        with open(STATUS_PATH, "w") as file:
-            json.dump(data, file, indent=4)
+    max_retries = 3
+    retry_delay = 0.1
+    
+    for attempt in range(max_retries):
+        try:
+            if not os.path.exists(STATUS_PATH):
+                init_status()
             
-        _last_update_time = time.time()
-        return True
-    except Exception as e:
-        print(f"Error updating status: {e}")
-        return False
+            with _cache_lock:
+                global _status_cache, _last_update_time
+                if _status_cache:
+                    _status_cache[key] = value
+            
+            try:
+                with open(STATUS_PATH, "r") as file:
+                    content = file.read().strip()
+                    if not content or not content.startswith('{'):
+                        data = init_status()
+                    else:
+                        data = json.loads(content)
+            except json.JSONDecodeError:
+                LOG.error("JSON decode error when updating, reinitializing")
+                data = init_status()
+            
+            data[key] = value
+            
+            temp_path = f"{STATUS_PATH}.tmp"
+            with open(temp_path, "w") as file:
+                json.dump(data, file, indent=4)
+            
+            os.replace(temp_path, STATUS_PATH)
+            _last_update_time = time.time()
+            return True
+            
+        except Exception as e:
+            LOG.error(f"Error updating status (attempt {attempt+1}): {e}")
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay)
+    
+    LOG.error(f"Failed to update status after {max_retries} attempts")
+    return False
 
 def update_multiple(update_dict):
     if not update_dict:
@@ -78,7 +100,6 @@ def update_multiple(update_dict):
         if not os.path.exists(STATUS_PATH):
             init_status()
             
-        # Cập nhật cache
         with _cache_lock:
             global _status_cache, _last_update_time
             if _status_cache:
@@ -109,10 +130,34 @@ def read_all_status():
     
     try:
         if not os.path.exists(STATUS_PATH):
+            print("Status file not found, creating new one")
             return init_status()
             
-        with open(STATUS_PATH, "r") as file:
-            data = json.load(file)
+        try:
+            with open(STATUS_PATH, "r") as file:
+                content = file.read().strip()
+                
+                if not content:
+                    print("Empty status file detected, reinitializing")
+                    return init_status()
+                
+                if not content.startswith('{'):
+                    print("Invalid JSON format, reinitializing")
+                    return init_status()
+                    
+                data = json.loads(content)
+        except json.JSONDecodeError as je:
+            print(f"JSON decode error: {je}, creating backup and reinitializing")
+            
+            if os.path.exists(STATUS_PATH):
+                backup_path = f"{STATUS_PATH}.bad.{int(time.time())}"
+                try:
+                    os.rename(STATUS_PATH, backup_path)
+                    print(f"Backed up corrupted file to {backup_path}")
+                except:
+                    print("Failed to back up corrupted file")
+            
+            return init_status()
             
         with _cache_lock:
             _status_cache = data.copy()

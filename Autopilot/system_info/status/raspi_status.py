@@ -20,7 +20,8 @@ def init_status():
         "depth": 0,
         "horizontal_velocity": 0,
         "vertical_velocity": 0,
-        "temp": 0,
+        "internal_temp": 0,
+        "external_temp": 0,
         "pitch": 0,
         "roll": 0,
         "heading": 0,
@@ -128,23 +129,37 @@ def read_all_status():
     
     try:
         if not os.path.exists(STATUS_PATH):
+            LOG.info("Status file not found, creating new one")
             return init_status()
             
-        with open(STATUS_PATH, "r") as file:
-            data = json.load(file)
+        try:
+            with open(STATUS_PATH, "r") as file:
+                file_content = file.read().strip()
+                if not file_content:
+                    LOG.error("Empty status file detected")
+                    return init_status()
+                data = json.loads(file_content)
+        except (json.JSONDecodeError, IOError) as e:
+            LOG.error(f"JSON decode error in status file: {e}")
+            LOG.info("Backing up corrupt status file and creating new one")
+            # Backup corrupt file
+            if os.path.exists(STATUS_PATH):
+                backup_path = f"{STATUS_PATH}.backup.{int(time.time())}"
+                try:
+                    os.rename(STATUS_PATH, backup_path)
+                    LOG.info(f"Backed up corrupt file to {backup_path}")
+                except Exception as bak_err:
+                    LOG.error(f"Failed to backup file: {bak_err}")
+            return init_status()
             
         with _cache_lock:
             _status_cache = data.copy()
             _last_update_time = time.time()
             
         return data
-    except json.JSONDecodeError as e:
-        LOG.error(f"JSON decode error in status file: {e}")
-        LOG.info("Reinitializing status file due to JSON error")
-        return init_status()
     except Exception as e:
         LOG.error(f"Failed to read status file: {e}")
-        return {}
+        return init_status()  # Return fresh status on any error
 
 def read_status(key, default=0):
     with _cache_lock:

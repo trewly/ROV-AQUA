@@ -114,10 +114,15 @@ class MavlinkController:
         while self.running:
             try:
                 with self.send_lock:
+                    if self.master_send.target_system == 0:
+                        self.master_send.target_system = 1
+                    if self.master_send.target_component == 0:
+                        self.master_send.target_component = 1
+                        
                     self.master_send.mav.heartbeat_send(
                         mavutil.mavlink.MAV_TYPE_GCS,
                         mavutil.mavlink.MAV_AUTOPILOT_GENERIC,
-                        0, 0, 0
+                        0, 0, mavutil.mavlink.MAV_STATE_ACTIVE
                     )
                 self._is_connected = True
                 time.sleep(self.heartbeat_interval)

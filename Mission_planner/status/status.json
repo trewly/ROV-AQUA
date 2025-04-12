@@ -1,11 +1,12 @@
 {
-    "depth": 0,
+    "depth": 0.0,
     "horizontal_velocity": 0,
     "vertical_velocity": 0,
-    "temp": 0,
-    "pitch": 0,
-    "roll": 0,
-    "heading": 0,
+    "internal_temp": 36.55646896362305,
+    "external_temp": 0.0,
+    "pitch": 0.5295140147209167,
+    "roll": -0.9895605444908142,
+    "heading": 16.844615936279297,
     "auto_heading": 0,
     "target_heading": 0,
     "auto_depth": 0,
@@ -14,5 +15,7 @@
     "disconnected": 1,
     "light": 0,
     "camera": 0,
-    "calibrated": 0
+    "calibrated": 0,
+    "vertical_velocit": 0.0,
+    "horizontal_veloc": 0.0
 }
