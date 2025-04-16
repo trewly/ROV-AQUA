@@ -421,7 +421,6 @@ class MavlinkController:
                 msg = self.receiver.recv_match(blocking=True, timeout=1)
                 if msg:
                     with self._lock:
-                        # Log mọi message nhận được để debug
                         LOG.debug(f"Received message: {msg.get_type()}")
                         
                         if self.connection_lost:

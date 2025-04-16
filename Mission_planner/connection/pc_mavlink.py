@@ -60,6 +60,7 @@ class MavlinkController:
         
         self.send_lock = threading.Lock()
         
+        self._initialize_connections()
         for attr in dir(MavCommands):
             if not attr.startswith('__'):
                 setattr(self, attr, getattr(MavCommands, attr))
@@ -113,18 +114,14 @@ class MavlinkController:
         LOG.info("Heartbeat thread started")
         while self.running:
             try:
-                with self.send_lock:
-                    if self.master_send.target_system == 0:
-                        self.master_send.target_system = 1
-                    if self.master_send.target_component == 0:
-                        self.master_send.target_component = 1
-                        
+                with self.send_lock:  
                     self.master_send.mav.heartbeat_send(
                         mavutil.mavlink.MAV_TYPE_GCS,
                         mavutil.mavlink.MAV_AUTOPILOT_GENERIC,
                         0, 0, mavutil.mavlink.MAV_STATE_ACTIVE
                     )
                 self._is_connected = True
+                LOG.info("Heartbeat sent")
                 time.sleep(self.heartbeat_interval)
             except Exception as e:
                 LOG.error(f"Error sending heartbeat: {e}")

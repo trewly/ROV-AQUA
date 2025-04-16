@@ -3,7 +3,7 @@
     "horizontal_velocity": 0,
     "vertical_velocity": 0,
     "internal_temp": 0.0,
-    "external_temp": 0,
+    "external_temp": 0.0,
     "pitch": 0,
     "roll": 0,
     "heading": 0,
