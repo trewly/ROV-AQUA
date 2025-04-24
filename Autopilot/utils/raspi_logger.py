@@ -4,7 +4,7 @@ from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime
 
 
-def setup_logger(name="System", log_subdir="../../logs"):
+def setup_logger(name="System", log_subdir="../logs"):
     log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), log_subdir))
     os.makedirs(log_dir, exist_ok=True)
     

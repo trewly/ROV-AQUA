@@ -39,7 +39,6 @@ class MavCommands:
     START_MAG_CALIBRATION = 1200
     START_CAMERA_STREAM = 1201
 
-
 class MavlinkController:
     def __init__(self, raspi_ip="169.254.54.120", send_port=5000, receive_port=5001, 
                 heartbeat_interval=1.0, connection_timeout=10.0):
@@ -60,6 +59,9 @@ class MavlinkController:
         
         self.send_lock = threading.Lock()
         
+        self.pending_commands = {}
+        self.command_timeout = 5.0
+
         self._initialize_connections()
         for attr in dir(MavCommands):
             if not attr.startswith('__'):
@@ -134,6 +136,8 @@ class MavlinkController:
                 msg = self.master_receive.recv_match(blocking=True, timeout=1)
                 current_time = time.time()
                 
+                self._check_pending_commands()
+                
                 if msg is not None:
                     if not self._is_connected:
                         LOG.info("Connection established")
@@ -170,6 +174,8 @@ class MavlinkController:
                 
             except Exception as e:
                 LOG.error(f"Error processing parameter: {e}")
+        elif msg_type == "COMMAND_ACK":
+            self._handle_command_ack(msg)
         else:
             try:
                 msg_dict = msg.to_dict()
@@ -178,7 +184,63 @@ class MavlinkController:
                 LOG.info(log_msg)
             except:
                 LOG.info(f"Received message of type: {msg_type}")
-    
+
+    def _handle_command_ack(self, msg):
+        cmd = msg.command
+        result = msg.result
+        
+        cmd_name = "UNKNOWN"
+        for name, value in vars(MavCommands).items():
+            if not name.startswith('__') and value == cmd:
+                cmd_name = name
+                break
+                
+        if cmd in self.pending_commands:
+            cmd_info = self.pending_commands.pop(cmd)
+            elapsed = time.time() - cmd_info['timestamp']
+            
+            result_str = {
+                mavutil.mavlink.MAV_RESULT_ACCEPTED: "ACCEPTED",
+                mavutil.mavlink.MAV_RESULT_TEMPORARILY_REJECTED: "TEMPORARILY REJECTED",
+                mavutil.mavlink.MAV_RESULT_DENIED: "DENIED",
+                mavutil.mavlink.MAV_RESULT_UNSUPPORTED: "UNSUPPORTED",
+                mavutil.mavlink.MAV_RESULT_FAILED: "FAILED",
+                mavutil.mavlink.MAV_RESULT_IN_PROGRESS: "IN PROGRESS",
+            }.get(result, f"UNKNOWN ({result})")
+            
+            reason = ""
+            if hasattr(msg, 'result_text'):
+                reason = msg.result_text.decode('utf-8').rstrip('\0')
+                
+            if result == mavutil.mavlink.MAV_RESULT_ACCEPTED:
+                LOG.info(f"Command {cmd_name} ({cmd}) acknowledged: {result_str} (took {elapsed:.2f}s)")
+            else:
+                LOG.warning(f"Command {cmd_name} ({cmd}) not successful: {result_str}{' - ' + reason if reason else ''} (took {elapsed:.2f}s)")
+                
+            status.update_status("last_command_result", result)
+            status.update_status("last_command", cmd_name)
+        else:
+            LOG.debug(f"Received ACK for unknown command {cmd_name} ({cmd}): {result}")
+
+    def _check_pending_commands(self):
+        current_time = time.time()
+        timed_out = []
+        
+        for cmd, cmd_info in self.pending_commands.items():
+            if current_time - cmd_info['timestamp'] > self.command_timeout:
+                timed_out.append(cmd)
+                
+        for cmd in timed_out:
+            cmd_info = self.pending_commands.pop(cmd)
+            cmd_name = "UNKNOWN"
+            for name, value in vars(MavCommands).items():
+                if not name.startswith('__') and value == cmd:
+                    cmd_name = name
+                    break
+            LOG.warning(f"Command {cmd_name} ({cmd}) timed out after {self.command_timeout}s")
+            status.update_status("last_command_result", "TIMEOUT")
+            status.update_status("last_command", cmd_name)
+
     def is_connected(self):
         return self._is_connected
     
@@ -205,6 +267,14 @@ class MavlinkController:
                     confirmation,
                     param1, param2, param3, param4, param5, param6, param7
                 )
+                
+            # Track command for acknowledgment
+            self.pending_commands[command] = {
+                'timestamp': time.time(),
+                'command': command,
+                'params': [param1, param2, param3, param4, param5, param6, param7]
+            }
+            
             self.command_counter += 1
             LOG.debug(f"Sent command: {command} with params: {param1}, {param2}, {param3}")
             return True

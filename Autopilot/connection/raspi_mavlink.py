@@ -94,7 +94,8 @@ class MavlinkController:
         
         self._lock = threading.RLock()
         self._initialized = True
-
+        self._initialize_connection()
+        
     def _initialize_connection(self):
         global _MAV_INITIALIZED
         
@@ -298,6 +299,7 @@ class MavlinkController:
         if msg.get_type() == "COMMAND_LONG":
             try:
                 command = MavCommand(msg.command)
+                result = mavutil.mavlink.MAV_RESULT_ACCEPTED
                 
                 if self.emergency_mode_active:
                     if command == MavCommand.SET_MANUAL:
@@ -307,73 +309,57 @@ class MavlinkController:
                         rov.stop_all()
                     else:
                         LOG.warning(f"Emergency mode active: Ignoring command {command}")
+                        result = mavutil.mavlink.MAV_RESULT_DENIED
+                        self._send_command_ack(msg.command, result, reason="Emergency mode active")
                         return
+                
+                try:
+                    current_mode = status.read_status(key="mode")
+
+                    if current_mode == "manual" and command in {
+                        MavCommand.SURFACE, MavCommand.DIVE,
+                        MavCommand.LEFT, MavCommand.RIGHT,
+                        MavCommand.FORWARD, MavCommand.BACKWARD,
+                        MavCommand.STOP
+                    }:
+                        self._handle_manual_command(command)
+
+                    self._handle_mode_commands(msg)
+                    self._handle_configuration_commands(msg)
                     
-                important_commands = {
-                    MavCommand.SET_MANUAL, 
-                    MavCommand.SET_AUTO_HEADING,
-                    MavCommand.SET_AUTO_DEPTH,
-                    MavCommand.SET_PID_YAW,
-                    MavCommand.SET_PID_DEPTH,
-                    MavCommand.SET_PID_AUTOHEADING,
-                    MavCommand.SET_SPEED_FORWARD,
-                    MavCommand.SET_SPEED_BACKWARD,
-                    MavCommand.SET_SPEED_DIVE,
-                    MavCommand.SET_SPEED_SURFACE,
-                    MavCommand.SET_LIGHT,
-                    MavCommand.SET_CAMERA,
-                    MavCommand.START_MAG_CALIBRATION
-                }
+                except Exception as e:
+                    LOG.error(f"Error executing command {command}: {e}")
+                    result = mavutil.mavlink.MAV_RESULT_FAILED
                 
-                if command in important_commands:
-                    if command == MavCommand.SET_MANUAL:
-                        LOG.info(f"Mode changed: Manual control")
-
-                    elif command == MavCommand.SET_AUTO_HEADING:
-                        LOG.info(f"Mode changed: Auto heading with target {msg.param1}°")
-
-                    elif command == MavCommand.SET_AUTO_DEPTH:
-                        LOG.info(f"Mode changed: Auto depth with target {msg.param1}m")
-                
-                    elif command == MavCommand.SET_SPEED_FORWARD:
-                        LOG.info(f"Forward speed set to {msg.param1}%")
-
-                    elif command == MavCommand.SET_SPEED_BACKWARD:
-                        LOG.info(f"Backward speed set to {msg.param1}%") 
-
-                    elif command == MavCommand.SET_SPEED_DIVE:
-                        LOG.info(f"Dive speed set to {msg.param1}%")
-
-                    elif command == MavCommand.SET_SPEED_SURFACE:
-                        LOG.info(f"Surface speed set to {msg.param1}%")
-
-                    elif command == MavCommand.SET_LIGHT:
-                        LOG.info(f"Light set to on")
-
-                    elif command == MavCommand.SET_CAMERA:
-                        LOG.info(f"Camera set to on")
-                        
-                    elif command == MavCommand.START_MAG_CALIBRATION:
-                        LOG.info(f"Starting magnetometer calibration")
-                
-                current_mode = status.read_status(key="mode")
-
-                if current_mode == "manual" and command in {
-                    MavCommand.SURFACE, MavCommand.DIVE,
-                    MavCommand.LEFT, MavCommand.RIGHT,
-                    MavCommand.FORWARD, MavCommand.BACKWARD,
-                    MavCommand.STOP
-                }:
-                    self._handle_manual_command(command)
-
-                self._handle_mode_commands(msg)
-
-                self._handle_configuration_commands(msg)
-
+                self._send_command_ack(msg.command, result)
+                    
             except ValueError:
                 LOG.warning(f"Received unknown command ID: {msg.command}")
+                self._send_command_ack(msg.command, mavutil.mavlink.MAV_RESULT_UNSUPPORTED)
             except Exception as e:
                 LOG.error(f"Error handling command: {e}", exc_info=True)
+                self._send_command_ack(msg.command, mavutil.mavlink.MAV_RESULT_FAILED)
+                
+    def _send_command_ack(self, command, result, progress=0, result_param2=0, reason=""):
+        try:
+            if hasattr(self.transmitter.mav, 'command_ack_send') and reason:
+                self.transmitter.mav.command_ack_send(
+                    command,
+                    result,
+                    progress,
+                    result_param2,
+                    0,
+                    0,
+                    reason.encode('utf-8')  
+                )
+            else:
+                self.transmitter.mav.command_ack_send(
+                    command,
+                    result
+                )
+            LOG.debug(f"Sent ACK for command {command} with result {result}")
+        except Exception as e:
+            LOG.error(f"Failed to send command ACK: {e}")
 
     def _handle_connection_lost(self):
         if not self.connection_lost_reported:

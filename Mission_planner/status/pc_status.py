@@ -30,7 +30,9 @@ def init_status():
         "disconnected": 0,
         "light": 0,
         "camera": 0,
-        "calibrated": 0
+        "calibrated": 0,
+        "position_x": 0,
+        "position_y": 0
     }
 
     try:

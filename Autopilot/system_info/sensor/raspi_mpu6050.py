@@ -104,8 +104,37 @@ class MPU6050:
         self.filtered_accel_y = 0.0
         self.filtered_accel_z = 0.0
 
+        self.position_x = 0.0
+        self.position_y = 0.0
+        self.last_position_update = time.time()
+
         self.update_thread = None
         self.running = False
+
+    def reset_position(self):
+        self.position_x = 0.0
+        self.position_y = 0.0
+        self.last_position_update = time.time()
+
+    def update_position_xy(self):
+        current_time = time.time()
+        dt = current_time - self.last_position_update
+        self.last_position_update = current_time
+
+        vx, vy, _ = self.get_velocity_enhanced()
+        heading = status.read_status(key="heading", default=0.0)
+
+        heading_rad = math.radians(heading)
+
+        v = math.sqrt(vx**2 + vy**2)
+        dx = v * math.cos(heading_rad) * dt
+        dy = v * math.sin(heading_rad) * dt
+
+        self.position_x += dx
+        self.position_y += dy
+
+    def get_relative_position_xy(self):
+        return self.position_x, self.position_y
 
     def initialize(self):
         try:
@@ -265,93 +294,6 @@ class MPU6050:
             return pitch, roll
         except Exception:
             return 0, 0
-
-    def get_velocity(self):
-        try:
-            ax, ay, az = self.read_accel_data()
-
-            current_time = time.time()
-            dt = current_time - self.velocity_last_update
-            self.velocity_last_update = current_time
-
-            ax_ms2 = ax * self.G
-            ay_ms2 = ay * self.G
-            az_ms2 = (az - 1.0) * self.G
-
-            ACCEL_DEADBAND = 0.05
-            ax_ms2 = 0.0 if abs(ax_ms2) < ACCEL_DEADBAND * self.G else ax_ms2
-            ay_ms2 = 0.0 if abs(ay_ms2) < ACCEL_DEADBAND * self.G else ay_ms2
-            az_ms2 = 0.0 if abs(az_ms2) < ACCEL_DEADBAND * self.G else az_ms2
-
-            if not hasattr(self, 'accel_x_filter'):
-                self.accel_x_filter = MovingAverageFilter(window_size=20)
-                self.accel_y_filter = MovingAverageFilter(window_size=20)
-                self.accel_z_filter = MovingAverageFilter(window_size=20)
-                
-            ax_filtered = self.accel_x_filter.update(ax_ms2)
-            ay_filtered = self.accel_y_filter.update(ay_ms2)
-            az_filtered = self.accel_z_filter.update(az_ms2)
-
-            delta_vx = ax_filtered * dt
-            delta_vy = ay_filtered * dt
-            delta_vz = az_filtered * dt
-
-            if abs(ax_filtered) < ACCEL_DEADBAND * self.G and abs(ay_filtered) < ACCEL_DEADBAND * self.G and abs(az_filtered) < ACCEL_DEADBAND * self.G:
-                damping_factor = 0.95
-                self.current_velocity_x *= damping_factor
-                self.current_velocity_y *= damping_factor
-                self.current_velocity_z *= damping_factor
-            else:
-                self.current_velocity_x += delta_vx
-                self.current_velocity_y += delta_vy
-                self.current_velocity_z += delta_vz
-
-            self.current_velocity_x = low_pass_filter(
-                self.current_velocity_x,
-                self.current_velocity_x,
-                self.VELOCITY_ALPHA
-            )
-            self.current_velocity_y = low_pass_filter(
-                self.current_velocity_y,
-                self.current_velocity_y,
-                self.VELOCITY_ALPHA
-            )
-            self.current_velocity_z = low_pass_filter(
-                self.current_velocity_z,
-                self.current_velocity_z,
-                self.VELOCITY_ALPHA
-            )
-
-            self.velocity_reset_counter += 1
-
-            if self.velocity_reset_counter >= self.VELOCITY_RESET_THRESHOLD:
-                self.velocity_reset_counter = 0
-                self.current_velocity_x *= 0.25
-                self.current_velocity_y *= 0.25
-                self.current_velocity_z *= 0.25
-
-            MAX_EXPECTED_VELOCITY = 5.0
-            if (abs(self.current_velocity_x) > MAX_EXPECTED_VELOCITY or 
-                abs(self.current_velocity_y) > MAX_EXPECTED_VELOCITY or 
-                abs(self.current_velocity_z) > MAX_EXPECTED_VELOCITY):
-                if (abs(ax_filtered) < 2 * ACCEL_DEADBAND * self.G and 
-                    abs(ay_filtered) < 2 * ACCEL_DEADBAND * self.G and 
-                    abs(az_filtered) < 2 * ACCEL_DEADBAND * self.G):
-                    self.current_velocity_x *= 0.5
-                    self.current_velocity_y *= 0.5
-                    self.current_velocity_z *= 0.5
-
-            horizontal_velocity = round(math.sqrt(self.current_velocity_x**2 + self.current_velocity_y**2), 2)
-            vertical_velocity = round(self.current_velocity_z, 2)
-            
-            status.update_status(key="horizontal_velocity", value=horizontal_velocity)
-            status.update_status(key="vertical_velocity", value=vertical_velocity)
-
-            return self.current_velocity_x, self.current_velocity_y, self.current_velocity_z
-
-        except Exception as e:
-            LOG.error(f"Error in get_velocity: {e}")
-            return self.current_velocity_x, self.current_velocity_y, self.current_velocity_z
 
     def get_velocity_enhanced(self):
         try:
@@ -540,7 +482,9 @@ class MPU6050:
                         "velocity_z": 0.0,
                         "horizontal_velocity": 0.0,
                         "vertical_velocity": 0.0,
-                        "internal_temp": 0.0
+                        "internal_temp": 0.0,
+                        "position_x": 0.0,
+                        "position_y": 0.0
                     }
 
                     for key, value in default_data.items():
@@ -555,13 +499,16 @@ class MPU6050:
                 roll = status.read_status(key="roll", default=0.0)
 
             try:
-                vx, vy, vz = self.get_velocity()
+                vx, vy, vz = self.get_velocity_enhanced()
                 horizontal_velocity = math.sqrt(vx**2 + vy**2)
             except Exception:
                 vx = status.read_status(key="velocity_x", default=0.0)
                 vy = status.read_status(key="velocity_y", default=0.0)
                 vz = status.read_status(key="velocity_z", default=0.0)
                 horizontal_velocity = status.read_status(key="horizontal_velocity", default=0.0)
+
+            self.update_position_xy()
+            pos_x, pos_y = self.get_relative_position_xy()
 
             try:
                 temp = self.read_temp_data()
@@ -576,7 +523,9 @@ class MPU6050:
                 "velocity_z": round(vz, 2),
                 "horizontal_velocity": round(horizontal_velocity, 2),
                 "vertical_velocity": round(vz, 2),
-                "internal_temp": round(temp, 2)
+                "internal_temp": round(temp, 2),
+                "position_x": round(pos_x, 3),
+                "position_y": round(pos_y, 3)
             }
             status.update_multiple(sensor_data)
             return sensor_data
@@ -590,7 +539,9 @@ class MPU6050:
                 "velocity_z": status.read_status(key="velocity_z", default=0.0),
                 "horizontal_velocity": status.read_status(key="horizontal_velocity", default=0.0),
                 "vertical_velocity": status.read_status(key="velocity_z", default=0.0),
-                "internal_temp": status.read_status(key="internal_temp", default=0.0)
+                "internal_temp": status.read_status(key="internal_temp", default=0.0),
+                "position_x": status.read_status(key="position_x", default=0.0),
+                "position_y": status.read_status(key="position_y", default=0.0)
             }
             return default_data
 
@@ -795,4 +746,3 @@ class MPU6050:
                        np.var(gz_samples) < threshold_gyro*threshold_gyro)
         
         return accel_stable and gyro_stable
-    
