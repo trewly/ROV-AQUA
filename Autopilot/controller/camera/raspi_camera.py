@@ -222,35 +222,36 @@ def start_stream(host=DEFAULT_SERVER_IP, port=DEFAULT_STREAM_PORT,
 
 def stop_stream():
     global stream_process, is_streaming
-    
+
     with stream_lock:
         if not is_streaming or stream_process is None:
             LOG.info("Stream is not active")
             return False
-            
+
         try:
             LOG.info("Stopping stream gracefully...")
-            
-            os.killpg(os.getpgid(stream_process.pid), signal.SIGINT)
-            
-            for _ in range(20):
-                if stream_process.poll() is not None:
-                    break
-                time.sleep(0.1)
-            
-            if stream_process and stream_process.poll() is None:
-                LOG.info("Process still running, sending SIGTERM...")
-                os.killpg(os.getpgid(stream_process.pid), signal.SIGTERM)
-                
-                for _ in range(30):
+
+            if stream_process is not None:
+                os.killpg(os.getpgid(stream_process.pid), signal.SIGINT)
+
+                for _ in range(20):
                     if stream_process.poll() is not None:
                         break
                     time.sleep(0.1)
-                
+
                 if stream_process and stream_process.poll() is None:
-                    LOG.info("Process still running, forcing SIGKILL...")
-                    os.killpg(os.getpgid(stream_process.pid), signal.SIGKILL)
-            
+                    LOG.info("Process still running, sending SIGTERM...")
+                    os.killpg(os.getpgid(stream_process.pid), signal.SIGTERM)
+
+                    for _ in range(30):
+                        if stream_process.poll() is not None:
+                            break
+                        time.sleep(0.1)
+
+                    if stream_process and stream_process.poll() is None:
+                        LOG.info("Process still running, forcing SIGKILL...")
+                        os.killpg(os.getpgid(stream_process.pid), signal.SIGKILL)
+
             LOG.info("Stream stopped successfully")
             return True
         except Exception as e:

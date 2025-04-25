@@ -1,8 +1,8 @@
 {
-    "depth": 0.0,
+    "depth": 0,
     "horizontal_velocity": 0,
     "vertical_velocity": 0,
-    "internal_temp": 0.0,
+    "internal_temp": 0,
     "external_temp": 0,
     "pitch": 0,
     "roll": 0,
@@ -12,10 +12,12 @@
     "auto_depth": 0,
     "target_depth": 0,
     "mode": "manual",
-    "disconnected": 0,
+    "disconnected": 1,
     "light": 0,
     "camera": 0,
     "calibrated": 0,
-    "position_x": 0.0,
-    "position_y": 0.0
+    "position_x": 0,
+    "position_y": 0,
+    "last_command_result": "TIMEOUT",
+    "last_command": "START_CAMERA_STREAM"
 }

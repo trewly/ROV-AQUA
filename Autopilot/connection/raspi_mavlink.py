@@ -48,6 +48,7 @@ class MavCommand(IntEnum):
 
     START_MAG_CALIBRATION = 1200
     START_CAMERA_STREAM = 1201
+    RESTART_CAMERA_STREAM = 1202
 
 class MavlinkController:
     _instance = None
@@ -60,7 +61,7 @@ class MavlinkController:
             return cls._instance
             
     def __init__(self, pc_ip="169.254.54.121", receive_port=5000, send_port=5001, status_send_interval=0.01,
-                  heartbeat_timeout=10.0):
+                  heartbeat_interval=1.0 ,heartbeat_timeout=10.0):
         if self._initialized:
             return
             
@@ -71,6 +72,7 @@ class MavlinkController:
         self.send_port = send_port
         
         self.status_send_interval = status_send_interval
+        self.heartbeat_interval = heartbeat_interval
         self.heartbeat_timeout = heartbeat_timeout
         self.last_heartbeat = time.time()
         
@@ -118,6 +120,7 @@ class MavlinkController:
                 name="MAVLink-Receiver"
             )
             receiver_thread.start()
+            receiver_thread.setDaemon(True)
             self.threads.append(receiver_thread)
             
             self.transmitter = mavutil.mavlink_connection(f"udpout:{self.pc_ip}:{self.send_port}")
@@ -127,6 +130,7 @@ class MavlinkController:
                 name="MAVLink-Transmitter"
             )
             transmitter_thread.start()
+            transmitter_thread.setDaemon(True)
             self.threads.append(transmitter_thread)
 
             _MAV_INITIALIZED = True
@@ -267,8 +271,6 @@ class MavlinkController:
         elif command == MavCommand.SET_LIGHT:
             status.update_status(key="light", value=msg.param1)
            
-        elif command == MavCommand.SET_CAMERA:
-            status.update_status(key="camera", value=msg.param1)
         
         elif command == MavCommand.START_MAG_CALIBRATION:
             sensor.initialize_sensors()
@@ -291,6 +293,10 @@ class MavlinkController:
 
         elif command == MavCommand.START_CAMERA_STREAM:
             camera.start_stream()
+            
+        elif command == MavCommand.RESTART_CAMERA_STREAM:
+            LOG.info("Received RESTART_CAMERA_STREAM command")
+            camera.restart_stream()
 
     def handle_received_msg(self, msg):
         if msg is None:
@@ -451,7 +457,7 @@ class MavlinkController:
         
         param_type = mavutil.mavlink.MAV_PARAM_TYPE_REAL32
         last_send_time = 0
-        
+        last_heartbeat = 0
         while self.running:
             try:
                 current_time = time.time()
@@ -477,14 +483,17 @@ class MavlinkController:
                             LOG.warning(f"Invalid value for {key}: {e}")
                         except Exception as e:
                             LOG.error(f"Error sending {key}: {e}")
+                
+                if current_time - last_heartbeat >= self.heartbeat_interval:
+                    last_heartbeat = current_time
+                    self.transmitter.mav.heartbeat_send(
+                        mavutil.mavlink.MAV_TYPE_SUBMARINE,
+                        mavutil.mavlink.MAV_AUTOPILOT_GENERIC,
+                        0,
+                        0,
+                        mavutil.mavlink.MAV_STATE_EMERGENCY
+                    )
                     
-                    # self.transmitter.mav.heartbeat_send(
-                    #     mavutil.mavlink.MAV_TYPE_SUBMARINE,
-                    #     mavutil.mavlink.MAV_AUTOPILOT_GENERIC,
-                    #     0,
-                    #     0,
-                    #     mavutil.mavlink.MAV_STATE_ACTIVE
-                    # )
                 
             except Exception as e:
                 LOG.error(f"Error in transmitter thread: {e}", exc_info=True)

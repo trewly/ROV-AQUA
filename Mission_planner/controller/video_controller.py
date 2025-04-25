@@ -142,38 +142,37 @@ class VideoReceiver(QWidget):
             self.status_label.setText(error)
             QMessageBox.critical(self, "Error", error)
             return
-        
+
         self.status_label.setText("Looking for GStreamer window...")
-        
+
         result_queue = queue.Queue()
-        
+
         find_window_thread = threading.Thread(
             target=find_window_by_pid, 
             args=(self.gst_process.pid, result_queue), 
             daemon=True
         )
         find_window_thread.start()
-        
+
         find_window_thread.join(timeout=10)
-        
+
         try:
             hwnds = result_queue.get(block=False)
         except queue.Empty:
             hwnds = []
-        
+
         if not hwnds:
             self.window_find_attempts += 1
-            
-            if self.window_find_attempts <= 5:
+
+            if self.window_find_attempts <= 3:
                 self.status_label.setText(f"Retrying window search (attempt {self.window_find_attempts}/3)...")
                 QTimer.singleShot(2000, self.find_and_embed_window)
             else:
-                QMessageBox.warning(self, "Warning", "Could not find GStreamer window after multiple attempts.")
-            error = "No GStreamer window found"
-            LOG.error(error)
-            self.status_label.setText(error)
+                self.status_label.setText("Restarting camera and GStreamer...")
+                LOG.warning("Could not find GStreamer window after multiple attempts. Restarting camera and GStreamer.")
+                self.restart_camera_stream()
             return
-        
+
         LOG.info(f"Found GStreamer window: {hwnds[0]}")
         self.status_label.setText(f"Found window: {hwnds[0]}")
         
@@ -197,6 +196,29 @@ class VideoReceiver(QWidget):
             self.status_label.setText(error)
             QMessageBox.critical(self, "Error", error)
     
+    def restart_camera_stream(self):
+        try:
+            LOG.info("Sending RESTART_CAMERA_STREAM command to Pi5")
+            MAV.restart_camera_stream()
+        except Exception as e:
+            LOG.error(f"Failed to send RESTART_CAMERA_STREAM command: {e}")
+
+        if self.gst_process and self.gst_process.poll() is None:
+            try:
+                LOG.info("Killing GStreamer process on PC")
+                self.gst_process.terminate()
+                self.gst_process.wait(timeout=3)
+            except Exception as e:
+                LOG.error(f"Error terminating GStreamer process: {e}")
+                try:
+                    self.gst_process.kill()
+                except:
+                    pass
+        self.gst_process = None
+
+        self.window_find_attempts = 0
+        QTimer.singleShot(3000, self.start_gstreamer)
+
     def cleanup(self):
         if self.process_monitor:
             self.process_monitor.stop()

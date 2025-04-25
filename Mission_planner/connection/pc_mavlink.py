@@ -34,10 +34,10 @@ class MavCommands:
     SET_SPEED_SURFACE = 1109
 
     SET_LIGHT = 1110
-    SET_CAMERA = 1111
 
     START_MAG_CALIBRATION = 1200
     START_CAMERA_STREAM = 1201
+    RESTART_CAMERA_STREAM = 1202
 
 class MavlinkController:
     def __init__(self, raspi_ip="169.254.54.120", send_port=5000, receive_port=5001, 
@@ -133,7 +133,7 @@ class MavlinkController:
         LOG.info("Receive thread started")
         while self.running:
             try:
-                msg = self.master_receive.recv_match(blocking=True, timeout=1)
+                msg = self.master_receive.recv_match(blocking=True, timeout=3)
                 current_time = time.time()
                 
                 self._check_pending_commands()
@@ -335,17 +335,17 @@ class MavlinkController:
         LOG.info(f"Setting light on")
         return self.send_command(MavCommands.SET_LIGHT)
 
-    def set_camera(self):
+    def start_camera_stream(self):
         LOG.info(f"Setting camera on")
-        return self.send_command(MavCommands.SET_CAMERA)
+        return self.send_command(MavCommands.START_CAMERA_STREAM)
 
     def start_mag_calibration(self):
         LOG.info("Starting magnetometer calibration")
         return self.send_command(MavCommands.START_MAG_CALIBRATION)
     
-    def start_camera_stream(self):
-        LOG.info("Starting camera")
-        return self.send_command(MavCommands.START_CAMERA_STREAM)
+    def restart_camera_stream(self):
+        LOG.info("Restarting camera stream")
+        return self.send_command(MavCommands.RESTART_CAMERA_STREAM)
 
     def get_status(self, status_id):
         try:
