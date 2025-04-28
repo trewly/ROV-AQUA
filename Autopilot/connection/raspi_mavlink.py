@@ -60,7 +60,7 @@ class MavlinkController:
             return cls._instance
             
     def __init__(self, pc_ip="169.254.54.121", receive_port=5000, send_port=5001, status_send_interval=0.01,
-                  heartbeat_timeout=10.0):
+                  heartbeat_interval=1.0, heartbeat_timeout=10.0):
         if self._initialized:
             return
             
@@ -70,6 +70,7 @@ class MavlinkController:
         self.pc_ip = pc_ip
         self.send_port = send_port
         
+        self.heartbeat_interval = heartbeat_interval
         self.status_send_interval = status_send_interval
         self.heartbeat_timeout = heartbeat_timeout
         self.last_heartbeat = time.time()
@@ -451,11 +452,20 @@ class MavlinkController:
         
         param_type = mavutil.mavlink.MAV_PARAM_TYPE_REAL32
         last_send_time = 0
-        
+        last_heartbeat = 0
+
         while self.running:
             try:
                 current_time = time.time()
                 
+                if current_time - last_heartbeat > self.heartbeat_interval:
+                    last_heartbeat = current_time
+                    self.transmitter.mav.heartbeat_send(
+                        mavutil.mavlink.MAV_TYPE_SUBMARINE,
+                        mavutil.mavlink.MAV_AUTOPILOT_GENERIC,
+                        0, 0, 0, 0, 0
+                    )
+
                 if current_time - last_send_time >= self.status_send_interval:
                     last_send_time = current_time
                     
@@ -477,15 +487,7 @@ class MavlinkController:
                             LOG.warning(f"Invalid value for {key}: {e}")
                         except Exception as e:
                             LOG.error(f"Error sending {key}: {e}")
-                    
-                    self.transmitter.mav.heartbeat_send(
-                        mavutil.mavlink.MAV_TYPE_SUBMARINE,
-                        mavutil.mavlink.MAV_AUTOPILOT_GENERIC,
-                        0,
-                        0,
-                        mavutil.mavlink.MAV_STATE_ACTIVE
-                    )
-                
+                    time.sleep(0.05)
             except Exception as e:
                 LOG.error(f"Error in transmitter thread: {e}", exc_info=True)
 
