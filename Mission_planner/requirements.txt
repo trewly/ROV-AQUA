@@ -8,3 +8,5 @@ PyOpenGL
 PyOpenGL_accelerate
 scipy
 pywin32
+smbus2
+pyserial
