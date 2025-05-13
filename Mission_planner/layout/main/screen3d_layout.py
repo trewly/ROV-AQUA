@@ -242,7 +242,7 @@ class STLViewerWidget(QWidget):
 
         transform = QMatrix4x4()
         transform.rotate(x_angle, 1, 0, 0)  # Xoay quanh trục X
-        transform.rotate((-1)*y_angle, 0, 1, 0)  # Xoay quanh trục Y
+        transform.rotate(y_angle, 0, 1, 0)  # Xoay quanh trục Y
         transform.rotate(z_angle, 0, 0, 1)  # Xoay quanh trục Z
 
         self.mesh_item.setTransform(transform)  # Cập nhật mô hình
@@ -346,15 +346,15 @@ class STLViewerWidget(QWidget):
     #ham theo doi trang thai he thong
     def state_show(self):
         self.state_status=QLabel(f"Pitch: {self.pitch_info}   Roll: {self.roll_info}   Yaw: {self.yaw_info}",self.view)
+        self.state_status.setFixedWidth(500)
         self.state_status.setFont(self.font)
         self.state_status.setStyleSheet("color: #395B64; font-size: 20px;")
         self.state_status.move(0, 0)
 
     def update_sate_show(self,roll,pitch,yaw):
-        self.roll_info=roll
-        self.pitch_info=pitch
-        self.yaw_info=yaw
-
+        self.roll_info = round(roll, 1)
+        self.pitch_info = round(pitch, 1)
+        self.yaw_info = round(yaw, 1)
         self.state_status.setText(f"Pitch: {self.pitch_info}   Roll: {self.roll_info}  Yaw: {self.yaw_info}")
     
     def closeEvent(self, event):

@@ -282,3 +282,12 @@ class HMC5883L:
             success = not self.update_thread.is_alive()
             return success
         return True
+    
+hmc = HMC5883L()
+while (not hmc.initialize()):
+    time.sleep(1)
+    print("Hello")
+
+hmc.calibrate()
+
+hmc.get_heading()

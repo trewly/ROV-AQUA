@@ -124,11 +124,10 @@ class PIDTuner(QWidget):
         label.setText(f"{param}: {self.updated_params[pid_name][index]:.3f}")
     
     def confirm_update(self, pid_name):
-    # Cập nhật các tham số PID
         self.pid_params[pid_name] = self.updated_params[pid_name].copy()
         print(f"PID parameters for {pid_name} updated:", self.pid_params[pid_name])
         # update and transmit
-        if pid_name in ["autoheading", "depth", "yaw"]:  # Kiểm tra nếu pid_name hợp lệ
+        if pid_name in ["autoheading", "depth", "yaw"]:  
             # write json
             status.update_status(f"Kp_{pid_name}", self.pid_params[pid_name][0])
             status.update_status(f"Ki_{pid_name}", self.pid_params[pid_name][1])

@@ -458,7 +458,9 @@ class MavlinkController:
             try:
                 current_time = time.time()
                 
+                # Send heartbeat
                 if current_time - last_heartbeat > self.heartbeat_interval:
+                    print("Sending heartbeat...")
                     last_heartbeat = current_time
                     self.transmitter.mav.heartbeat_send(
                         mavutil.mavlink.MAV_TYPE_SUBMARINE,
@@ -466,6 +468,7 @@ class MavlinkController:
                         0, 0, 0, 0, 0
                     )
 
+                # Send status updates
                 if current_time - last_send_time >= self.status_send_interval:
                     last_send_time = current_time
                     
@@ -487,7 +490,10 @@ class MavlinkController:
                             LOG.warning(f"Invalid value for {key}: {e}")
                         except Exception as e:
                             LOG.error(f"Error sending {key}: {e}")
-                    time.sleep(0.05)
+            
+                # Sleep to avoid busy-waiting
+                time.sleep(0.05)
+
             except Exception as e:
                 LOG.error(f"Error in transmitter thread: {e}", exc_info=True)
 

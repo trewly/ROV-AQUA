@@ -108,7 +108,7 @@ class CanvasWidget(QWidget):
 
         #bien 
         self.selected_points = []
-        self.go_to_point_mode = False  # Chế độ chọn waypoint
+        self.go_to_point_mode = False  
 
         #Cap nhat su kien
         self.status_manager = status_manager
@@ -168,14 +168,16 @@ class CanvasWidget(QWidget):
         # status dot
         self.statusDot = QLabel(self)
         self.statusDot.setFixedSize(20, 20)
-        self.statusDot.setStyleSheet("border-radius: 10px; background-color: gray; border: 1px solid black;")
+        self.statusDot.setStyleSheet("border-radius: 10px; background-color: red; border: 1px solid black;")
         self.statusDot.move(600,15)  
 
     def update_vehicle_status(self,disconnected: bool):
         if disconnected:
             self.statusLabel.setText("Vehicle unconnected")
+            self.statusDot.setStyleSheet("border-radius: 10px; background-color: red; border: 1px solid black;")
         else:
             self.statusLabel.setText("Vehicle connected")
+            self.statusDot.setStyleSheet("border-radius: 10px; background-color: #2ECC71; border: 1px solid black;")
         #print("update connected info")
 
     def system_info_init(self):
@@ -219,16 +221,6 @@ class CanvasWidget(QWidget):
             }
         """)
 
-        # self.button2d = QPushButton("2D",self)
-        # self.button2d.setStyleSheet(button_style)
-        # self.button2d.setFixedSize(90, 50)
-        # self.button2d.move(600, 5) 
-
-        # self.button3d = QPushButton("3D",self)
-        # self.button3d.setStyleSheet(button_style)
-        # self.button3d.setFixedSize(90, 50)
-        # self.button3d.move(695, 5) 
-
         #clear button
         self.button_clear = QPushButton("Clear", self)
         self.button_clear.setStyleSheet(canvas_button_style)
@@ -263,23 +255,19 @@ class CanvasWidget(QWidget):
         """Xóa toàn bộ các điểm đã chọn trên canvas mà không xóa vehicle_dot"""
         self.selected_points = []
 
-        # Lưu lại vị trí của vehicle_dot trước khi xóa
         vehicle_pos = self.vehicle_dot.pos()
 
-        # Xóa tất cả item trừ vehicle_dot
         items_to_remove = [item for item in self.scene.items() if item is not self.vehicle_dot]
         for item in items_to_remove:
             self.scene.removeItem(item)
 
-        # Vẽ lại lưới trước
         self.draw_grid(50)
 
-        # Đặt lại vehicle_dot lên trên cùng
         self.scene.addItem(self.vehicle_dot)  
-        self.vehicle_dot.setPos(vehicle_pos)  # Đặt lại vị trí cũ
+        self.vehicle_dot.setPos(vehicle_pos) 
 
         self.go_to_point_mode = False
-        self.button_clear.setVisible(False)  # Ẩn nút "Clear"
+        self.button_clear.setVisible(False) 
         self.button_uploadmission.setVisible(False)
 
     def upload_waypoints(self):
@@ -290,26 +278,23 @@ class CanvasWidget(QWidget):
         if self.go_to_point_mode and self.canvas.geometry().contains(event.pos()):
             scene_pos = self.canvas.mapToScene(event.pos() - self.canvas.pos())  # Chuyển đổi tọa độ
 
-            # Vẽ điểm waypoint
             radius = 5
             point = QGraphicsEllipseItem(scene_pos.x() - radius, scene_pos.y() - radius, radius * 2, radius * 2)
-            point.setBrush(QColor(255, 0, 0))  # Màu đỏ
+            point.setBrush(QColor(255, 0, 0)) 
             self.scene.addItem(point)
 
-            # Nối đường nếu có ít nhất 2 điểm
             if self.selected_points:
                 last_point = self.selected_points[-1]
                 line = QGraphicsLineItem(last_point.x(), last_point.y(), scene_pos.x(), scene_pos.y())
-                line.setPen(QPen(Qt.blue, 2))  # Vẽ đường màu xanh
+                line.setPen(QPen(Qt.blue, 2))  
                 self.scene.addItem(line)
 
-            self.selected_points.append(scene_pos)  # Lưu điểm đã chọn
+            self.selected_points.append(scene_pos)  
 
     def vehicle_locate_init(self):
         self.vehicle_dot = QGraphicsPixmapItem(QPixmap("./layout/resources/vehicle_sym.png"))
         self.scene.addItem(self.vehicle_dot)
         
-        # Đặt tâm xoay về trung tâm hình ảnh
         self.vehicle_dot.setTransformOriginPoint(self.vehicle_dot.boundingRect().width() / 2, 
                                                 self.vehicle_dot.boundingRect().height() / 2)
 
@@ -317,18 +302,16 @@ class CanvasWidget(QWidget):
         transform = QTransform().rotate(90)
         rotated_pixmap = pixmap.transformed(transform, Qt.SmoothTransformation)
         
-        self.vehicle_dot.setPixmap(rotated_pixmap)  # Cập nhật ảnh đã xoay
+        self.vehicle_dot.setPixmap(rotated_pixmap) 
 
-        # Đặt vị trí ban đầu
         self.vehicle_dot.setPos(2200, 2400)
 
     def update_motion_canvas(self,x,y,yaw):
         self.vehicle_dot.setPos(x, y)
         self.vehicle_dot.setTransform(QTransform().rotate(yaw))
 
-        #add tracking
-        track_path = QGraphicsEllipseItem(x, y, 3, 3)  # Vẽ hình tròn nhỏ (6x6 pixel)
-        track_path.setBrush(Qt.green)  # Đặt màu đỏ cho waypoint
+        track_path = QGraphicsEllipseItem(x, y, 3, 3)  
+        track_path.setBrush(Qt.green) 
         track_path.setPen(QPen(Qt.NoPen))
         self.scene.addItem(track_path)
 
@@ -339,7 +322,7 @@ class CanvasWidget(QWidget):
     
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    status_manager = SystemStatusManager()  # Tạo đối tượng quản lý trạng thái hệ thống
+    status_manager = SystemStatusManager()  
     main_window = CanvasWidget(status_manager)
     main_window.show()
     sys.exit(app.exec_())

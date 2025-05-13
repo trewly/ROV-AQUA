@@ -133,7 +133,6 @@ class MavlinkController:
                 current_time = time.time()
                 
                 if msg is not None:
-                    print(f"Received message: {msg}")
                     if not self._is_connected:
                         LOG.info("Connection established")
                         self._is_connected = True

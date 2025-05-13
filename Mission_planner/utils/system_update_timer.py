@@ -5,8 +5,6 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-#print(os.path.dirname(os.path.abspath(__file__)))
-
 from status import pc_status as status
 from config import raspi_config as config
 
@@ -32,11 +30,11 @@ class SystemStatusManager(QObject):
         self.timer_2= QTimer()
         self.timer_2.timeout.connect(self.get_roll_pitch_yaw_info)
         self.timer_2.timeout.connect(self.get_x_velo_info)
-        self.timer_2.start(50)
+        self.timer_2.start(20)
 
     def initial_read(self):
         try:
-            self.disconnected=bool(status.read_status("disconnected"))
+            self.disconnected=bool(status.read_status("disconnect"))
             self.temp=status.read_status("internal_temp")
             self.depth=status.read_status("depth")
             self.pitch=status.read_status("pitch")
@@ -47,8 +45,8 @@ class SystemStatusManager(QObject):
 
     def get_disconnected_info(self):
         try:
-            self.disconnected=bool(status.read_status("disconnected"))
-            self.got_disconnected_info.emit(self.disconnected)
+            self.disconnected=bool(status.read_status("disconnect"))
+            self.got_disconnected_info.emit(0)
         except:
             print("Error read connect status")
 

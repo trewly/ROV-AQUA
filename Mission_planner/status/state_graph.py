@@ -81,11 +81,6 @@ class AttitudePlotter(QWidget):
         self.timer.stop()
 
     def update_data(self):
-        # pitch = random.uniform(-90, 90)
-        # roll = random.uniform(-90, 90)
-        # yaw = random.uniform(-180, 180)
-
-        #cap nhat theo du lieu that
         try:
             pitch=status.read_status("pitch")
             roll=status.read_status("roll")

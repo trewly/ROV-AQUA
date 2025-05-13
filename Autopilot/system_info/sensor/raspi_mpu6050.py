@@ -746,3 +746,13 @@ class MPU6050:
                        np.var(gz_samples) < threshold_gyro*threshold_gyro)
         
         return accel_stable and gyro_stable
+
+
+mpu = MPU6050()
+while (not mpu.initialize()):
+    print("meee")
+    time.sleep(1)
+
+while True:
+    print(mpu.read_all_sensors())
+    time.sleep(1)

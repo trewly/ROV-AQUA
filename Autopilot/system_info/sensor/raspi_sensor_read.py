@@ -44,6 +44,7 @@ class SensorFusion:
                 # Update IMU sensors every cycle
                 self.mpu.read_all_sensors()
                 
+                time.sleep(0.1)
                 # Update compass every cycle
                 self.compass.get_heading()
                 
